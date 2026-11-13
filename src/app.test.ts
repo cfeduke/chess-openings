@@ -9,7 +9,7 @@ import { delaySetting } from './settings.ts';
 let unmount = new AbortController();
 
 /** Mounts the app at a URL, with the small book of openings unless a loader is given. */
-async function mount(hash = '', load: () => Promise<OpeningsDataset> = async () => SMALL_DATASET) {
+function mount(hash = '', load: () => Promise<OpeningsDataset> = async () => SMALL_DATASET) {
   history.replaceState(null, '', `/${hash}`);
   const root = document.createElement('div');
   document.body.append(root);
@@ -47,7 +47,7 @@ afterEach(() => {
 
 describe('on arrival', () => {
   it('shows the site’s name and a board set up for a new game, straight away', async () => {
-    const { root, ready, text } = await mount();
+    const { root, ready, text } = mount();
 
     expect(text('h1')).toBe('Chess Openings');
     expect(root.querySelectorAll('.board .piece')).toHaveLength(32);
@@ -56,7 +56,7 @@ describe('on arrival', () => {
 
   it('says it is fetching the openings, then lists them by volume', async () => {
     const fetching = Promise.withResolvers<OpeningsDataset>();
-    const { root, ready, text } = await mount('', () => fetching.promise);
+    const { root, ready, text } = mount('', () => fetching.promise);
     expect(text('.catalog-panel')).toContain('Loading the openings');
 
     fetching.resolve(SMALL_DATASET);
@@ -67,7 +67,7 @@ describe('on arrival', () => {
   });
 
   it('invites a choice, and plays nothing until one is made', async () => {
-    const { ready, text, squareOf } = await mount();
+    const { ready, text, squareOf } = mount();
     await ready;
 
     vi.advanceTimersByTime(10_000);
@@ -80,7 +80,7 @@ describe('on arrival', () => {
 
 describe('choosing an opening from the catalog', () => {
   it('names it above the board, lists its moves, and starts to play it', async () => {
-    const { root, ready, text, cursor, squareOf, chooseItalian } = await mount();
+    const { root, ready, text, cursor, squareOf, chooseItalian } = mount();
     await ready;
 
     chooseItalian();
@@ -98,7 +98,7 @@ describe('choosing an opening from the catalog', () => {
   });
 
   it('puts it in the address, so the page can be bookmarked or shared', async () => {
-    const { ready, chooseItalian } = await mount();
+    const { ready, chooseItalian } = mount();
     await ready;
 
     chooseItalian();
@@ -107,7 +107,7 @@ describe('choosing an opening from the catalog', () => {
   });
 
   it('marks it in the catalog', async () => {
-    const { ready, $, chooseItalian } = await mount();
+    const { ready, $, chooseItalian } = mount();
     await ready;
 
     chooseItalian();
@@ -116,7 +116,7 @@ describe('choosing an opening from the catalog', () => {
   });
 
   it('starts it over when it is chosen again', async () => {
-    const { ready, cursor, chooseItalian } = await mount();
+    const { ready, cursor, chooseItalian } = mount();
     await ready;
     chooseItalian();
     vi.advanceTimersByTime(3200);
@@ -132,7 +132,7 @@ describe('choosing an opening from the catalog', () => {
 
 describe('arriving by a link to an opening', () => {
   it('opens that opening and plays it', async () => {
-    const { ready, text, cursor } = await mount(hashForOpening(NAJDORF.id));
+    const { ready, text, cursor } = mount(hashForOpening(NAJDORF.id));
     await ready;
 
     expect(text('.opening__family')).toBe('Sicilian Defense');
@@ -142,7 +142,7 @@ describe('arriving by a link to an opening', () => {
   });
 
   it('finds it in the catalog: its volume, its group, its line', async () => {
-    const { root, ready, $ } = await mount(hashForOpening(NAJDORF.id));
+    const { root, ready, $ } = mount(hashForOpening(NAJDORF.id));
     await ready;
 
     const selected = root.querySelector('[role="tab"][aria-selected="true"]');
@@ -151,14 +151,14 @@ describe('arriving by a link to an opening', () => {
   });
 
   it('just invites a choice when the link names no opening we have', async () => {
-    const { ready, text } = await mount('#/no-such-opening');
+    const { ready, text } = mount('#/no-such-opening');
     await ready;
 
     expect(text('.opening h2')).toBe('Choose an opening');
   });
 
   it('follows the address when it changes, as with the back button', async () => {
-    const { ready, text } = await mount(hashForOpening(NAJDORF.id));
+    const { ready, text } = mount(hashForOpening(NAJDORF.id));
     await ready;
 
     history.replaceState(null, '', `/${hashForOpening(ITALIAN.id)}`);
@@ -178,10 +178,14 @@ describe('when the openings cannot be fetched', () => {
       .fn<() => Promise<OpeningsDataset>>()
       .mockRejectedValueOnce(new Error('openings.json: HTTP 503'))
       .mockResolvedValueOnce(SMALL_DATASET);
-    const { root, ready, text, $ } = await mount('', load);
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { root, ready, text, $ } = mount('', load);
     await ready;
 
     expect(text('.catalog-panel [role="alert"]')).toContain('could not be loaded');
+    expect(logged).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'openings.json: HTTP 503' }),
+    );
     expect(root.querySelectorAll('[role="tab"]')).toHaveLength(0);
 
     $('.catalog-panel button')?.click();
@@ -193,7 +197,7 @@ describe('when the openings cannot be fetched', () => {
 
 describe('the player', () => {
   it('has its controls, with the delay at a second and a half', async () => {
-    const { ready, $ } = await mount(hashForOpening(ITALIAN.id));
+    const { ready, $ } = mount(hashForOpening(ITALIAN.id));
     await ready;
 
     expect($('[aria-label="Player controls"] button[aria-label="Pause"]')).not.toBeNull();
@@ -202,7 +206,7 @@ describe('the player', () => {
 
   it('plays at the delay the visitor chose last time', async () => {
     delaySetting.write(400);
-    const { ready, $, cursor } = await mount(hashForOpening(ITALIAN.id));
+    const { ready, $, cursor } = mount(hashForOpening(ITALIAN.id));
     await ready;
 
     expect($<HTMLInputElement>('input[type="range"]')?.value).toBe('400');
@@ -212,7 +216,7 @@ describe('the player', () => {
 
   it('ignores a saved delay that is out of range', async () => {
     localStorage.setItem(delaySetting.key, '5');
-    const { ready, $ } = await mount();
+    const { ready, $ } = mount();
     await ready;
 
     expect($<HTMLInputElement>('input[type="range"]')?.value).toBe('300');
@@ -236,7 +240,7 @@ describe('mounted as the site mounts it, with no options', () => {
 
 describe('the credits', () => {
   it('say where the openings come from, down to the revision', async () => {
-    const { ready, text, $ } = await mount();
+    const { ready, text, $ } = mount();
     await ready;
 
     expect(text('.credits')).toContain('lichess-org/chess-openings');

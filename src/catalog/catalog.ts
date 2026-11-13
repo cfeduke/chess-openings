@@ -28,6 +28,24 @@ export interface CatalogVolume {
   count: number;
 }
 
+/** Where one opening is filed. */
+export interface CatalogPlace {
+  opening: Opening;
+  volume: CatalogVolume;
+  group: CatalogGroup;
+  family: CatalogFamily;
+  /** The opening's position among `family.lines`. */
+  index: number;
+}
+
+/** The openings arranged as the encyclopaedia arranges them. */
+export interface Catalog {
+  /** All five volumes, in order. */
+  volumes: CatalogVolume[];
+  /** Where the opening with this id is filed, if there is one. */
+  locate(id: string): CatalogPlace | undefined;
+}
+
 function byEcoThenNameThenLength(a: Opening, b: Opening): number {
   return a.eco.localeCompare(b.eco) || a.name.localeCompare(b.name) || a.san.length - b.san.length;
 }
@@ -37,12 +55,12 @@ function byEcoThenNameThenLength(a: Opening, b: Opening): number {
  * Each group leads with its biggest family, so the opening the group is named after comes first
  * and the stray transpositions filed alongside it come last; ties keep ECO order.
  */
-export function buildCatalog(openings: Opening[]): CatalogVolume[] {
+export function buildCatalog(openings: Opening[]): Catalog {
   const byGroup = Map.groupBy(openings.toSorted(byEcoThenNameThenLength), (opening) =>
     ecoGroupOf(opening.eco),
   );
 
-  return ECO_VOLUMES.map((volume) => {
+  const volumes = ECO_VOLUMES.map((volume): CatalogVolume => {
     const groups = volume.groups.flatMap((group): CatalogGroup[] => {
       const lines = (byGroup.get(group) ?? []).map(
         (opening): CatalogLine => ({ opening, ...parseOpeningName(opening.name) }),
@@ -56,4 +74,16 @@ export function buildCatalog(openings: Opening[]): CatalogVolume[] {
     });
     return { volume, groups, count: groups.reduce((sum, group) => sum + group.count, 0) };
   });
+
+  const places = new Map<string, CatalogPlace>();
+  for (const volume of volumes) {
+    for (const group of volume.groups) {
+      for (const family of group.families) {
+        family.lines.forEach(({ opening }, index) => {
+          places.set(opening.id, { opening, volume, group, family, index });
+        });
+      }
+    }
+  }
+  return { volumes, locate: (id) => places.get(id) };
 }

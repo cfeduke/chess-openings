@@ -1,8 +1,14 @@
-.catalog {
+.catalog,
+.catalog__browse {
   display: flex;
   flex: 1;
   flex-direction: column;
   min-height: 0;
+}
+
+/* `hidden` alone would lose to the `display` above. */
+.catalog__browse[hidden] {
+  display: none;
 }
 
 /* Search ---------------------------------------------------------------------------------- */
@@ -26,11 +32,6 @@
   overflow-y: auto;
 }
 
-.catalog__results[hidden],
-.catalog__browse[hidden] {
-  display: none;
-}
-
 .catalog__status {
   margin: 2px 4px 8px;
   color: var(--ink-soft);
@@ -38,13 +39,6 @@
 }
 
 /* Volumes --------------------------------------------------------------------------------- */
-
-.catalog__browse {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-height: 0;
-}
 
 .catalog__tabs {
   display: grid;
@@ -159,7 +153,6 @@
 
 .group__moves,
 .line__moves {
-  grid-column: 1;
   overflow: hidden;
   color: var(--ink-soft);
   font-size: 0.8rem;
@@ -224,6 +217,10 @@
   line-height: 1.25;
 }
 
+.group__moves {
+  grid-column: 1;
+}
+
 .line__moves {
   grid-column: 2;
 }
@@ -237,4 +234,8 @@
 .line[aria-current="true"] .line__moves {
   color: inherit;
   opacity: 0.85;
+}
+
+.line[aria-current="true"] .line__eco {
+  border-color: transparent;
 }

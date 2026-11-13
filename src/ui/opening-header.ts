@@ -1,25 +1,18 @@
 import './opening-header.css';
+import type { CatalogPlace } from '../catalog/catalog.ts';
 import { parseOpeningName } from '../catalog/name.ts';
-import type { Opening } from '../data/opening.ts';
 import { el } from '../dom.ts';
-import { ECO_VOLUMES, ecoGroupOf, ecoRangeLabel } from '../eco/taxonomy.ts';
+import { ecoRangeLabel } from '../eco/taxonomy.ts';
 
-/** Where an opening sits in the encyclopaedia: its volume, then its group of codes. */
-function place({ eco }: Opening): string {
-  const volume = ECO_VOLUMES.find((candidate) => candidate.letter === eco[0]);
-  const group = ecoGroupOf(eco);
-  return `Volume ${volume?.letter} · ${volume?.title} › ${ecoRangeLabel(group)} · ${group.title}`;
-}
-
-/** The name of the opening on the board, above the board. */
+/** The name of the opening on the board, above the board, with where the encyclopaedia files it. */
 export function createOpeningHeader(): {
   element: HTMLElement;
-  show(opening: Opening | null): void;
+  show(place: CatalogPlace | null): void;
 } {
   const element = el('header', { class: 'opening' });
 
-  const show = (opening: Opening | null) => {
-    if (!opening) {
+  const show = (place: CatalogPlace | null) => {
+    if (!place) {
       element.replaceChildren(
         el('h2', { class: 'opening__name' }, 'Choose an opening'),
         el(
@@ -31,15 +24,20 @@ export function createOpeningHeader(): {
       return;
     }
 
+    const { opening, volume, group } = place;
     const { family, variation } = parseOpeningName(opening.name);
     const name = el(
       'h2',
       { class: 'opening__name', 'aria-label': `${opening.eco} ${opening.name}` },
-      el('span', { class: 'opening__eco' }, opening.eco),
+      el('span', { class: 'opening__eco eco-badge' }, opening.eco),
       el('span', { class: 'opening__family' }, family),
     );
     if (variation) name.append(el('span', { class: 'opening__variation' }, variation));
-    element.replaceChildren(el('p', { class: 'opening__place' }, place(opening)), name);
+
+    const filedUnder =
+      `Volume ${volume.volume.letter} · ${volume.volume.title} › ` +
+      `${ecoRangeLabel(group.group)} · ${group.group.title}`;
+    element.replaceChildren(el('p', { class: 'opening__place' }, filedUnder), name);
   };
 
   show(null);

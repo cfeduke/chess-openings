@@ -1,12 +1,15 @@
+import { isSlug } from './text/slug.ts';
+
 /** Deep links: the opening on show is named in the address, as `#/<opening id>`. */
 
-const OPENING_HASH = /^#\/([a-z0-9]+(?:-[a-z0-9]+)*)$/;
+const PREFIX = '#/';
 
 export function hashForOpening(id: string): string {
-  return `#/${id}`;
+  return PREFIX + id;
 }
 
 /** The opening id a location hash names, or null if it names none. */
 export function openingIdFromHash(hash: string): string | null {
-  return hash.match(OPENING_HASH)?.[1] ?? null;
+  const id = hash.startsWith(PREFIX) ? hash.slice(PREFIX.length) : '';
+  return isSlug(id) ? id : null;
 }

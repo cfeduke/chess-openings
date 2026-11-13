@@ -8,6 +8,8 @@
       content="Learn chess openings by watching them: an ECO-organised catalog with an animated board."
     />
     <title>Chess Openings — learn by watching</title>
+    <!-- The catalog needs this as soon as the script runs: fetch it alongside the script. -->
+    <link rel="preload" href="%BASE_URL%openings.json" as="fetch" crossorigin />
   </head>
   <body>
     <div id="app"></div>

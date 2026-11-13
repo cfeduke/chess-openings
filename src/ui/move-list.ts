@@ -1,7 +1,7 @@
 import './move-list.css';
 import { moveNumber } from '../chess/san.ts';
 import type { TimelineMove } from '../chess/timeline.ts';
-import { el, exclusiveClass } from '../dom.ts';
+import { el, exclusiveAttribute, exclusiveClass } from '../dom.ts';
 import type { Player, PlayerSnapshot } from '../playback/player.ts';
 
 /** `1. e4` for White's moves, `1… e5` for Black's: how a player would say where a move falls. */
@@ -21,6 +21,7 @@ export function createMoveList(player: Player): { element: HTMLElement } {
   let shown: PlayerSnapshot['moves'] | undefined;
   let buttons: HTMLButtonElement[] = [];
   let cursor: HTMLButtonElement | undefined;
+  const holdCursor = exclusiveAttribute('aria-current', 'step');
   const holdPending = exclusiveClass('move--pending');
 
   const moveButton = (ply: number, label: string, text: string) =>
@@ -61,8 +62,7 @@ export function createMoveList(player: Player): { element: HTMLElement } {
 
     const current = buttons[ply];
     if (current !== cursor) {
-      cursor?.removeAttribute('aria-current');
-      current?.setAttribute('aria-current', 'step');
+      holdCursor([current]);
       current?.scrollIntoView({ block: 'nearest' });
       cursor = current;
     }

@@ -10,7 +10,7 @@ import { createCatalog } from './catalog.ts';
 function setup(openings: Opening[] = SMALL_BOOK) {
   const onSelect = vi.fn();
   const catalog = createCatalog({
-    volumes: buildCatalog(openings),
+    catalog: buildCatalog(openings),
     search: createSearch(openings),
     onSelect,
   });
@@ -251,11 +251,20 @@ describe('show', () => {
     expect(all('.line[aria-current]')).toEqual([]);
   });
 
-  it('marks the line in a group that is opened later, too', () => {
-    const { catalog, tab, group, line } = setup();
+  it('leaves no mark behind in a volume it has turned away from', () => {
+    const { catalog, tab, all } = setup();
     catalog.show(NAJDORF);
-    tab('C')?.click();
     catalog.show(ITALIAN);
+
+    tab('B')?.click();
+
+    expect(all('.line[aria-current]')).toEqual([]);
+  });
+
+  it('keeps the mark while its group is closed and opened again', () => {
+    const { catalog, group, line } = setup();
+    catalog.show(ITALIAN);
+
     group('C50')?.click();
     group('C50')?.click();
 
@@ -330,6 +339,16 @@ describe('search', () => {
     expect(onSelect).toHaveBeenCalledWith(NAJDORF);
   });
 
+  it('chooses nothing on Enter once the box has been emptied', () => {
+    const { type, press, searchBox, onSelect } = setup();
+    type('najdorf');
+    type('');
+
+    press(searchBox, 'Enter');
+
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
   it('goes back to the volumes when the box is emptied, or on Escape', () => {
     const { element, type, press, searchBox } = setup();
     const browse = element.querySelector('.catalog__browse') as HTMLElement;
@@ -359,28 +378,28 @@ describe('search', () => {
 });
 
 describe('with the whole encyclopaedia', () => {
-  // Built once for the three specs below, which follow on from one another.
-  const { element, tab, group, type, all, searchBox } = setup(realOpenings);
-
   it('says how many openings there are to search', () => {
+    const { searchBox } = setup(realOpenings);
+
     expect(searchBox.placeholder).toBe(
       `Search ${realOpenings.length.toLocaleString('en')} openings`,
     );
   });
 
   it('builds no lines until a group is opened, then only that group’s', () => {
+    const { tab, group, all } = setup(realOpenings);
     tab('B')?.click();
     expect(all('.line')).toEqual([]);
 
     group('B90')?.click();
 
-    const expected = realOpenings.filter(
-      (opening) => opening.eco >= 'B90' && opening.eco <= 'B99',
-    ).length;
-    expect(all('.line')).toHaveLength(expected);
+    const najdorf = realOpenings.filter((opening) => opening.eco >= 'B90' && opening.eco <= 'B99');
+    expect(all('.line')).toHaveLength(najdorf.length);
   });
 
   it('shows only the best of a great many matches, and says so', () => {
+    const { element, type, all } = setup(realOpenings);
+
     type('sicilian');
 
     expect(all('.catalog__results .line')).toHaveLength(50);

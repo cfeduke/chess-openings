@@ -14,9 +14,11 @@ const opening = (eco: string, name: string, san: string): Opening => ({
 
 describe('buildCatalog', () => {
   it('always lists the five volumes, even when some are empty', () => {
-    const catalog = buildCatalog([opening('B90', 'Sicilian Defense: Najdorf Variation', 'e4 c5')]);
+    const { volumes } = buildCatalog([
+      opening('B90', 'Sicilian Defense: Najdorf Variation', 'e4 c5'),
+    ]);
 
-    expect(catalog.map((volume) => [volume.volume.letter, volume.count])).toEqual([
+    expect(volumes.map((volume) => [volume.volume.letter, volume.count])).toEqual([
       ['A', 0],
       ['B', 1],
       ['C', 0],
@@ -27,7 +29,9 @@ describe('buildCatalog', () => {
 
   it('files each opening under volume → ECO group → family → line', () => {
     const najdorf = opening('B90', 'Sicilian Defense: Najdorf Variation', 'e4 c5 Nf3 d6');
-    const [, volumeB] = buildCatalog([najdorf]);
+    const {
+      volumes: [, volumeB],
+    } = buildCatalog([najdorf]);
 
     expect(volumeB?.groups).toEqual([
       {
@@ -50,13 +54,17 @@ describe('buildCatalog', () => {
   });
 
   it('omits ECO groups that have no openings', () => {
-    const [volumeA] = buildCatalog([opening('A01', 'Nimzo-Larsen Attack', 'b3')]);
+    const {
+      volumes: [volumeA],
+    } = buildCatalog([opening('A01', 'Nimzo-Larsen Attack', 'b3')]);
 
     expect(volumeA?.groups.map((entry) => entry.group.from)).toEqual(['A01']);
   });
 
   it('keeps one family together across the codes of a group, including its "with …" names', () => {
-    const [volumeA] = buildCatalog([
+    const {
+      volumes: [volumeA],
+    } = buildCatalog([
       opening('A07', "King's Indian Attack, with Bf5", 'Nf3 d5 g3 Bf5'),
       opening('A05', "King's Indian Attack", 'Nf3 Nf6 g3'),
       opening('A04', 'Zukertort Opening', 'Nf3'),
@@ -77,7 +85,9 @@ describe('buildCatalog', () => {
   });
 
   it('leads each group with its biggest family, and breaks ties by ECO order', () => {
-    const [volumeA] = buildCatalog([
+    const {
+      volumes: [volumeA],
+    } = buildCatalog([
       opening('A04', 'Colle System: Rhamphorhynchus Variation', 'Nf3 g6'),
       opening('A04', 'Zukertort Opening', 'Nf3'),
       opening('A06', 'Zukertort Opening: Tennison Gambit', 'Nf3 d5 e4'),
@@ -92,7 +102,9 @@ describe('buildCatalog', () => {
   });
 
   it('orders lines by ECO code, then name, then length — whatever order they arrive in', () => {
-    const [, , volumeC] = buildCatalog([
+    const {
+      volumes: [, , volumeC],
+    } = buildCatalog([
       opening('C51', 'Italian Game: Evans Gambit', 'e4 e5 Nf3 Nc6 Bc4 Bc5 b4'),
       opening('C50', 'Italian Game: Giuoco Pianissimo', 'e4 e5 Nf3 Nc6 Bc4 Bc5 d3 Nf6'),
       opening('C50', 'Italian Game', 'e4 e5 Nf3 Nc6 Bc4'),
@@ -112,7 +124,7 @@ describe('buildCatalog', () => {
 
   describe('for the real dataset', () => {
     const catalog = buildCatalog(realOpenings);
-    const groups = catalog.flatMap((volume) => volume.groups);
+    const groups = catalog.volumes.flatMap((volume) => volume.groups);
     const lines = groups.flatMap((group) => group.families).flatMap((family) => family.lines);
 
     it('contains every opening exactly once', () => {
@@ -121,7 +133,7 @@ describe('buildCatalog', () => {
     });
 
     it('keeps the counts consistent at every level', () => {
-      for (const volume of catalog) {
+      for (const volume of catalog.volumes) {
         expect(volume.count).toBe(volume.groups.reduce((sum, group) => sum + group.count, 0));
       }
       for (const group of groups) {
@@ -132,7 +144,7 @@ describe('buildCatalog', () => {
     });
 
     it('never mixes volumes or groups up', () => {
-      for (const volume of catalog) {
+      for (const volume of catalog.volumes) {
         for (const { group, families } of volume.groups) {
           for (const { opening: line } of families.flatMap((family) => family.lines)) {
             expect(line.eco[0]).toBe(volume.volume.letter);
@@ -150,6 +162,38 @@ describe('buildCatalog', () => {
 
       expect(najdorf?.families.map((family) => family.name)).toEqual(['Sicilian Defense']);
       expect(najdorf?.families[0]?.lines[0]?.variation).toBe('Najdorf Variation');
+    });
+  });
+
+  describe('locate', () => {
+    const najdorf = opening('B90', 'Sicilian Defense: Najdorf Variation', 'e4 c5 Nf3 d6');
+    const english = opening(
+      'B90',
+      'Sicilian Defense: Najdorf Variation, English Attack',
+      'e4 c5 Nf3 d6 Be3',
+    );
+    const catalog = buildCatalog([english, najdorf, opening('C50', 'Italian Game', 'e4 e5')]);
+
+    it('says where an opening is filed: its volume, group and family, and its place among the lines', () => {
+      const place = catalog.locate(english.id);
+
+      expect(place?.opening).toBe(english);
+      expect(place?.volume.volume.letter).toBe('B');
+      expect(place?.group.group.from).toBe('B90');
+      expect(place?.family.name).toBe('Sicilian Defense');
+      expect(place?.family.lines[place.index]?.opening).toBe(english);
+      expect(place?.index).toBe(1);
+      expect(catalog.locate(najdorf.id)?.index).toBe(0);
+    });
+
+    it('finds nothing for an id it does not know', () => {
+      expect(catalog.locate('no-such-opening')).toBeUndefined();
+    });
+
+    it('finds every opening of the real dataset', () => {
+      const real = buildCatalog(realOpenings);
+
+      expect(realOpenings.filter((entry) => real.locate(entry.id)?.opening !== entry)).toEqual([]);
     });
   });
 });

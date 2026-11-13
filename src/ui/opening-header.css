@@ -20,17 +20,6 @@
   font: 600 1.55rem / 1.15 var(--font-display);
 }
 
-.opening__eco,
-.line__eco {
-  border: 1px solid var(--rule);
-  border-radius: 5px;
-  background: var(--surface);
-  color: var(--ink-soft);
-  font: 600 0.78rem / 1 var(--font-body);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.03em;
-}
-
 .opening__eco {
   align-self: center;
   padding: 5px 7px;

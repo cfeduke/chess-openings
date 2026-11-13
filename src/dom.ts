@@ -19,14 +19,31 @@ export function el<K extends keyof HTMLElementTagNameMap>(
 }
 
 /**
- * A CSS class held by a changing set of elements. The returned function hands the class to
- * `holders` and takes it away from whoever held it before.
+ * A mark held by a changing set of elements. The returned function gives the mark to `holders`
+ * and takes it away from whoever held it before — wherever they are, attached to the page or not.
  */
-export function exclusiveClass(className: string): (holders: (Element | undefined)[]) => void {
+function exclusive(
+  give: (holder: Element) => void,
+  take: (holder: Element) => void,
+): (holders: (Element | null | undefined)[]) => void {
   let current: Element[] = [];
   return (holders) => {
-    for (const holder of current) holder.classList.remove(className);
-    current = holders.filter((holder) => holder !== undefined);
-    for (const holder of current) holder.classList.add(className);
+    current.forEach(take);
+    current = holders.filter((holder) => holder != null);
+    current.forEach(give);
   };
 }
+
+/** A CSS class that only the latest holders have. */
+export const exclusiveClass = (className: string) =>
+  exclusive(
+    (holder) => holder.classList.add(className),
+    (holder) => holder.classList.remove(className),
+  );
+
+/** An attribute, such as `aria-current`, that only the latest holders have. */
+export const exclusiveAttribute = (name: string, value: string) =>
+  exclusive(
+    (holder) => holder.setAttribute(name, value),
+    (holder) => holder.removeAttribute(name),
+  );

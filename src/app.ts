@@ -96,7 +96,8 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
     let dataset: OpeningsDataset;
     try {
       dataset = await load();
-    } catch {
+    } catch (error) {
+      console.error(error);
       const retry = el('button', { type: 'button', class: 'catalog-panel__retry' }, 'Try again');
       retry.addEventListener('click', openCatalog);
       catalogPanel.replaceChildren(
@@ -109,30 +110,35 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
       );
       return;
     }
-    if (signal?.aborted) return;
 
-    const byId = new Map(dataset.openings.map((opening) => [opening.id, opening]));
+    const catalog = buildCatalog(dataset.openings);
 
-    /** Puts `opening` on the board and plays it; with `null`, clears the board. */
-    const show = (opening: Opening | null) => {
-      header.show(opening);
-      catalog.show(opening);
-      player.load(buildTimeline(opening ?? NO_LINE));
-      if (opening) player.play();
+    /**
+     * The address says which opening is on the board; this makes the page agree with it. It is
+     * the only way an opening gets there, whether the address changed by a click, the back
+     * button or a link.
+     */
+    const showFromAddress = () => {
+      const place = catalog.locate(openingIdFromHash(location.hash) ?? '') ?? null;
+      header.show(place);
+      catalogView.show(place?.opening ?? null);
+      player.load(buildTimeline(place?.opening ?? NO_LINE));
+      if (place) player.play();
     };
 
-    const catalog = createCatalog({
-      volumes: buildCatalog(dataset.openings),
-      search: createSearch(dataset.openings),
-      // The address is how a choice is remembered: by the back button, a bookmark, a shared link.
-      onSelect(opening) {
-        history.pushState(null, '', hashForOpening(opening.id));
-        show(opening);
-      },
-    });
-    catalogPanel.replaceChildren(catalog.element, credits(dataset.source));
+    /** Puts `opening` on the board, by way of the address. */
+    const open = (opening: Opening) => {
+      history.pushState(null, '', hashForOpening(opening.id));
+      showFromAddress();
+    };
 
-    const showFromAddress = () => show(byId.get(openingIdFromHash(location.hash) ?? '') ?? null);
+    const catalogView = createCatalog({
+      catalog,
+      search: createSearch(dataset.openings),
+      onSelect: open,
+    });
+    catalogPanel.replaceChildren(catalogView.element, credits(dataset.source));
+
     window.addEventListener('hashchange', showFromAddress, { signal });
     showFromAddress();
   };

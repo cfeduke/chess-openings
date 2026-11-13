@@ -100,3 +100,14 @@ input {
 .icon-button[aria-pressed="false"] {
   color: var(--ink-soft);
 }
+
+/* An ECO code, set apart from the name beside it. */
+.eco-badge {
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font: 600 0.78rem / 1 var(--font-body);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+}

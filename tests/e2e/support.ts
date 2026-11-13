@@ -1,4 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
+import { hashForOpening } from '../../src/routing.ts';
 import { delaySetting } from '../../src/settings.ts';
 
 export const boardOn = (page: Page) => page.getByRole('img', { name: 'Chess board' });
@@ -11,6 +12,16 @@ export const squareOn = (page: Page, name: string) =>
   boardOn(page).locator(`.square[data-square="${name}"]`);
 
 export const movesOn = (page: Page) => page.getByRole('region', { name: 'Moves' });
+
+export const catalogOn = (page: Page) => page.getByRole('navigation', { name: 'Openings' });
+
+/** The name of the opening on the board, above the board. */
+export const openingNameOn = (page: Page) =>
+  page.getByRole('region', { name: 'Board' }).getByRole('heading', { level: 2 });
+
+/** The address of the site with an opening on the board. */
+export const linkTo = (openingId: string) => `/${hashForOpening(openingId)}`;
+export const ITALIAN_GAME = linkTo('italian-game');
 
 /** Where an element is on the page. Fails if it is not rendered. */
 export async function box(locator: Locator) {

@@ -1,10 +1,17 @@
-import { expect, type Page, test } from '@playwright/test';
-import { boardOn, box, movesOn, pieceFrom, startWithDelay } from './support.ts';
+import { expect, test } from '@playwright/test';
+import {
+  boardOn,
+  box,
+  catalogOn,
+  ITALIAN_GAME,
+  linkTo,
+  movesOn,
+  openingNameOn,
+  pieceFrom,
+  startWithDelay,
+} from './support.ts';
 
-const catalogOn = (page: Page) => page.getByRole('navigation', { name: 'Openings' });
-/** The name of the opening on the board, above the board. */
-const openingNameOn = (page: Page) =>
-  page.getByRole('region', { name: 'Board' }).getByRole('heading', { level: 2 });
+const NAJDORF = linkTo('sicilian-defense-najdorf-variation');
 
 test.beforeEach(async ({ page }) => {
   await startWithDelay(page, 400);
@@ -29,7 +36,7 @@ test('arriving: a board, an invitation, and the whole encyclopaedia to browse', 
 test('the catalog is to the left of the board, and nothing spills off the page', async ({
   page,
 }) => {
-  await page.goto('/#/italian-game');
+  await page.goto(ITALIAN_GAME);
   const catalog = await box(catalogOn(page));
   const board = await box(boardOn(page));
   const moves = await box(movesOn(page));
@@ -98,7 +105,7 @@ test('searching by name, by ECO code and by moves', async ({ page }) => {
 });
 
 test('a link to an opening opens it, finds it in the catalog, and plays it', async ({ page }) => {
-  await page.goto('/#/sicilian-defense-najdorf-variation');
+  await page.goto(NAJDORF);
   const catalog = catalogOn(page);
 
   await expect(openingNameOn(page)).toHaveAccessibleName('B90 Sicilian Defense: Najdorf Variation');
@@ -112,11 +119,11 @@ test('a link to an opening opens it, finds it in the catalog, and plays it', asy
   const line = catalog.locator('.line[aria-current="true"]');
   await expect(line).toHaveAccessibleName('Sicilian Defense: Najdorf Variation (B90)');
   await expect(line).toBeInViewport();
-  await expect(pieceFrom(page, 'a7')).toHaveAttribute('data-square', 'a6', { timeout: 8000 });
+  await expect(pieceFrom(page, 'c7')).toHaveAttribute('data-square', 'c5');
 });
 
 test('the back button returns to the opening before', async ({ page }) => {
-  await page.goto('/#/italian-game');
+  await page.goto(ITALIAN_GAME);
   await expect(openingNameOn(page)).toHaveAccessibleName('C50 Italian Game');
   const catalog = catalogOn(page);
   await catalog.getByRole('searchbox', { name: 'Search openings' }).fill('ruy lopez');
@@ -127,6 +134,22 @@ test('the back button returns to the opening before', async ({ page }) => {
 
   await expect(openingNameOn(page)).toHaveAccessibleName('C50 Italian Game');
   await expect(movesOn(page).getByRole('button', { name: '3. Bc4' })).toBeVisible();
+});
+
+test('the openings are fetched once, alongside the page rather than after it', async ({ page }) => {
+  const fetched: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().endsWith('/openings.json')) fetched.push(request.resourceType());
+  });
+
+  await page.goto('/');
+  await expect(catalogOn(page).getByRole('tab')).toHaveCount(5);
+
+  expect(fetched).toHaveLength(1);
+  await expect(page.locator('link[rel="preload"][as="fetch"]')).toHaveAttribute(
+    'href',
+    '/openings.json',
+  );
 });
 
 test('the page credits its sources', async ({ page }) => {
