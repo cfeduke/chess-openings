@@ -11,3 +11,8 @@ export function slugify(text: string): string {
   }
   return foldWords(text).join('-');
 }
+
+/** Whether `text` has the shape `slugify` produces: lowercase words and numbers joined by dashes. */
+export function isSlug(text: string): boolean {
+  return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(text);
+}

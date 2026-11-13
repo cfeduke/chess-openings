@@ -1,0 +1,33 @@
+.opening {
+  min-width: 0;
+}
+
+.opening__place {
+  margin: 0 0 4px;
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.opening__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0;
+  font: 600 1.55rem / 1.15 var(--font-display);
+}
+
+.opening__eco {
+  align-self: center;
+  padding: 5px 7px;
+}
+
+.opening__variation {
+  color: var(--ink-soft);
+  font-size: 0.72em;
+  font-style: italic;
+  font-weight: 500;
+}

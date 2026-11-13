@@ -1,0 +1,30 @@
+import { describe, expect, it, vi } from 'vitest';
+import { SMALL_DATASET } from '../../tests/support/openings.ts';
+import { loadOpenings } from './load.ts';
+
+const respondWith = (response: Partial<Response>) => vi.fn(async () => response as Response);
+
+describe('loadOpenings', () => {
+  it('fetches the dataset the build put next to the page', async () => {
+    const fetch = respondWith({ ok: true, json: async () => SMALL_DATASET });
+
+    const dataset = await loadOpenings(fetch);
+
+    expect(fetch).toHaveBeenCalledWith('/openings.json');
+    expect(dataset).toEqual(SMALL_DATASET);
+  });
+
+  it('fails with the status when the server does not have it', async () => {
+    const fetch = respondWith({ ok: false, status: 404 });
+
+    await expect(loadOpenings(fetch)).rejects.toThrow(/openings\.json.*404/);
+  });
+
+  it('lets a network failure through', async () => {
+    const fetch = vi.fn(async () => {
+      throw new TypeError('Failed to fetch');
+    });
+
+    await expect(loadOpenings(fetch)).rejects.toThrow('Failed to fetch');
+  });
+});

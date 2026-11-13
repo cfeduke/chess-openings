@@ -2,6 +2,7 @@ import { cpSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { isSlug } from '../../src/text/slug.ts';
 import { realDataset } from '../../tests/support/real-openings.ts';
 import { LICHESS_DATA_DIR, loadDataset, SOURCE_FILE, VOLUME_FILES } from './dataset.ts';
 
@@ -26,7 +27,7 @@ describe('the lichess dataset', () => {
     const ids = openings.map((opening) => opening.id);
 
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids.filter((id) => !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(id))).toEqual([]);
+    expect(ids.filter((id) => !isSlug(id))).toEqual([]);
   });
 
   it('gives every opening matching SAN and UCI move lists', () => {

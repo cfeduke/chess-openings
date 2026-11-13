@@ -11,9 +11,9 @@ const KEYS: Record<string, (player: Player) => void> = {
 /**
  * Drives the player from the keyboard, wherever the focus is: space plays and pauses, the
  * arrows step, Home and End jump. A key that already means something to the focused control is
- * left to it. Returns a function that removes the shortcuts again.
+ * left to it. Aborting `signal` removes the shortcuts again.
  */
-export function bindShortcuts(page: Document, player: Player): () => void {
+export function bindShortcuts(page: Document, player: Player, signal?: AbortSignal): void {
   const onKeydown = (event: KeyboardEvent) => {
     const action = KEYS[event.key];
     if (!action || event.altKey || event.ctrlKey || event.metaKey) return;
@@ -29,6 +29,5 @@ export function bindShortcuts(page: Document, player: Player): () => void {
     action(player);
   };
 
-  page.addEventListener('keydown', onKeydown);
-  return () => page.removeEventListener('keydown', onKeydown);
+  page.addEventListener('keydown', onKeydown, { signal });
 }

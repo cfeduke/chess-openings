@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { pieceFrom, startWithDelay } from './support.ts';
+import { ITALIAN_GAME, pieceFrom, startWithDelay } from './support.ts';
 
 declare global {
   interface Window {
@@ -21,7 +21,7 @@ test('moves are heard once the visitor has interacted with the page, and not bef
     };
   });
   await startWithDelay(page, 400);
-  await page.goto('/');
+  await page.goto(ITALIAN_GAME);
   const pawn = pieceFrom(page, 'e2');
 
   // The first move is made in silence: nobody has touched the page yet.

@@ -2,4 +2,4 @@ import { mountApp } from './app.ts';
 
 const root = document.getElementById('app');
 if (!root) throw new Error('Missing #app root element');
-mountApp(root);
+void mountApp(root);

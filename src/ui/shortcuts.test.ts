@@ -4,11 +4,12 @@ import { fakePlayer } from '../../tests/support/fake-player.ts';
 import { ITALIAN_MOVES as italian } from '../../tests/support/lines.ts';
 import { bindShortcuts } from './shortcuts.ts';
 
-let unbind = () => {};
+let unbound = new AbortController();
 
 function setup() {
   const { player } = fakePlayer({ moves: italian, ply: 2 });
-  unbind = bindShortcuts(document, player);
+  unbound = new AbortController();
+  bindShortcuts(document, player, unbound.signal);
   /** Presses a key with the focus on `target`; returns whether the browser's default was left alone. */
   const press = (key: string, target: Element = document.body, modifiers: KeyboardEventInit = {}) =>
     target.dispatchEvent(
@@ -23,7 +24,7 @@ function focusable(html: string): Element {
 }
 
 afterEach(() => {
-  unbind();
+  unbound.abort();
   document.body.innerHTML = '';
 });
 
@@ -119,12 +120,22 @@ describe('keyboard shortcuts', () => {
     expect(player.seek).not.toHaveBeenCalled();
   });
 
-  it('stop when unbound', () => {
+  it('stop when their signal is aborted', () => {
     const { player, press } = setup();
 
-    unbind();
+    unbound.abort();
     press(' ');
 
     expect(player.toggle).not.toHaveBeenCalled();
+  });
+
+  it('need no signal at all', () => {
+    const { player } = fakePlayer({ moves: italian });
+    const page = new Document();
+
+    bindShortcuts(page, player);
+    page.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+
+    expect(player.stepForward).toHaveBeenCalledTimes(1);
   });
 });
