@@ -38,45 +38,51 @@ const FILE = Buffer.concat(
   ),
 );
 
-/** Where a download that gets half of the file stops. */
-const HALF = Math.floor(FILE.length / 2);
-
 const urlOf = (month: string) =>
   `https://database.lichess.org/standard/lichess_db_standard_rated_${month}.pgn.zst`;
 
-/** What `open` is to do the `n`th time it is asked: how many bytes to give, and how to end. */
-interface Opening {
-  bytes?: number;
-  ends?: 'well' | 'badly';
-}
+/** Small enough parts that the file is several of them, and three to be asked for at a time. */
+const SETTINGS = { threads: 2, connections: 3, partSize: 64 };
 
-function fakeDatabase(openings: Opening[] = []) {
-  const opened: [location: string, from: number][] = [];
+/** The parts of the file, as the bytes each begins and ends at. */
+const PARTS = Array.from({ length: Math.ceil(FILE.length / 64) }, (_, part) => [
+  part * 64,
+  Math.min(part * 64 + 64, FILE.length),
+]);
+
+/** What goes wrong with the part of the file beginning at `from`, the `nth` time it is asked for. */
+type Mishap = (from: number, nth: number) => 'fails' | 'comes short' | undefined;
+
+function fakeDatabase(mishap: Mishap = () => undefined) {
+  const read: [location: string, from: number, to: number][] = [];
   const written = new Map<string, string>();
   const paused: number[] = [];
   const said: string[] = [];
+  const flights = { now: 0, most: 0 };
+  let clock = 0;
   return {
-    opened,
+    read,
     written,
     paused,
     said,
+    flights,
     io: {
       fetchText: async (url: string) => {
         if (url !== 'https://database.lichess.org/standard/list.txt') throw new Error(url);
         return `${urlOf('2026-10')}\n${urlOf('2026-09')}\n${urlOf('2026-08')}\n`;
       },
-      open: async (location: string, from: number) => {
-        const { bytes = FILE.length, ends = 'well' } = openings[opened.length] ?? {};
-        opened.push([location, from]);
-        return {
-          size: FILE.length,
-          bytes: (async function* () {
-            for (let at = from; at < Math.min(from + bytes, FILE.length); at += 64) {
-              yield FILE.subarray(at, Math.min(at + 64, from + bytes, FILE.length));
-            }
-            if (ends === 'badly') throw new Error('the connection was lost');
-          })(),
-        };
+      size: async () => FILE.length,
+      read: async (location: string, from: number, to: number) => {
+        const nth = read.filter(([, asked]) => asked === from).length;
+        read.push([location, from, to]);
+        flights.most = Math.max(flights.most, ++flights.now);
+        // Long enough for the parts asked for at one time to be on their way together.
+        await new Promise((resolve) => setTimeout(resolve, 2));
+        flights.now--;
+
+        const wrong = mishap(from, nth);
+        if (wrong === 'fails') throw new Error('the connection was lost');
+        return FILE.subarray(from, wrong === 'comes short' ? to - 1 : to);
       },
       writeFile: async (path: string, contents: string) => {
         written.set(path, contents);
@@ -85,10 +91,14 @@ function fakeDatabase(openings: Opening[] = []) {
       pause: async (ms: number) => {
         paused.push(ms);
       },
+      // Each look at the clock finds it a minute later.
+      now: () => {
+        clock += 60_000;
+        return clock;
+      },
       log: (line: string) => {
         said.push(line);
       },
-      workers: 2,
     },
   };
 }
@@ -101,22 +111,37 @@ function expected() {
 }
 
 describe('updateGamesData', () => {
+  const update = (target: string | undefined, database: ReturnType<typeof fakeDatabase>) =>
+    updateGamesData(target, INTEREST, 'data/lichess-games', database.io, SETTINGS);
+
   it('reads the month it is asked for from the database, and writes its tallies', async () => {
     const database = fakeDatabase();
 
-    await updateGamesData('2026-09', INTEREST, 'data/lichess-games', database.io);
+    await update('2026-09', database);
 
-    expect(database.opened).toEqual([[urlOf('2026-09'), 0]]);
+    expect(new Set(database.read.map(([location]) => location))).toEqual(
+      new Set([urlOf('2026-09')]),
+    );
     expect(database.written.get('data/lichess-games/positions.tsv')).toBe(
       expected().files.positions,
     );
     expect(database.written.get('data/lichess-games/tallies.tsv')).toBe(expected().files.tallies);
   });
 
+  it('asks for the file a part at a time, in order, and for no more at once than it may', async () => {
+    const database = fakeDatabase();
+
+    await update('2026-09', database);
+
+    expect(PARTS.length).toBeGreaterThan(SETTINGS.connections);
+    expect(database.read.map(([, from, to]) => [from, to])).toEqual(PARTS);
+    expect(database.flights.most).toBe(SETTINGS.connections);
+  });
+
   it('records which month that was, how many games it held and which were left out', async () => {
     const database = fakeDatabase();
 
-    await updateGamesData('2026-09', INTEREST, 'data/lichess-games', database.io);
+    await update('2026-09', database);
 
     expect(JSON.parse(database.written.get('data/lichess-games/SOURCE.json') ?? '')).toEqual({
       database: 'lichess_db_standard_rated',
@@ -141,9 +166,9 @@ describe('updateGamesData', () => {
   it('reads the newest month there is when it is not asked for one', async () => {
     const database = fakeDatabase();
 
-    const report = await updateGamesData(undefined, INTEREST, 'data/lichess-games', database.io);
+    const report = await update(undefined, database);
 
-    expect(database.opened).toEqual([[urlOf('2026-10'), 0]]);
+    expect(database.read[0]?.[0]).toBe(urlOf('2026-10'));
     expect(report.month).toBe('2026-10');
   });
 
@@ -151,9 +176,9 @@ describe('updateGamesData', () => {
     const database = fakeDatabase();
     const path = '/downloads/lichess_db_standard_rated_2024-03.pgn.zst';
 
-    await updateGamesData(path, INTEREST, 'data/lichess-games', database.io);
+    await update(path, database);
 
-    expect(database.opened).toEqual([[path, 0]]);
+    expect(new Set(database.read.map(([location]) => location))).toEqual(new Set([path]));
     expect(JSON.parse(database.written.get('data/lichess-games/SOURCE.json') ?? '')).toMatchObject({
       month: '2024-03',
       url: urlOf('2024-03'),
@@ -163,16 +188,14 @@ describe('updateGamesData', () => {
   it('refuses a file whose name does not say which month it is of', async () => {
     const database = fakeDatabase();
 
-    await expect(
-      updateGamesData('/downloads/games.pgn.zst', INTEREST, 'data/lichess-games', database.io),
-    ).rejects.toThrow(/which month/);
-    expect(database.opened).toEqual([]);
+    await expect(update('/downloads/games.pgn.zst', database)).rejects.toThrow(/which month/);
+    expect(database.read).toEqual([]);
   });
 
   it('says what it did: the games it read and counted, and the positions none of them reached', async () => {
     const database = fakeDatabase();
 
-    const report = await updateGamesData('2026-09', INTEREST, 'data/lichess-games', database.io);
+    const report = await update('2026-09', database);
 
     expect(report).toEqual({
       month: '2026-09',
@@ -190,33 +213,36 @@ describe('updateGamesData', () => {
     });
   });
 
+  it('says how far it has got as it goes', async () => {
+    const database = fakeDatabase();
+
+    await update('2026-09', database);
+
+    expect(
+      database.said.filter((line) => /\d+\.\d% read.*min to go/.test(line)).length,
+    ).toBeGreaterThan(0);
+  });
+
   it.each([
-    ['breaks off', 'badly'],
-    ['stops short', 'well'],
-  ] as const)('takes up a download that %s where it left off', async (_how, ends) => {
-    const database = fakeDatabase([{ bytes: HALF, ends }, { bytes: 1, ends }, {}]);
+    ['fails', 'fails'],
+    ['comes short', 'comes short'],
+  ] as const)('asks again for a part of the file that %s', async (_how, wrong) => {
+    const database = fakeDatabase((from, nth) => (from === 64 && nth < 2 ? wrong : undefined));
 
-    await updateGamesData('2026-09', INTEREST, 'data/lichess-games', database.io);
+    await update('2026-09', database);
 
-    expect(database.opened).toEqual([
-      [urlOf('2026-09'), 0],
-      [urlOf('2026-09'), HALF],
-      [urlOf('2026-09'), HALF + 1],
-    ]);
+    expect(database.read.filter(([, from]) => from === 64).length).toBe(3);
+    expect(database.read.length).toBe(PARTS.length + 2);
     expect(database.paused.length).toBe(2);
+    expect(database.said.filter((line) => line.includes('asking again')).length).toBe(2);
     expect(database.written.get('data/lichess-games/tallies.tsv')).toBe(expected().files.tallies);
   });
 
-  it('gives up on a download that keeps breaking off without getting any further', async () => {
-    const database = fakeDatabase([
-      { bytes: HALF, ends: 'badly' },
-      ...Array<Opening>(20).fill({ bytes: 0, ends: 'badly' }),
-    ]);
+  it('gives up on a part of the file that keeps failing, and writes nothing', async () => {
+    const database = fakeDatabase((from) => (from === 64 ? 'fails' : undefined));
 
-    await expect(
-      updateGamesData('2026-09', INTEREST, 'data/lichess-games', database.io),
-    ).rejects.toThrow(/connection was lost/);
-    expect(database.opened.length).toBe(6);
+    await expect(update('2026-09', database)).rejects.toThrow(/connection was lost/);
+    expect(database.read.filter(([, from]) => from === 64).length).toBe(6);
     expect(database.written.size).toBe(0);
   });
 });
