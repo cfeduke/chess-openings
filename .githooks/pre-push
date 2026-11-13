@@ -1,0 +1,7 @@
+#!/bin/sh
+# Local replacement for hosted CI: nothing is pushed unless the full
+# verification (lint, typecheck, unit tests, build, integration tests) passes.
+# Bypass in an emergency with `git push --no-verify`.
+set -e
+echo "pre-push: running npm run verify"
+npm run verify
