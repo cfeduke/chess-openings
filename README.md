@@ -119,35 +119,33 @@ it whichever appearance is in use, and the choice is remembered between visits.
 
 ### Installing a theme pack
 
-A theme pack is a zip named after its two colours — `walnut_gold.zip`, say — holding pieces and a
-board made for each other:
+A theme pack is a zip named after its two colours, holding pieces and a board made for each
+other. `walnut_gold.zip` is "Walnut & Gold", and its id here is `walnut-gold`.
 
-| In the zip                    | What it is                                         | Installed?                |
-| ----------------------------- | -------------------------------------------------- | ------------------------- |
-| `src/board/pieces/*.svg`      | The twelve pieces: `wk.svg` … `bp.svg`             | Yes, into a new directory |
-| `src/board/pieces/LICENSE.md` | Where the artwork comes from, and on what terms    | Yes, beside the pieces    |
-| `board.css`                   | The board's five colours, as `--board-*` variables | The values only           |
-| `README.md`, `preview.png`    | The pack's notes, and a picture of it              | No                        |
+| In the zip                 | What it is                                                 |
+| -------------------------- | ---------------------------------------------------------- |
+| `src/board/pieces/`        | The twelve pieces, `wk.svg` … `bp.svg`, and a `LICENSE.md` |
+| `board.css`                | The board's five colours, as `--board-*` variables         |
+| `README.md`, `preview.png` | The pack's notes and a picture of it; neither is used      |
 
-**Do not follow the install steps in the pack's own README.** They were written for the site when
-it had one look: they say to copy the pieces over the ones in `src/board/pieces/` and to merge
-`board.css` into `src/board/board.css`. Nothing is overwritten any more — a pack is added beside
-the others — and that stylesheet no longer holds any colours.
+**Do not follow the install steps in the pack's own README.** They date from when the site had
+one look: they overwrite the pieces in `src/board/pieces/` and merge the pack's colours into
+`src/board/board.css`, which no longer holds any.
 
-1. **Name it.** The id is the zip's name in kebab case, and the name is its two words joined by
-   an ampersand: `walnut_gold.zip` is `walnut-gold`, "Walnut & Gold".
+1. **Say what the dropdown will offer.** A pack is a change like any other, so it starts with an
+   issue, a branch and a failing test ([Development workflow](#development-workflow)): add the
+   pack's name to the options expected in
+   [`tests/e2e/player-ui.spec.ts`](tests/e2e/player-ui.spec.ts), and commit that.
 
-2. **Copy the pieces and their licence into a directory of their own**, named by the id:
+2. **Put the pieces and their licence in a directory of their own**, named by the id:
 
    ```sh
-   unzip walnut_gold.zip -d /tmp/walnut_gold
-   mkdir src/board/pieces/walnut-gold
-   cp /tmp/walnut_gold/src/board/pieces/* src/board/pieces/walnut-gold/
+   unzip -j walnut_gold.zip 'src/board/pieces/*' -d src/board/pieces/walnut-gold
    ```
 
 3. **Declare it** by adding an entry to `APPEARANCES` in
-   [`src/board/appearance.ts`](src/board/appearance.ts), with the five values from the pack's
-   `board.css`:
+   [`src/board/appearance.ts`](src/board/appearance.ts), with the five values that
+   `unzip -p walnut_gold.zip board.css` prints:
 
    ```ts
    pack('walnut-gold', 'Walnut & Gold', {
@@ -159,21 +157,22 @@ the others — and that stylesheet no longer holds any colours.
    }),
    ```
 
-   The dropdown lists the appearances in the order they are declared, and the first is the one a
-   new visitor sees.
+   The dropdown lists the appearances in the order they are declared, after Classic, which stays
+   first as the default.
 
-4. **Credit it** under [Credits](#credits), below.
-
-5. **Check it.** `npm run format` tidies the licence file, and `npm run verify` fails if a piece
-   or the licence is missing, if a directory of pieces is not used by any appearance, or if the id
-   or the name is already taken. Then `npm run dev`, choose it from the dropdown, and look.
+4. **Check it.** `npm run format` tidies the licence file. `npm run verify` fails if a piece or
+   the licence is missing, if a directory of pieces is not used by any appearance, if the id or
+   the name is already taken, or if the dropdown does not offer what step 1 said it would. Then
+   `npm run dev`, choose it from the dropdown, and look.
 
 ### Artwork from elsewhere
 
-A piece set that did not come as a pack goes in a directory just the same. What it needs is the
-twelve SVGs named by colour then piece — `wk wq wr wb wn wp` and `bk bq br bb bn bp` (`n` is the
-knight) — each on a square canvas with a `viewBox`, since an image is stretched to fill its
-square, and a `LICENSE.md`.
+A piece set that did not come as a pack goes in a directory of its own just the same, holding
+
+- twelve SVGs named by colour then piece — `wk wq wr wb wn wp` and `bk bq br bb bn bp` (`n` is the
+  knight) — each on a square canvas with a `viewBox`, since an image is stretched to fill its
+  square; and
+- a `LICENSE.md` saying where the artwork comes from and under what terms it is used.
 
 `pack()` is a shorthand for pieces and a board that share a name and whose artwork is in the
 public domain. Pieces and boards are separate things, though, and an appearance can pair any two:
@@ -205,7 +204,6 @@ then `npm run verify`.
 - **Chess pieces** — drawn by Colin M.L. Burnett, from Wikimedia Commons, used under the BSD
   3-Clause License; see [`src/board/pieces/cburnett/LICENSE.md`](src/board/pieces/cburnett/LICENSE.md).
   This is the Classic appearance.
-- **The Walnut & Gold, Midnight & Cyan, Sage & Sand and Slate & Ivory pieces** — original artwork
-  supplied as theme packs, each with its board colours, and dedicated to the public domain (CC0
-  1.0); see the `LICENSE.md` in `src/board/pieces/walnut-gold/`, `midnight-cyan/`, `sage-sand/`
-  and `slate-ivory/`.
+- **The pieces of every other appearance** — original artwork supplied as
+  [theme packs](#installing-a-theme-pack), each with its board colours, and dedicated to the
+  public domain (CC0 1.0); see the `LICENSE.md` beside each set in `src/board/pieces/`.
