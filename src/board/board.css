@@ -94,7 +94,6 @@
     opacity var(--move-ms, 0ms) ease-out,
     scale 180ms ease-out,
     filter 180ms ease-out;
-  will-change: translate;
 }
 
 /* The piece that is about to move is picked up off the board. */

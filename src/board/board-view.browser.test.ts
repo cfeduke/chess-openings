@@ -1,14 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { applyMove, type Position, type Square, startingPosition } from '../chess/board.ts';
+import { positionAfter } from '../../tests/support/positions.ts';
+import { type Square, startingPosition } from '../chess/board.ts';
 import { type BoardView, createBoardView } from './board-view.ts';
 import type { Orientation } from './geometry.ts';
 
 const BOARD_SIZE = 480;
 const SQUARE_SIZE = BOARD_SIZE / 8;
-
-function positionAfter(...moves: string[]): Position {
-  return moves.reduce((position, uci) => applyMove(position, uci).position, startingPosition());
-}
 
 function mount(orientation?: Orientation) {
   const host = document.createElement('div');
@@ -62,20 +59,6 @@ describe('the board in a real browser', () => {
     expect([...artwork.values()].every((image) => image.includes('svg'))).toBe(true);
   });
 
-  it('puts every piece exactly on its square', () => {
-    const { view, piece, square } = mount();
-    view.setPosition(startingPosition());
-
-    for (const name of startingPosition().keys()) {
-      const onSquare = square(name).getBoundingClientRect();
-      const ofPiece = piece(name).getBoundingClientRect();
-
-      expect(ofPiece.x, name).toBeCloseTo(onSquare.x, 0);
-      expect(ofPiece.y, name).toBeCloseTo(onSquare.y, 0);
-      expect(ofPiece.width, name).toBeCloseTo(SQUARE_SIZE, 0);
-    }
-  });
-
   it('lifts the highlighted piece without taking it off its square', async () => {
     const { view, piece, square } = mount();
     view.setPosition(startingPosition());
@@ -124,21 +107,36 @@ describe('the board in a real browser', () => {
     const { view, arrow, square } = mount();
     view.setPosition(startingPosition());
 
-    view.showArrow('e2', 'e4', { durationMs: 100 });
+    view.showArrow('e2', 'e4', { durationMs: 300 });
 
+    // It takes its time …
     const shaft = arrow().querySelector('.arrow__shaft') as SVGGraphicsElement;
+    expect(getComputedStyle(shaft).strokeDashoffset).not.toBe('0px');
     await expect.poll(() => getComputedStyle(shaft).strokeDashoffset).toBe('0px');
+    // … and ends with its tip at the centre of e4, having started inside e2, up the e-file.
     const drawn = arrow().getBoundingClientRect();
-    // Its tip is at the centre of e4 and it starts inside e2, straight up the e-file.
     expect(drawn.top).toBeCloseTo(centre(square('e4')).y, 0);
     expect(drawn.bottom).toBeGreaterThan(square('e2').getBoundingClientRect().top);
     expect(drawn.bottom).toBeLessThan(centre(square('e2')).y);
     expect(drawn.left + drawn.width / 2).toBeCloseTo(centre(square('e4')).x, 0);
   });
 
-  it('turns around for Black, keeping pieces on their squares', () => {
+  it('shows the whole arrow at once when it is given no time to draw', () => {
+    const { view, arrow } = mount();
+
+    view.showArrow('g1', 'f3');
+
+    const shaft = arrow().querySelector('.arrow__shaft') as SVGGraphicsElement;
+    const head = arrow().querySelector('.arrow__head') as SVGGraphicsElement;
+    expect(getComputedStyle(shaft).strokeDashoffset).toBe('0px');
+    expect(getComputedStyle(head).opacity).toBe('1');
+  });
+
+  it('turns around for Black at once, even with a slide in flight', async () => {
     const { view, piece, square } = mount();
     view.setPosition(startingPosition());
+    await painted();
+    view.setPosition(positionAfter('e2e4'), { durationMs: 300 });
 
     view.setOrientation('black');
 
@@ -146,7 +144,24 @@ describe('the board in a real browser', () => {
     const a1 = square('a1').getBoundingClientRect();
     expect(a1.right).toBeCloseTo(board.right, 0);
     expect(a1.top).toBeCloseTo(board.top, 0);
-    expect(centre(piece('a1')).x).toBeCloseTo(centre(square('a1')).x, 0);
-    expect(centre(piece('a1')).y).toBeCloseTo(centre(square('a1')).y, 0);
+    for (const [id, name] of [
+      ['a1', 'a1'],
+      ['e2', 'e4'],
+    ] as const) {
+      expect(centre(piece(id)).x, id).toBeCloseTo(centre(square(name)).x, 0);
+      expect(centre(piece(id)).y, id).toBeCloseTo(centre(square(name)).y, 0);
+    }
+  });
+
+  it('keeps a drawn arrow drawn when the board turns, rather than drawing it again', async () => {
+    const { view, arrow, square } = mount();
+    view.showArrow('e2', 'e4', { durationMs: 150 });
+    const shaft = arrow().querySelector('.arrow__shaft') as SVGGraphicsElement;
+    await expect.poll(() => getComputedStyle(shaft).strokeDashoffset).toBe('0px');
+
+    view.setOrientation('black');
+
+    expect(getComputedStyle(shaft).strokeDashoffset).toBe('0px');
+    expect(arrow().getBoundingClientRect().bottom).toBeCloseTo(centre(square('e4')).y, 0);
   });
 });

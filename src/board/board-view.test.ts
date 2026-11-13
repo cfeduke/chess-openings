@@ -1,14 +1,11 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { applyMove, type Position, startingPosition } from '../chess/board.ts';
+import { positionAfter } from '../../tests/support/positions.ts';
+import { applyMove, startingPosition } from '../chess/board.ts';
 import { createBoardView } from './board-view.ts';
+import type { Orientation } from './geometry.ts';
 
-/** The position after playing UCI moves from the start. */
-function positionAfter(...moves: string[]): Position {
-  return moves.reduce((position, uci) => applyMove(position, uci).position, startingPosition());
-}
-
-function setup(orientation?: 'white' | 'black') {
+function setup(orientation?: Orientation) {
   const view = createBoardView({ orientation });
   const { element } = view;
   return {
@@ -18,6 +15,10 @@ function setup(orientation?: 'white' | 'black') {
     piece: (id: string) => element.querySelector<HTMLElement>(`.piece[data-piece="${id}"]`),
     pieces: () => [...element.querySelectorAll<HTMLElement>('.piece')],
     arrow: () => element.querySelector<SVGElement>('.arrow'),
+    marked: (className: string) =>
+      [...element.querySelectorAll<HTMLElement>(`.${className}`)]
+        .map((marked) => marked.dataset.square ?? marked.dataset.piece)
+        .sort(),
   };
 }
 
@@ -41,8 +42,9 @@ describe('the board', () => {
   });
 
   it('lays the squares out from White’s side by default', () => {
-    const { square } = setup();
+    const { view, square } = setup();
 
+    expect(view.orientation).toBe('white');
     expect(square('a8')?.style.translate).toBe('0% 0%');
     expect(square('h1')?.style.translate).toBe('700% 700%');
   });
@@ -94,35 +96,26 @@ describe('setPosition', () => {
     expect(pieces()).toHaveLength(32);
   });
 
-  it('tells the stylesheet how long the slide should take', () => {
-    const { view, element } = setup();
-    view.setPosition(startingPosition());
-    expect(element.style.getPropertyValue('--move-ms')).toBe('0ms');
-
-    view.setPosition(positionAfter('e2e4'), { durationMs: 300 });
-
-    expect(element.style.getPropertyValue('--move-ms')).toBe('300ms');
-  });
-
   it('raises the pieces that are moving above the rest, until they land', () => {
-    const { view, piece } = setup();
+    const { view, marked } = setup();
     view.setPosition(startingPosition());
 
     view.setPosition(positionAfter('g1f3'), { durationMs: 300 });
 
-    expect(piece('g1')?.classList.contains('piece--moving')).toBe(true);
-    expect(piece('e2')?.classList.contains('piece--moving')).toBe(false);
+    expect(marked('piece--moving')).toEqual(['f3']);
     vi.advanceTimersByTime(300);
-    expect(piece('g1')?.classList.contains('piece--moving')).toBe(false);
+    expect(marked('piece--moving')).toEqual([]);
   });
 
   it('fades a captured piece out, then removes it', () => {
-    const { view, piece, pieces } = setup();
+    const { view, element, piece, pieces } = setup();
     view.setPosition(positionAfter('e2e4', 'd7d5'));
 
     view.setPosition(positionAfter('e2e4', 'd7d5', 'e4d5'), { durationMs: 300 });
 
     expect(piece('d7')?.classList.contains('piece--captured')).toBe(true);
+    // While it fades it no longer counts as standing on d5: the capturing pawn does.
+    expect(element.querySelectorAll('.piece[data-square="d5"]')).toHaveLength(1);
     expect(piece('e2')?.dataset.square).toBe('d5');
     vi.advanceTimersByTime(299);
     expect(piece('d7')).not.toBeNull();
@@ -141,7 +134,7 @@ describe('setPosition', () => {
   });
 
   it('finishes the previous change before starting the next', () => {
-    const { view, piece, pieces } = setup();
+    const { view, piece, pieces, marked } = setup();
     view.setPosition(positionAfter('e2e4', 'd7d5'));
     view.setPosition(positionAfter('e2e4', 'd7d5', 'e4d5'), { durationMs: 300 });
 
@@ -149,13 +142,13 @@ describe('setPosition', () => {
 
     expect(piece('d7')).toBeNull();
     expect(piece('e2')?.classList.contains('piece--captured')).toBe(true);
-    expect(piece('d8')?.classList.contains('piece--moving')).toBe(true);
+    expect(marked('piece--moving')).toEqual(['d5']);
     vi.advanceTimersByTime(300);
     expect(pieces()).toHaveLength(30);
   });
 
   it('moves king and rook together when castling', () => {
-    const { view, piece } = setup();
+    const { view, piece, marked } = setup();
     const beforeCastling = positionAfter('e2e4', 'e7e5', 'g1f3', 'b8c6', 'f1c4', 'g8f6');
     view.setPosition(beforeCastling);
 
@@ -163,8 +156,7 @@ describe('setPosition', () => {
 
     expect(piece('e1')?.dataset.square).toBe('g1');
     expect(piece('h1')?.dataset.square).toBe('f1');
-    expect(piece('e1')?.classList.contains('piece--moving')).toBe(true);
-    expect(piece('h1')?.classList.contains('piece--moving')).toBe(true);
+    expect(marked('piece--moving')).toEqual(['f1', 'g1']);
   });
 
   it('changes the look of a pawn that promotes', () => {
@@ -189,44 +181,68 @@ describe('setPosition', () => {
     expect(piece('d7')?.dataset.square).toBe('d5');
     expect(piece('e2')?.dataset.square).toBe('e4');
   });
+
+  it('tints the squares of the move that led to the position', () => {
+    const { view, marked } = setup();
+
+    view.setPosition(positionAfter('e2e4'), { lastMove: { from: 'e2', to: 'e4' } });
+    expect(marked('square--last-move')).toEqual(['e2', 'e4']);
+
+    view.setPosition(positionAfter('e2e4', 'e7e5'), { lastMove: { from: 'e7', to: 'e5' } });
+    expect(marked('square--last-move')).toEqual(['e5', 'e7']);
+  });
+
+  it('shows no tint for a position that no move led to', () => {
+    const { view, marked } = setup();
+    view.setPosition(positionAfter('e2e4'), { lastMove: { from: 'e2', to: 'e4' } });
+
+    view.setPosition(startingPosition());
+
+    expect(marked('square--last-move')).toEqual([]);
+  });
+
+  it('drops the highlight and the arrow, which were about the position before', () => {
+    const { view, element } = setup();
+    view.setPosition(startingPosition());
+    view.highlight('e2');
+    view.showArrow('e2', 'e4');
+
+    view.setPosition(positionAfter('e2e4'), { durationMs: 300 });
+
+    expect(element.querySelector('.square--highlight, .piece--lifted, .arrow')).toBeNull();
+  });
 });
 
 describe('highlight', () => {
   it('marks the square and lifts the piece standing on it', () => {
-    const { view, square, piece } = setup();
+    const { view, marked } = setup();
     view.setPosition(startingPosition());
 
     view.highlight('e2');
 
-    expect(square('e2')?.classList.contains('square--highlight')).toBe(true);
-    expect(piece('e2')?.classList.contains('piece--lifted')).toBe(true);
+    expect(marked('square--highlight')).toEqual(['e2']);
+    expect(marked('piece--lifted')).toEqual(['e2']);
   });
 
-  it('moves when another square is highlighted, and clears with null', () => {
-    const { view, element } = setup();
+  it('moves when another square is highlighted', () => {
+    const { view, marked } = setup();
     view.setPosition(startingPosition());
 
     view.highlight('e2');
     view.highlight('g1');
 
-    expect(element.querySelectorAll('.square--highlight')).toHaveLength(1);
-    expect(element.querySelector('.square--highlight')?.getAttribute('data-square')).toBe('g1');
-    expect(element.querySelector('.piece--lifted')?.getAttribute('data-piece')).toBe('g1');
-
-    view.highlight(null);
-
-    expect(element.querySelector('.square--highlight, .piece--lifted')).toBeNull();
+    expect(marked('square--highlight')).toEqual(['g1']);
+    expect(marked('piece--lifted')).toEqual(['g1']);
   });
 
-  it('lets go of the piece once it has moved', () => {
-    const { view, piece, element } = setup();
+  it('marks an empty square without lifting anything', () => {
+    const { view, marked } = setup();
     view.setPosition(startingPosition());
-    view.highlight('e2');
 
-    view.setPosition(positionAfter('e2e4'), { durationMs: 300 });
+    view.highlight('e4');
 
-    expect(piece('e2')?.classList.contains('piece--lifted')).toBe(false);
-    expect(element.querySelector('.square--highlight')).toBeNull();
+    expect(marked('square--highlight')).toEqual(['e4']);
+    expect(marked('piece--lifted')).toEqual([]);
   });
 });
 
@@ -254,19 +270,11 @@ describe('showArrow', () => {
     expect(element.querySelectorAll('.arrow')).toHaveLength(1);
     expect(arrow()?.dataset.from).toBe('g1');
   });
-
-  it('tells the stylesheet how long drawing it should take', () => {
-    const { view, element } = setup();
-
-    view.showArrow('e2', 'e4', { durationMs: 250 });
-
-    expect(element.style.getPropertyValue('--arrow-ms')).toBe('250ms');
-  });
 });
 
 describe('clearAnnotations', () => {
-  it('removes the highlight and the arrow', () => {
-    const { view, element } = setup();
+  it('removes the highlight and the arrow, and leaves the pieces alone', () => {
+    const { view, element, pieces } = setup();
     view.setPosition(startingPosition());
     view.highlight('e2');
     view.showArrow('e2', 'e4');
@@ -274,39 +282,16 @@ describe('clearAnnotations', () => {
     view.clearAnnotations();
 
     expect(element.querySelector('.square--highlight, .piece--lifted, .arrow')).toBeNull();
-  });
-});
-
-describe('setLastMove', () => {
-  it('tints the squares a move left and reached', () => {
-    const { view, element } = setup();
-
-    view.setLastMove({ from: 'e2', to: 'e4' });
-
-    const tinted = [...element.querySelectorAll('.square--last-move')];
-    expect(tinted.map((square) => square.getAttribute('data-square')).sort()).toEqual(['e2', 'e4']);
-  });
-
-  it('follows the latest move and clears with null', () => {
-    const { view, element } = setup();
-    view.setLastMove({ from: 'e2', to: 'e4' });
-
-    view.setLastMove({ from: 'e7', to: 'e5' });
-    expect(element.querySelectorAll('.square--last-move')).toHaveLength(2);
-    expect(element.querySelector('.square--last-move[data-square="e2"]')).toBeNull();
-
-    view.setLastMove(null);
-    expect(element.querySelector('.square--last-move')).toBeNull();
+    expect(pieces()).toHaveLength(32);
   });
 });
 
 describe('orientation', () => {
   it('can start from Black’s side', () => {
-    const { view, element, square, piece } = setup('black');
+    const { view, square, piece } = setup('black');
     view.setPosition(startingPosition());
 
     expect(view.orientation).toBe('black');
-    expect(element.dataset.orientation).toBe('black');
     expect(square('a8')?.style.translate).toBe('700% 700%');
     expect(piece('e1')?.style.translate).toBe('300% 0%');
     expect(square('h8')?.dataset.file).toBe('h');
@@ -318,24 +303,18 @@ describe('orientation', () => {
     const { view, element, square, piece, arrow } = setup();
     view.setPosition(startingPosition());
     view.showArrow('e2', 'e4');
+    const drawn = arrow();
 
     view.setOrientation('black');
 
+    expect(view.orientation).toBe('black');
     expect(square('a1')?.style.translate).toBe('700% 0%');
     expect(piece('e1')?.style.translate).toBe('300% 0%');
     expect(element.querySelectorAll('[data-file]')).toHaveLength(8);
     expect(square('a1')?.dataset.rank).toBeUndefined();
     expect(square('h1')?.dataset.rank).toBe('1');
+    // The same arrow, re-aimed — a new one would draw itself all over again.
+    expect(arrow()).toBe(drawn);
     expect(Number(arrow()?.querySelector('.arrow__shaft')?.getAttribute('x1'))).toBeCloseTo(3.5);
-  });
-
-  it('does not animate the turn', () => {
-    const { view, element } = setup();
-    view.setPosition(startingPosition());
-    view.setPosition(positionAfter('e2e4'), { durationMs: 300 });
-
-    view.setOrientation('black');
-
-    expect(element.style.getPropertyValue('--move-ms')).toBe('0ms');
   });
 });
