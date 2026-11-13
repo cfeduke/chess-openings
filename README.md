@@ -117,25 +117,70 @@ The dropdown at the right-hand end of the control bar chooses the board's **appe
 set paired with a board theme. The stylesheet names no artwork and no colour; the board view hands
 it whichever appearance is in use, and the choice is remembered between visits.
 
-**To add a theme pack** — pieces and a board made for each other — make a directory
-`src/board/pieces/<id>/` holding
+### Installing a theme pack
 
-- twelve SVGs named by colour then piece — `wk wq wr wb wn wp` and `bk bq br bb bn bp` (`n` is the
-  knight) — each on a square canvas with a `viewBox`, since an image is stretched to fill its
-  square; and
-- a `LICENSE.md` saying where the artwork comes from and under what terms it is used,
+A theme pack is a zip named after its two colours — `walnut_gold.zip`, say — holding pieces and a
+board made for each other:
 
-then add one `pack(id, name, colours)` entry to
-[`src/board/appearance.ts`](src/board/appearance.ts). The five colours are the light and dark
-squares, the translucent tints for the last move and for the piece about to move, and the arrow.
-The dropdown lists the appearances in the order they are declared, the default first. The pieces
-are found by their naming; the tests fail for a set with a piece or its licence missing, and for
-a directory no appearance uses.
+| In the zip                    | What it is                                         | Installed?                |
+| ----------------------------- | -------------------------------------------------- | ------------------------- |
+| `src/board/pieces/*.svg`      | The twelve pieces: `wk.svg` … `bp.svg`             | Yes, into a new directory |
+| `src/board/pieces/LICENSE.md` | Where the artwork comes from, and on what terms    | Yes, beside the pieces    |
+| `board.css`                   | The board's five colours, as `--board-*` variables | The values only           |
+| `README.md`, `preview.png`    | The pack's notes, and a picture of it              | No                        |
 
-Pieces and boards are separate things, though, and an appearance can pair any two: a piece set is
-`pieceSet(id, credit)` ([`src/board/piece-sets.ts`](src/board/piece-sets.ts)), a board theme is
-an id and five colours ([`src/board/board-themes.ts`](src/board/board-themes.ts)), and the
-Classic appearance is declared that way.
+**Do not follow the install steps in the pack's own README.** They were written for the site when
+it had one look: they say to copy the pieces over the ones in `src/board/pieces/` and to merge
+`board.css` into `src/board/board.css`. Nothing is overwritten any more — a pack is added beside
+the others — and that stylesheet no longer holds any colours.
+
+1. **Name it.** The id is the zip's name in kebab case, and the name is its two words joined by
+   an ampersand: `walnut_gold.zip` is `walnut-gold`, "Walnut & Gold".
+
+2. **Copy the pieces and their licence into a directory of their own**, named by the id:
+
+   ```sh
+   unzip walnut_gold.zip -d /tmp/walnut_gold
+   mkdir src/board/pieces/walnut-gold
+   cp /tmp/walnut_gold/src/board/pieces/* src/board/pieces/walnut-gold/
+   ```
+
+3. **Declare it** by adding an entry to `APPEARANCES` in
+   [`src/board/appearance.ts`](src/board/appearance.ts), with the five values from the pack's
+   `board.css`:
+
+   ```ts
+   pack('walnut-gold', 'Walnut & Gold', {
+     light: '#f1e0be', // --board-light
+     dark: '#956a4a', // --board-dark
+     'last-move': 'rgb(204 167 78 / 0.49)', // --board-last-move
+     highlight: 'rgb(255 211 93 / 0.72)', // --board-highlight
+     arrow: 'rgb(32 116 115 / 0.92)', // --board-arrow
+   }),
+   ```
+
+   The dropdown lists the appearances in the order they are declared, and the first is the one a
+   new visitor sees.
+
+4. **Credit it** under [Credits](#credits), below.
+
+5. **Check it.** `npm run format` tidies the licence file, and `npm run verify` fails if a piece
+   or the licence is missing, if a directory of pieces is not used by any appearance, or if the id
+   or the name is already taken. Then `npm run dev`, choose it from the dropdown, and look.
+
+### Artwork from elsewhere
+
+A piece set that did not come as a pack goes in a directory just the same. What it needs is the
+twelve SVGs named by colour then piece — `wk wq wr wb wn wp` and `bk bq br bb bn bp` (`n` is the
+knight) — each on a square canvas with a `viewBox`, since an image is stretched to fill its
+square, and a `LICENSE.md`.
+
+`pack()` is a shorthand for pieces and a board that share a name and whose artwork is in the
+public domain. Pieces and boards are separate things, though, and an appearance can pair any two:
+a piece set is `pieceSet(id, credit)` ([`src/board/piece-sets.ts`](src/board/piece-sets.ts)),
+where the credit finishes the sentence "Chess pieces …" under the catalog; a board theme is an id
+and five colours ([`src/board/board-themes.ts`](src/board/board-themes.ts)). The Classic
+appearance is declared that way.
 
 ## Opening data
 
