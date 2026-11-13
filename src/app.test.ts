@@ -10,4 +10,12 @@ describe('mountApp', () => {
 
     expect(root.querySelector('h1')?.textContent).toBe('Chess Openings');
   });
+
+  it('shows a board set up for a new game', () => {
+    const root = document.createElement('div');
+
+    mountApp(root);
+
+    expect(root.querySelectorAll('.board .piece')).toHaveLength(32);
+  });
 });

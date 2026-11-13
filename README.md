@@ -37,12 +37,12 @@ Every change follows the same loop:
 
 There is no hosted CI (no GitHub Actions). `npm run verify` is the whole pipeline:
 
-| Step              | Command             | What it checks                                                   |
-| ----------------- | ------------------- | ---------------------------------------------------------------- |
-| Lint + format     | `npm run lint`      | Biome                                                            |
-| Types             | `npm run typecheck` | `tsc`, strict                                                    |
-| Unit tests        | `npm test`          | Vitest (`*.test.ts`; DOM tests opt into happy-dom)               |
-| Integration tests | `npm run test:e2e`  | Playwright builds the site, then drives Chromium against `dist/` |
+| Step              | Command             | What it checks                                                                                                                                   |
+| ----------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Lint + format     | `npm run lint`      | Biome                                                                                                                                            |
+| Types             | `npm run typecheck` | `tsc`, strict                                                                                                                                    |
+| Unit tests        | `npm test`          | Vitest: `*.test.ts` in Node (DOM tests opt into happy-dom), and `*.browser.test.ts` in real Chromium for anything that depends on the stylesheet |
+| Integration tests | `npm run test:e2e`  | Playwright builds the site, then drives Chromium against `dist/`                                                                                 |
 
 `npm install` points git at `.githooks/`, whose `pre-push` hook runs `npm run verify` on a clean
 working tree, so only commits that pass the full pipeline reach the remote.
