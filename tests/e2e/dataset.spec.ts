@@ -7,5 +7,11 @@ test('the production build ships the generated openings dataset', async ({ reque
   const payload = await response.json();
   expect(payload.source.repository).toBe('lichess-org/chess-openings');
   expect(payload.openings.length).toBeGreaterThan(3800);
-  expect(payload.openings[0]).toEqual(['amar-opening', 'A00', 'Amar Opening', 'Nh3', 'g1h3']);
+  expect(payload.openings[0]).toEqual({
+    id: 'amar-opening',
+    eco: 'A00',
+    name: 'Amar Opening',
+    san: ['Nh3'],
+    uci: ['g1h3'],
+  });
 });

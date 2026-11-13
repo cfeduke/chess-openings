@@ -1,11 +1,11 @@
-import { readFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { decodeOpenings } from '../../src/data/opening.ts';
-import { LICHESS_DATA_DIR, loadDataset, VOLUME_FILES } from './dataset.ts';
+import { LICHESS_DATA_DIR, loadDataset, SOURCE_FILE, VOLUME_FILES } from './dataset.ts';
 
 // The whole real dataset, built once: the same code path `npm run build` uses.
-const payload = loadDataset(LICHESS_DATA_DIR);
-const openings = decodeOpenings(payload);
+const { source, openings } = loadDataset(LICHESS_DATA_DIR);
 
 describe('the lichess dataset', () => {
   it('contains every upstream row', () => {
@@ -50,8 +50,23 @@ describe('the lichess dataset', () => {
   });
 
   it('records where the data came from', () => {
-    expect(payload.source.repository).toBe('lichess-org/chess-openings');
-    expect(payload.source.commit).toMatch(/^[0-9a-f]{40}$/);
-    expect(payload.source.license).toBe('CC0-1.0');
+    expect(source).toEqual({
+      repository: 'lichess-org/chess-openings',
+      commit: expect.stringMatching(/^[0-9a-f]{40}$/),
+      license: 'CC0-1.0',
+    });
+  });
+});
+
+describe('loadDataset', () => {
+  it('refuses data whose provenance record is incomplete', () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'lichess-data-'));
+    cpSync(LICHESS_DATA_DIR, dataDir, { recursive: true });
+    writeFileSync(
+      join(dataDir, SOURCE_FILE),
+      JSON.stringify({ repository: 'lichess-org/chess-openings' }),
+    );
+
+    expect(() => loadDataset(dataDir)).toThrow(/SOURCE\.json: missing "commit"/);
   });
 });

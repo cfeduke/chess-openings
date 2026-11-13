@@ -1,13 +1,15 @@
 // Generates the dataset the site ships: `node scripts/build-openings.ts`.
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { LICHESS_DATA_DIR, loadDataset } from './openings/dataset.ts';
 
-const OUTPUT = 'public/openings.json';
+const OUTPUT = join(import.meta.dirname, '../public/openings.json');
 
-const payload = loadDataset(LICHESS_DATA_DIR);
+const dataset = loadDataset(LICHESS_DATA_DIR);
 mkdirSync(dirname(OUTPUT), { recursive: true });
-writeFileSync(OUTPUT, JSON.stringify(payload));
+writeFileSync(OUTPUT, JSON.stringify(dataset));
+
+const { repository, commit } = dataset.source;
 console.log(
-  `${OUTPUT}: ${payload.openings.length} openings from ${payload.source.repository}@${payload.source.commit.slice(0, 7)}`,
+  `${relative(process.cwd(), OUTPUT)}: ${dataset.openings.length} openings from ${repository}@${commit.slice(0, 7)}`,
 );

@@ -23,6 +23,10 @@ describe('slugify', () => {
     expect(slugify(name)).toBe(slug);
   });
 
+  it('refuses to silently drop a letter it cannot transliterate', () => {
+    expect(() => slugify('Łódź Gambit')).toThrow(/cannot transliterate "ł" in "Łódź Gambit"/);
+  });
+
   it('never produces leading, trailing or doubled dashes', () => {
     expect(slugify('  -- St. George Defense --  ')).toBe('st-george-defense');
   });

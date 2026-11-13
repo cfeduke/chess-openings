@@ -58,8 +58,10 @@ is in the public domain (CC0).
 
 `npm run data` (run automatically before `dev` and `build`) replays every line with
 [chess.js](https://github.com/jhlywa/chess.js) and writes `public/openings.json`. Each opening gets
-a unique id, its ECO code, its name, and its moves in both SAN and UCI, so the browser can animate
-a line without a rules engine. The build fails if a row is malformed or a move is illegal.
+its ECO code, its name, its moves in both SAN and UCI (so the browser can animate a line without a
+rules engine), and a unique id. Upstream repeats a name once per transposition: the shortest line
+keeps the plain slug of the name and the others add a fingerprint of their own moves, so ids — and
+links to them — survive data updates. The build fails if a row is malformed or a move is illegal.
 
 To pick up new upstream data: `npm run data:update` (optionally with a branch, tag or commit),
 then `npm run verify`.

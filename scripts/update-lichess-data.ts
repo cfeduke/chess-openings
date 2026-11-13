@@ -1,7 +1,12 @@
 // Refreshes the vendored opening data: `node scripts/update-lichess-data.ts [ref]`.
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { LICHESS_DATA_DIR, SOURCE_FILE, VOLUME_FILES } from './openings/dataset.ts';
+import {
+  LICHESS_DATA_DIR,
+  SOURCE_FILE,
+  type VendoredSource,
+  VOLUME_FILES,
+} from './openings/dataset.ts';
 
 const REPOSITORY = 'lichess-org/chess-openings';
 
@@ -32,7 +37,12 @@ export async function updateLichessData(
     await io.writeFile(join(dataDir, file), contents);
   }
 
-  const source = { repository: REPOSITORY, commit: sha, license: 'CC0-1.0', retrieved: io.today() };
+  const source: VendoredSource = {
+    repository: REPOSITORY,
+    commit: sha,
+    license: 'CC0-1.0',
+    retrieved: io.today(),
+  };
   await io.writeFile(join(dataDir, SOURCE_FILE), `${JSON.stringify(source, null, 2)}\n`);
   return sha;
 }
