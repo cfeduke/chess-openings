@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { boardOn, startWithDelay } from './support.ts';
+import { pieceFrom, startWithDelay } from './support.ts';
 
 declare global {
   interface Window {
@@ -22,15 +22,14 @@ test('moves are heard once the visitor has interacted with the page, and not bef
   });
   await startWithDelay(page, 400);
   await page.goto('/');
-  const board = boardOn(page);
-  const pawn = board.locator('.piece[data-piece="e2"]');
+  const pawn = pieceFrom(page, 'e2');
 
   // The first move is made in silence: nobody has touched the page yet.
   await expect(pawn).toHaveAttribute('data-square', 'e4');
   expect(await page.evaluate(() => window.soundsStarted)).toBe(0);
 
-  // A click anywhere is the gesture browsers ask for. The next move can be heard.
+  // A click anywhere is the gesture browsers ask for. The audio engine takes a moment to start,
+  // so it may not be the very next move that is heard — but the line does not end in silence.
   await page.mouse.click(4, 4);
-  await expect(board.locator('.piece[data-piece="e7"]')).toHaveAttribute('data-square', 'e5');
-  expect(await page.evaluate(() => window.soundsStarted)).toBeGreaterThan(0);
+  await expect.poll(() => page.evaluate(() => window.soundsStarted)).toBeGreaterThan(0);
 });

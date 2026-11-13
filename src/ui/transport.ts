@@ -8,17 +8,11 @@ import { ICONS, type IconName } from './icons.ts';
 interface TransportOptions {
   player: Player;
   sounds: Pick<SoundEffects, 'muted' | 'setMuted'>;
-  /** Called with the delay the visitor has just chosen, so that it can be remembered. */
-  saveDelay(delayMs: number): void;
   onFlip(): void;
 }
 
+/** `1.5` for a delay of 1500 ms. */
 const seconds = (delayMs: number) => (delayMs / 1000).toFixed(1);
-
-/** `1.5 s` */
-export function formatDelay(delayMs: number): string {
-  return `${seconds(delayMs)} s`;
-}
 
 /** A button that is all icon: its name is for assistive technology and the tooltip. */
 function iconButton(name: string, icon: IconName, onClick: () => void): HTMLButtonElement {
@@ -40,14 +34,14 @@ function dress(button: HTMLButtonElement, name: string, icon: IconName): void {
  * between moves, and the sound and board-orientation toggles.
  */
 export function createTransport(options: TransportOptions): { element: HTMLElement } {
-  const { player, sounds, saveDelay, onFlip } = options;
+  const { player, sounds, onFlip } = options;
 
   const restart = iconButton('Restart', 'restart', player.restart);
   const back = iconButton('Step back', 'back', player.stepBack);
   const toggle = iconButton('Play', 'play', player.toggle);
   toggle.classList.add('icon-button--primary');
   const forward = iconButton('Step forward', 'forward', player.stepForward);
-  const end = iconButton('Jump to end', 'end', () => player.seek(player.snapshot.moves.length));
+  const end = iconButton('Jump to end', 'end', () => player.seek(Number.POSITIVE_INFINITY));
   const playback = el(
     'div',
     { class: 'transport__playback', role: 'group', 'aria-label': 'Playback' },
@@ -62,9 +56,9 @@ export function createTransport(options: TransportOptions): { element: HTMLEleme
     type: 'range',
     id: 'delay',
     class: 'transport__slider',
-    min: String(MIN_DELAY_MS),
-    max: String(MAX_DELAY_MS),
-    step: '100',
+    min: MIN_DELAY_MS,
+    max: MAX_DELAY_MS,
+    step: 100,
   });
   const readout = el('output', { for: slider.id, class: 'transport__readout' });
   const delay = el(
@@ -74,11 +68,7 @@ export function createTransport(options: TransportOptions): { element: HTMLEleme
     slider,
     readout,
   );
-  slider.addEventListener('input', () => {
-    const chosen = Number(slider.value);
-    player.setDelay(chosen);
-    saveDelay(chosen);
-  });
+  slider.addEventListener('input', () => player.setDelay(Number(slider.value)));
 
   const flip = iconButton('Flip board', 'flip', onFlip);
   const sound = iconButton('Sound', 'soundOn', () => {
@@ -111,7 +101,7 @@ export function createTransport(options: TransportOptions): { element: HTMLEleme
 
     slider.value = String(delayMs);
     slider.setAttribute('aria-valuetext', `${seconds(delayMs)} seconds`);
-    readout.textContent = formatDelay(delayMs);
+    readout.textContent = `${seconds(delayMs)} s`;
   };
 
   renderSound();

@@ -3,21 +3,21 @@ import { preference } from './preferences.ts';
 
 function fakeStorage(initial: Record<string, string> = {}) {
   const data = new Map(Object.entries(initial));
-  const storage = {
+  const storage = () => ({
     getItem: (key: string) => data.get(key) ?? null,
     setItem: (key: string, value: string) => void data.set(key, value),
-  };
+  });
   return { data, storage };
 }
 
-const brokenStorage = {
+const brokenStorage = () => ({
   getItem: () => {
     throw new Error('storage is disabled');
   },
   setItem: () => {
     throw new Error('storage is full');
   },
-};
+});
 
 const boolean = (saved: unknown) => (typeof saved === 'boolean' ? saved : undefined);
 /** A number, pulled back into 1–10. */
@@ -42,9 +42,11 @@ describe('a preference', () => {
 
   it('is stored under a name of its own, clear of anything else on the origin', () => {
     const { data, storage } = fakeStorage();
+    const saved = preference('level', 5, level, storage);
 
-    preference('level', 5, level, storage).write(7);
+    saved.write(7);
 
+    expect(saved.key).toBe('chess-openings.level');
     expect([...data]).toEqual([['chess-openings.level', '7']]);
   });
 
@@ -81,9 +83,19 @@ describe('a preference, left to find the browser’s storage itself', () => {
     if (original) Object.defineProperty(globalThis, 'localStorage', original);
   });
 
+  it('looks for it only when it is needed, not when it is declared', () => {
+    const muted = preference('muted', false, boolean);
+    const { data, storage } = fakeStorage();
+    vi.stubGlobal('localStorage', storage());
+
+    muted.write(true);
+
+    expect(data.get('chess-openings.muted')).toBe('true');
+  });
+
   it('uses local storage', () => {
     const { data, storage } = fakeStorage();
-    vi.stubGlobal('localStorage', storage);
+    vi.stubGlobal('localStorage', storage());
 
     preference('muted', false, boolean).write(true);
 

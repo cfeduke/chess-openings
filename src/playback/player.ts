@@ -2,6 +2,7 @@ import type { BoardView } from '../board/board-view.ts';
 import { moveKind } from '../chess/board.ts';
 import { givesCheck } from '../chess/san.ts';
 import type { Timeline, TimelineMove } from '../chess/timeline.ts';
+import type { Preference } from '../preferences.ts';
 import { clamp, clampDelay, DEFAULT_DELAY_MS, type MoveSchedule, scheduleFor } from './schedule.ts';
 
 /**
@@ -51,7 +52,7 @@ export interface Player {
   seek(ply: number): void;
   /** Plays the line from the start. */
   restart(): void;
-  /** Sets the delay between moves, effective immediately. */
+  /** Sets the delay between moves, effective immediately, and remembers it. */
   setDelay(delayMs: number): void;
 }
 
@@ -77,14 +78,17 @@ function gapBefore(beat: Beat, { highlightAt, arrowAt, moveAt, slideMs }: MoveSc
 
 const EMPTY: Timeline = { positions: [], moves: [] };
 
-export function createPlayer(options: {
+interface PlayerOptions {
   board: PlayerBoard;
   sound?: (cue: SoundCue) => void;
-}): Player {
-  const { board, sound = () => {} } = options;
+  /** Where the delay between moves is kept. Without it, the delay starts at the default. */
+  delay?: Preference<number>;
+}
+
+export function createPlayer({ board, sound = () => {}, delay }: PlayerOptions): Player {
   let timeline = EMPTY;
   let ply = 0;
-  let delayMs = DEFAULT_DELAY_MS;
+  let delayMs = clampDelay(delay?.read() ?? DEFAULT_DELAY_MS);
   /**
    * The beat being waited for — which is to say, whether the player is playing. Each beat is
    * timed from the one before it rather than from a fixed start, so a timer the browser delivers
@@ -240,6 +244,7 @@ export function createPlayer(options: {
 
     setDelay(next) {
       delayMs = clampDelay(next);
+      delay?.write(delayMs);
       if (awaiting) {
         // Keep the same place in the wait under way: a third of the way there stays a third.
         const done = clamp((performance.now() - awaiting.since) / awaiting.gap, 0, 1);

@@ -1,5 +1,6 @@
 import { vi } from 'vitest';
 import type { Player, PlayerSnapshot } from '../../src/playback/player.ts';
+import { DEFAULT_DELAY_MS } from '../../src/playback/schedule.ts';
 
 /** A player that does nothing but record what it is asked, and report whatever `emit` says. */
 export function fakePlayer(initial: Partial<PlayerSnapshot> = {}) {
@@ -8,7 +9,7 @@ export function fakePlayer(initial: Partial<PlayerSnapshot> = {}) {
     moves: [],
     ply: 0,
     pending: null,
-    delayMs: 1500,
+    delayMs: DEFAULT_DELAY_MS,
     ...initial,
   };
   const listeners = new Set<(snapshot: PlayerSnapshot) => void>();

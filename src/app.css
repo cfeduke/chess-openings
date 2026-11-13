@@ -1,7 +1,8 @@
+/* The page is exactly as tall as the window: header, the working area, the controls. */
 .app {
   display: grid;
-  grid-template-rows: auto 1fr auto;
-  min-height: 100dvh;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100dvh;
 }
 
 .app__header {
@@ -25,25 +26,36 @@
 }
 
 /*
- * The board is as large as the window allows once the header and the controls have their
- * share, and everything beside it is exactly as tall.
+ * The working area is a size container, so what is in it can be sized from the room there
+ * actually is (`cqw`, `cqh`) rather than from guesses at how tall the header and controls are.
  */
 .app__main {
-  --board-size: clamp(280px, calc(100dvh - 190px), 720px);
+  --gap: 24px;
+  --moves-width: 280px;
 
+  container-type: size;
   display: grid;
-  grid-template-columns: minmax(0, var(--board-size)) minmax(220px, 300px);
-  grid-template-rows: minmax(0, var(--board-size));
+  grid-template-columns: auto var(--moves-width);
   justify-content: center;
-  gap: 24px;
-  padding: 24px;
+  align-content: start;
+  gap: var(--gap);
+  padding: var(--gap);
+}
+
+/* The board is the largest square that fits beside the move list, and the list is as tall. */
+.app__main > * {
+  --board-size: max(240px, min(100cqh, 100cqw - var(--moves-width) - var(--gap)));
 }
 
 .stage {
-  min-width: 0;
+  width: var(--board-size);
 }
 
 .stage .board {
   border-radius: 6px;
   box-shadow: var(--shadow);
+}
+
+.app__main > .move-list {
+  max-height: var(--board-size);
 }

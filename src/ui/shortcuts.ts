@@ -5,29 +5,30 @@ const KEYS: Record<string, (player: Player) => void> = {
   ArrowLeft: (player) => player.stepBack(),
   ArrowRight: (player) => player.stepForward(),
   Home: (player) => player.seek(0),
-  End: (player) => player.seek(player.snapshot.moves.length),
+  End: (player) => player.seek(Number.POSITIVE_INFINITY),
 };
 
 /**
- * Drives the player from the keyboard: space plays and pauses, the arrows step, Home and End
- * jump. Keys that already mean something to the focused control are left to it. Returns a
- * function that removes the shortcuts again.
+ * Drives the player from the keyboard, wherever the focus is: space plays and pauses, the
+ * arrows step, Home and End jump. A key that already means something to the focused control is
+ * left to it. Returns a function that removes the shortcuts again.
  */
-export function bindShortcuts(target: Document | HTMLElement, player: Player): () => void {
-  const onKeydown = (event: Event) => {
-    const { key, altKey, ctrlKey, metaKey } = event as KeyboardEvent;
-    const action = KEYS[key];
-    if (!action || altKey || ctrlKey || metaKey) return;
+export function bindShortcuts(page: Document, player: Player): () => void {
+  const onKeydown = (event: KeyboardEvent) => {
+    const action = KEYS[event.key];
+    if (!action || event.altKey || event.ctrlKey || event.metaKey) return;
 
+    // A control that used the key says so by preventing its default: tabs, a tree, a menu.
+    if (event.defaultPrevented) return;
+    // Native fields use all of these keys without saying so; a button uses space to press itself.
     const focused = event.target instanceof Element ? event.target : null;
-    // Fields use all of these keys themselves; a button uses only space, to press itself.
     if (focused?.closest('input, textarea, select, [contenteditable]')) return;
-    if (key === ' ' && focused?.closest('button, a, summary')) return;
+    if (event.key === ' ' && focused?.closest('button, a, summary')) return;
 
     event.preventDefault();
     action(player);
   };
 
-  target.addEventListener('keydown', onKeydown);
-  return () => target.removeEventListener('keydown', onKeydown);
+  page.addEventListener('keydown', onKeydown);
+  return () => page.removeEventListener('keydown', onKeydown);
 }

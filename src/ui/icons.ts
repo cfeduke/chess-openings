@@ -1,15 +1,22 @@
 /** The interface's icons: simple shapes on a 24 × 24 grid, drawn in the current text colour. */
 
-const filled = (path: string) =>
-  `<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="currentColor"><path d="${path}"/></svg>`;
+const svg = (attributes: string, body: string) =>
+  `<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" ${attributes}>${body}</svg>`;
 
-const stroked = (...paths: string[]) =>
-  `<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${paths
-    .map((path) => `<path d="${path}"/>`)
-    .join('')}</svg>`;
+const path = (d: string) => `<path d="${d}"/>`;
 
-const SPEAKER = '<path d="M4 9.5h3.5l4.5-4v13l-4.5-4H4z" fill="currentColor" stroke="none"/>';
-const speaker = (...paths: string[]) => stroked(...paths).replace('</svg>', `${SPEAKER}</svg>`);
+const filled = (shape: string) => svg('fill="currentColor"', path(shape));
+
+const LINES =
+  'fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"';
+const stroked = (...lines: string[]) => svg(LINES, lines.map(path).join(''));
+
+/** A loudspeaker with `lines` beside it: sound waves, or a cross. */
+const speaker = (...lines: string[]) =>
+  svg(
+    'fill="currentColor"',
+    `${path('M4 9.5h3.5l4.5-4v13l-4.5-4H4z')}<g ${LINES}>${lines.map(path).join('')}</g>`,
+  );
 
 export const ICONS = {
   play: filled('M8 5l11 7-11 7z'),

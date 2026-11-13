@@ -61,16 +61,12 @@
 }
 
 /* The cursor: the move just made is filled in, with a pointer at its side. */
-.move--current {
+.move[aria-current="step"] {
   background: var(--accent);
   color: var(--accent-ink);
 }
 
-.move--current:hover {
-  background: var(--accent);
-}
-
-.move--current::before {
+.move[aria-current="step"]::before {
   content: "▸";
   position: absolute;
   left: 6px;
@@ -78,21 +74,33 @@
   line-height: 1.2;
 }
 
-/* The move the board is pointing out, about to be made. */
+/*
+ * The move the board is pointing out, about to be made: outlined, with a tint that pulses. The
+ * tint is a layer of its own so that only its opacity animates.
+ */
 .move--pending {
+  isolation: isolate;
   box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.move--pending::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--accent-soft);
   animation: move-pending 700ms ease-in-out infinite alternate;
 }
 
 @keyframes move-pending {
-  to {
-    background: var(--accent-soft);
+  from {
+    opacity: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .move--pending {
+  .move--pending::after {
     animation: none;
-    background: var(--accent-soft);
   }
 }

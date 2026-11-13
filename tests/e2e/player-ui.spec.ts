@@ -1,5 +1,14 @@
 import { expect, test } from '@playwright/test';
-import { beatsOn, boardOn, box, recordBeats, startWithDelay } from './support.ts';
+import {
+  beatsOn,
+  boardOn,
+  box,
+  movesOn,
+  pieceFrom,
+  recordBeats,
+  squareOn,
+  startWithDelay,
+} from './support.ts';
 
 test.describe('layout', () => {
   test('the moves are listed to the right of the board, and the controls run along the bottom', async ({
@@ -7,7 +16,7 @@ test.describe('layout', () => {
   }) => {
     await page.goto('/');
     const board = await box(boardOn(page));
-    const moves = await box(page.getByRole('region', { name: 'Moves' }));
+    const moves = await box(movesOn(page));
     const transport = await box(page.getByRole('group', { name: 'Player controls' }));
     const viewport = page.viewportSize();
 
@@ -24,10 +33,9 @@ test.describe('the move list', () => {
     await recordBeats(page);
     await startWithDelay(page, 500);
     await page.goto('/');
-    const board = boardOn(page);
-    const current = page.getByRole('region', { name: 'Moves' }).locator('[aria-current="step"]');
+    const current = movesOn(page).locator('[aria-current="step"]');
 
-    await expect(board.locator('.piece[data-piece="e7"]')).toHaveAttribute('data-square', 'e5');
+    await expect(pieceFrom(page, 'e7')).toHaveAttribute('data-square', 'e5');
 
     // While the board points a move out the list marks it as coming, not as made; the cursor
     // moves when the piece does.
@@ -51,19 +59,18 @@ test.describe('the move list', () => {
   test('clicking a move jumps the board to the position after it', async ({ page }) => {
     await startWithDelay(page, 5000);
     await page.goto('/');
-    const board = boardOn(page);
-    const moves = page.getByRole('region', { name: 'Moves' });
+    const moves = movesOn(page);
 
     await moves.getByRole('button', { name: '2… Nc6' }).click();
 
-    await expect(board.locator('.piece[data-piece="b8"]')).toHaveAttribute('data-square', 'c6');
-    await expect(board.locator('.piece[data-piece="g1"]')).toHaveAttribute('data-square', 'f3');
-    await expect(board.locator('.piece[data-piece="f1"]')).toHaveAttribute('data-square', 'f1');
+    await expect(pieceFrom(page, 'b8')).toHaveAttribute('data-square', 'c6');
+    await expect(pieceFrom(page, 'g1')).toHaveAttribute('data-square', 'f3');
+    await expect(pieceFrom(page, 'f1')).toHaveAttribute('data-square', 'f1');
     await expect(moves.locator('[aria-current="step"]')).toHaveText('Nc6');
 
     await moves.getByRole('button', { name: 'Start position' }).click();
 
-    await expect(board.locator('.piece[data-piece="e2"]')).toHaveAttribute('data-square', 'e2');
+    await expect(pieceFrom(page, 'e2')).toHaveAttribute('data-square', 'e2');
   });
 });
 
@@ -79,13 +86,9 @@ test.describe('the delay slider', () => {
 
     // At the default pace the five moves take seven and a half seconds; now they fly by.
     await expect(readout).toHaveText('0.3 s');
-    await expect(boardOn(page).locator('.piece[data-piece="f1"]')).toHaveAttribute(
-      'data-square',
-      'c4',
-      {
-        timeout: 3000,
-      },
-    );
+    await expect(pieceFrom(page, 'f1')).toHaveAttribute('data-square', 'c4', {
+      timeout: 3000,
+    });
 
     await page.reload();
 
@@ -98,10 +101,9 @@ test.describe('the buttons and keys', () => {
   test('pause, step, jump and play again', async ({ page }) => {
     await startWithDelay(page, 5000);
     await page.goto('/');
-    const board = boardOn(page);
     const controls = page.getByRole('group', { name: 'Playback' });
-    const pawn = board.locator('.piece[data-piece="e2"]');
-    const bishop = board.locator('.piece[data-piece="f1"]');
+    const pawn = pieceFrom(page, 'e2');
+    const bishop = pieceFrom(page, 'f1');
 
     await controls.getByRole('button', { name: 'Pause' }).click();
     await expect(controls.getByRole('button', { name: 'Play', exact: true })).toBeVisible();
@@ -125,9 +127,8 @@ test.describe('the buttons and keys', () => {
   test('the keyboard does the same', async ({ page }) => {
     await startWithDelay(page, 5000);
     await page.goto('/');
-    const board = boardOn(page);
     const controls = page.getByRole('group', { name: 'Playback' });
-    const pawn = board.locator('.piece[data-piece="e2"]');
+    const pawn = pieceFrom(page, 'e2');
 
     await page.keyboard.press('Space');
     await expect(controls.getByRole('button', { name: 'Play', exact: true })).toBeVisible();
@@ -139,7 +140,7 @@ test.describe('the buttons and keys', () => {
     await expect(pawn).toHaveAttribute('data-square', 'e2');
 
     await page.keyboard.press('End');
-    await expect(board.locator('.piece[data-piece="f1"]')).toHaveAttribute('data-square', 'c4');
+    await expect(pieceFrom(page, 'f1')).toHaveAttribute('data-square', 'c4');
 
     await page.keyboard.press('Home');
     await expect(pawn).toHaveAttribute('data-square', 'e2');
@@ -167,7 +168,7 @@ test.describe('the buttons and keys', () => {
     await page.getByRole('button', { name: 'Flip board' }).click();
 
     const whole = await box(board);
-    const a1 = await box(board.locator('.square[data-square="a1"]'));
+    const a1 = await box(squareOn(page, 'a1'));
     expect(a1.x + a1.width).toBeCloseTo(whole.x + whole.width, 0);
     expect(a1.y).toBeCloseTo(whole.y, 0);
   });

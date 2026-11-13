@@ -1,15 +1,19 @@
 /** Small helpers for building and updating DOM by hand. */
 
-type Child = Node | string;
+type Attributes = Record<string, string | number>;
+
+export function setAttributes(element: Element, attributes: Attributes): void {
+  for (const [name, value] of Object.entries(attributes)) element.setAttribute(name, String(value));
+}
 
 /** Creates an element with attributes (`class` included) and children. */
 export function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
-  attributes: Record<string, string> = {},
-  ...children: Child[]
+  attributes: Attributes = {},
+  ...children: (Node | string)[]
 ): HTMLElementTagNameMap[K] {
   const element = document.createElement(tag);
-  for (const [name, value] of Object.entries(attributes)) element.setAttribute(name, value);
+  setAttributes(element, attributes);
   element.append(...children);
   return element;
 }

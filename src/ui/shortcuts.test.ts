@@ -1,21 +1,20 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from 'vitest';
 import { fakePlayer } from '../../tests/support/fake-player.ts';
-import { ITALIAN_GAME } from '../../tests/support/lines.ts';
-import { buildTimeline } from '../chess/timeline.ts';
+import { ITALIAN_MOVES as italian } from '../../tests/support/lines.ts';
 import { bindShortcuts } from './shortcuts.ts';
 
-const italian = buildTimeline(ITALIAN_GAME).moves;
+let unbind = () => {};
 
 function setup() {
   const { player } = fakePlayer({ moves: italian, ply: 2 });
-  const unbind = bindShortcuts(document, player);
+  unbind = bindShortcuts(document, player);
   /** Presses a key with the focus on `target`; returns whether the browser's default was left alone. */
   const press = (key: string, target: Element = document.body, modifiers: KeyboardEventInit = {}) =>
     target.dispatchEvent(
       new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...modifiers }),
     );
-  return { player, press, unbind };
+  return { player, press };
 }
 
 function focusable(html: string): Element {
@@ -24,6 +23,7 @@ function focusable(html: string): Element {
 }
 
 afterEach(() => {
+  unbind();
   document.body.innerHTML = '';
 });
 
@@ -55,7 +55,7 @@ describe('keyboard shortcuts', () => {
     expect(player.seek).toHaveBeenLastCalledWith(0);
 
     press('End');
-    expect(player.seek).toHaveBeenLastCalledWith(5);
+    expect(player.seek).toHaveBeenLastCalledWith(Number.POSITIVE_INFINITY);
   });
 
   it('leave other keys alone', () => {
@@ -107,8 +107,20 @@ describe('keyboard shortcuts', () => {
     expect(player.stepForward).toHaveBeenCalledTimes(1);
   });
 
+  it('leave a key to any control that has already used it', () => {
+    const { player, press } = setup();
+    const tabs = focusable('<div role="tablist" tabindex="0"></div>');
+    tabs.addEventListener('keydown', (event) => event.preventDefault());
+
+    press('ArrowRight', tabs);
+    press('Home', tabs);
+
+    expect(player.stepForward).not.toHaveBeenCalled();
+    expect(player.seek).not.toHaveBeenCalled();
+  });
+
   it('stop when unbound', () => {
-    const { player, press, unbind } = setup();
+    const { player, press } = setup();
 
     unbind();
     press(' ');

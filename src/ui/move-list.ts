@@ -1,12 +1,12 @@
 import './move-list.css';
+import { moveNumber } from '../chess/san.ts';
 import type { TimelineMove } from '../chess/timeline.ts';
 import { el, exclusiveClass } from '../dom.ts';
 import type { Player, PlayerSnapshot } from '../playback/player.ts';
 
 /** `1. e4` for White's moves, `1… e5` for Black's: how a player would say where a move falls. */
 function spoken(move: TimelineMove, index: number): string {
-  const number = Math.floor(index / 2) + 1;
-  return `${number}${index % 2 === 0 ? '.' : '…'} ${move.san}`;
+  return `${moveNumber(index)}${index % 2 === 0 ? '.' : '…'} ${move.san}`;
 }
 
 /**
@@ -50,7 +50,7 @@ export function createMoveList(player: Player): { element: HTMLElement } {
 
     const rows = el('ol', { class: 'move-list__rows' });
     for (let index = 0; index < moves.length; index += 2) {
-      const number = el('span', { class: 'move-row__number' }, `${index / 2 + 1}.`);
+      const number = el('span', { class: 'move-row__number' }, `${moveNumber(index)}.`);
       rows.append(el('li', { class: 'move-row' }, number, ...buttons.slice(index + 1, index + 3)));
     }
     list.replaceChildren(start, rows);
@@ -61,9 +61,7 @@ export function createMoveList(player: Player): { element: HTMLElement } {
 
     const current = buttons[ply];
     if (current !== cursor) {
-      cursor?.classList.remove('move--current');
       cursor?.removeAttribute('aria-current');
-      current?.classList.add('move--current');
       current?.setAttribute('aria-current', 'step');
       current?.scrollIntoView({ block: 'nearest' });
       cursor = current;

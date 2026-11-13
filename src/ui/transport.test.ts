@@ -1,11 +1,8 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from 'vitest';
 import { fakePlayer } from '../../tests/support/fake-player.ts';
-import { ITALIAN_GAME } from '../../tests/support/lines.ts';
-import { buildTimeline } from '../chess/timeline.ts';
-import { createTransport, formatDelay } from './transport.ts';
-
-const italian = buildTimeline(ITALIAN_GAME).moves;
+import { ITALIAN_MOVES as italian } from '../../tests/support/lines.ts';
+import { createTransport } from './transport.ts';
 
 function setup(initial: Parameters<typeof fakePlayer>[0] = { moves: italian }, muted = false) {
   const { player, emit } = fakePlayer(initial);
@@ -15,16 +12,18 @@ function setup(initial: Parameters<typeof fakePlayer>[0] = { moves: italian }, m
       sounds.muted = next;
     }),
   };
-  const savedDelay = { write: vi.fn() };
   const onFlip = vi.fn();
-  const { element } = createTransport({ player, sounds, saveDelay: savedDelay.write, onFlip });
+  const { element } = createTransport({ player, sounds, onFlip });
   const button = (name: string) => {
     const found = element.querySelector<HTMLButtonElement>(`button[aria-label="${name}"]`);
     if (!found) throw new Error(`no button named ${name}`);
     return found;
   };
   const slider = element.querySelector('input[type="range"]') as HTMLInputElement;
-  return { player, emit, sounds, savedDelay, onFlip, element, button, slider };
+  /** What the big button in the middle currently offers to do. */
+  const mainAction = () =>
+    element.querySelector('.icon-button--primary')?.getAttribute('aria-label');
+  return { player, emit, sounds, onFlip, element, button, slider, mainAction };
 }
 
 describe('the transport bar', () => {
@@ -49,29 +48,28 @@ describe('the transport bar', () => {
 
 describe('the play button', () => {
   it('offers to play while stopped and to pause while playing', () => {
-    const { emit, element, button } = setup();
-    expect(button('Play')).toBeDefined();
+    const { emit, mainAction } = setup();
+    expect(mainAction()).toBe('Play');
 
     emit({ playing: true });
 
-    expect(button('Pause')).toBeDefined();
-    expect(element.querySelector('button[aria-label="Play"]')).toBeNull();
+    expect(mainAction()).toBe('Pause');
   });
 
   it('offers to play again once the line is over', () => {
-    const { emit, button } = setup();
+    const { emit, mainAction } = setup();
 
     emit({ ply: 5, playing: false });
 
-    expect(button('Play again')).toBeDefined();
+    expect(mainAction()).toBe('Play again');
   });
 
   it('still offers to pause during the last move', () => {
-    const { emit, button } = setup();
+    const { emit, mainAction } = setup();
 
     emit({ ply: 5, playing: true });
 
-    expect(button('Pause')).toBeDefined();
+    expect(mainAction()).toBe('Pause');
   });
 
   it('toggles playback', () => {
@@ -96,7 +94,7 @@ describe('the other playback buttons', () => {
     expect(player.restart).toHaveBeenCalledTimes(1);
     expect(player.stepBack).toHaveBeenCalledTimes(1);
     expect(player.stepForward).toHaveBeenCalledTimes(1);
-    expect(player.seek).toHaveBeenCalledWith(5);
+    expect(player.seek).toHaveBeenCalledWith(Number.POSITIVE_INFINITY);
   });
 
   it('cannot go back from the start', () => {
@@ -145,14 +143,13 @@ describe('the delay slider', () => {
     expect(slider.getAttribute('aria-valuetext')).toBe('1.5 seconds');
   });
 
-  it('sets the player’s delay as it is dragged, and remembers it', () => {
-    const { player, savedDelay, slider } = setup();
+  it('sets the player’s delay as it is dragged', () => {
+    const { player, slider } = setup();
 
     slider.value = '800';
     slider.dispatchEvent(new Event('input', { bubbles: true }));
 
     expect(player.setDelay).toHaveBeenCalledWith(800);
-    expect(savedDelay.write).toHaveBeenCalledWith(800);
   });
 
   it('follows the player when the delay changes', () => {
@@ -162,17 +159,6 @@ describe('the delay slider', () => {
 
     expect(slider.value).toBe('3200');
     expect(element.querySelector('output')?.textContent).toBe('3.2 s');
-  });
-});
-
-describe('formatDelay', () => {
-  it.each([
-    [300, '0.3 s'],
-    [1500, '1.5 s'],
-    [2000, '2.0 s'],
-    [5000, '5.0 s'],
-  ])('writes %d ms as %j', (delayMs, text) => {
-    expect(formatDelay(delayMs)).toBe(text);
   });
 });
 

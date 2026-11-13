@@ -1,6 +1,16 @@
 import type { Locator, Page } from '@playwright/test';
+import { delaySetting } from '../../src/settings.ts';
 
 export const boardOn = (page: Page) => page.getByRole('img', { name: 'Chess board' });
+
+/** The piece that started the game on `home`, wherever it is now. */
+export const pieceFrom = (page: Page, home: string) =>
+  boardOn(page).locator(`.piece[data-piece="${home}"]`);
+
+export const squareOn = (page: Page, name: string) =>
+  boardOn(page).locator(`.square[data-square="${name}"]`);
+
+export const movesOn = (page: Page) => page.getByRole('region', { name: 'Moves' });
 
 /** Where an element is on the page. Fails if it is not rendered. */
 export async function box(locator: Locator) {
@@ -20,9 +30,10 @@ export async function centre(locator: Locator) {
  * the delay being remembered must not use it.
  */
 export async function startWithDelay(page: Page, delayMs: number) {
-  await page.addInitScript((saved) => {
-    localStorage.setItem('chess-openings.delayMs', saved);
-  }, String(delayMs));
+  await page.addInitScript(([key, saved]) => localStorage.setItem(key, saved), [
+    delaySetting.key,
+    String(delayMs),
+  ] as const);
 }
 
 /** One thing that happened on the board, with what the rest of the page showed at that instant. */
@@ -53,14 +64,17 @@ export async function recordBeats(page: Page) {
     window.beats = [];
     const squares = new Map<string, string>();
     let highlighted: string | undefined;
-    let drawn: string | undefined;
+    let drawn: string | null = null;
 
     const text = (selector: string) => document.querySelector(selector)?.textContent ?? null;
-    const record = (what: string) => {
+    const arrowShown = () => {
       const arrow = document.querySelector<SVGElement>('.arrow');
+      return arrow ? `${arrow.dataset.from}${arrow.dataset.to}` : null;
+    };
+    const record = (what: string) => {
       window.beats.push({
         what,
-        arrow: arrow ? `${arrow.dataset.from}${arrow.dataset.to}` : null,
+        arrow: arrowShown(),
         cursor: text('.move-list [aria-current="step"]'),
         pending: text('.move-list .move--pending'),
       });
@@ -71,10 +85,9 @@ export async function recordBeats(page: Page) {
       if (highlight && highlight !== highlighted) record(`highlight ${highlight}`);
       highlighted = highlight;
 
-      const arrow = document.querySelector<SVGElement>('.arrow');
-      const aim = arrow ? `${arrow.dataset.from}${arrow.dataset.to}` : undefined;
-      if (aim && aim !== drawn) record(`arrow ${aim}`);
-      drawn = aim;
+      const arrow = arrowShown();
+      if (arrow && arrow !== drawn) record(`arrow ${arrow}`);
+      drawn = arrow;
 
       for (const piece of document.querySelectorAll<HTMLElement>('.piece[data-square]')) {
         const { piece: id = '', square = '' } = piece.dataset;

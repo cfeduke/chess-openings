@@ -1,6 +1,6 @@
 import './board.css';
 import { FILES, type Move, type Piece, type Position, RANKS, type Square } from '../chess/board.ts';
-import { el, exclusiveClass } from '../dom.ts';
+import { el, exclusiveClass, setAttributes } from '../dom.ts';
 import { arrowGeometry, type Cell, type Orientation, squareCell } from './geometry.ts';
 
 /** The chess board on screen. */
@@ -31,10 +31,6 @@ function svg(name: string, attributes: Record<string, string | number> = {}): SV
   const element = document.createElementNS('http://www.w3.org/2000/svg', name);
   setAttributes(element, attributes);
   return element;
-}
-
-function setAttributes(element: Element, attributes: Record<string, string | number>): void {
-  for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, String(value));
 }
 
 const div = (className: string) => el('div', { class: className });

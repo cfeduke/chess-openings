@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mountApp } from './app.ts';
+import { delaySetting } from './settings.ts';
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -71,7 +72,7 @@ describe('mountApp', () => {
   });
 
   it('plays at the delay the visitor chose last time', () => {
-    localStorage.setItem('chess-openings.delayMs', '400');
+    delaySetting.write(400);
     const root = document.createElement('div');
     mountApp(root);
 
@@ -81,7 +82,7 @@ describe('mountApp', () => {
   });
 
   it('ignores a saved delay that is out of range', () => {
-    localStorage.setItem('chess-openings.delayMs', '5');
+    localStorage.setItem(delaySetting.key, '5');
     const root = document.createElement('div');
 
     mountApp(root);

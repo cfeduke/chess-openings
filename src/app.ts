@@ -5,8 +5,7 @@ import { createBoardView } from './board/board-view.ts';
 import { buildTimeline } from './chess/timeline.ts';
 import { el } from './dom.ts';
 import { createPlayer } from './playback/player.ts';
-import { clampDelay, DEFAULT_DELAY_MS } from './playback/schedule.ts';
-import { preference } from './preferences.ts';
+import { delaySetting, mutedSetting } from './settings.ts';
 import { createMoveList } from './ui/move-list.ts';
 import { bindShortcuts } from './ui/shortcuts.ts';
 import { createTransport } from './ui/transport.ts';
@@ -18,23 +17,14 @@ const ITALIAN_GAME = {
 };
 
 export function mountApp(root: HTMLElement): void {
-  const muted = preference('muted', false, (saved) =>
-    typeof saved === 'boolean' ? saved : undefined,
-  );
-  const delay = preference('delayMs', DEFAULT_DELAY_MS, (saved) =>
-    typeof saved === 'number' ? clampDelay(saved) : undefined,
-  );
-
   const board = createBoardView();
-  const sounds = createSoundEffects({ muted });
-  const player = createPlayer({ board, sound: sounds.play });
-  player.setDelay(delay.read());
+  const sounds = createSoundEffects({ muted: mutedSetting });
+  const player = createPlayer({ board, sound: sounds.play, delay: delaySetting });
 
   const moveList = createMoveList(player);
   const transport = createTransport({
     player,
     sounds,
-    saveDelay: delay.write,
     onFlip: () => board.setOrientation(board.orientation === 'white' ? 'black' : 'white'),
   });
 

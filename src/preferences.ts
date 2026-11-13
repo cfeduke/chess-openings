@@ -8,7 +8,10 @@ export interface Preference<T> {
   write(value: T): void;
 }
 
-const PREFIX = 'chess-openings.';
+/** A setting kept in storage, which also says under what name. */
+export interface StoredPreference<T> extends Preference<T> {
+  readonly key: string;
+}
 
 /** Local storage, or nothing where the browser has none or forbids touching it. */
 function browserStorage(): Storage | undefined {
@@ -20,20 +23,23 @@ function browserStorage(): Storage | undefined {
 }
 
 /**
- * Declares a setting: where it is kept, what it is until the visitor chooses, and how to tell a
- * saved value that can be used — `parse` returns it, repaired if need be, or undefined to fall
- * back to `fallback`.
+ * Declares a setting: what it is called, what it is until the visitor chooses, and how to tell
+ * a saved value that can be used — `parse` returns it, repaired if need be, or undefined to
+ * fall back to `fallback`. Storage is only looked for when the setting is read or written.
  */
 export function preference<T>(
-  key: string,
+  name: string,
   fallback: T,
   parse: (saved: unknown) => T | undefined,
-  storage = browserStorage(),
-): Preference<T> {
+  findStorage: () => Storage | undefined = browserStorage,
+): StoredPreference<T> {
+  const key = `chess-openings.${name}`;
   return {
+    key,
+
     read() {
       try {
-        return parse(JSON.parse(storage?.getItem(PREFIX + key) ?? 'null')) ?? fallback;
+        return parse(JSON.parse(findStorage()?.getItem(key) ?? 'null')) ?? fallback;
       } catch {
         return fallback;
       }
@@ -41,7 +47,7 @@ export function preference<T>(
 
     write(value) {
       try {
-        storage?.setItem(PREFIX + key, JSON.stringify(value));
+        findStorage()?.setItem(key, JSON.stringify(value));
       } catch {
         // Storage that is full or disabled only costs the visitor a remembered setting.
       }

@@ -9,9 +9,16 @@ export function parseMoveText(text: string): string[] {
     .filter(Boolean);
 }
 
+/** The number of the move — White's and Black's together — that the `index`th half-move is part of. */
+export function moveNumber(index: number): number {
+  return Math.floor(index / 2) + 1;
+}
+
 /** Numbered move text for a list of moves: `['e4', 'c5', 'Nf3']` → `1. e4 c5 2. Nf3`. */
 export function formatMoveText(san: string[]): string {
-  return san.map((move, ply) => (ply % 2 === 0 ? `${ply / 2 + 1}. ${move}` : move)).join(' ');
+  return san
+    .map((move, index) => (index % 2 === 0 ? `${moveNumber(index)}. ${move}` : move))
+    .join(' ');
 }
 
 /**

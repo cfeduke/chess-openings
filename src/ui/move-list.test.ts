@@ -1,12 +1,8 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from 'vitest';
 import { fakePlayer } from '../../tests/support/fake-player.ts';
-import { EXCHANGE_SPANISH, ITALIAN_GAME } from '../../tests/support/lines.ts';
-import { buildTimeline } from '../chess/timeline.ts';
+import { ITALIAN_MOVES as italian, SPANISH_MOVES as spanish } from '../../tests/support/lines.ts';
 import { createMoveList } from './move-list.ts';
-
-const italian = buildTimeline(ITALIAN_GAME).moves;
-const spanish = buildTimeline(EXCHANGE_SPANISH).moves;
 
 function setup(initial: Parameters<typeof fakePlayer>[0] = { moves: italian }) {
   const { player, emit } = fakePlayer(initial);
@@ -16,7 +12,10 @@ function setup(initial: Parameters<typeof fakePlayer>[0] = { moves: italian }) {
     emit,
     element,
     moves: () => [...element.querySelectorAll<HTMLButtonElement>('.move')],
-    current: () => element.querySelector<HTMLElement>('[aria-current="step"]'),
+    current: () =>
+      [...element.querySelectorAll<HTMLElement>('[aria-current="step"]')].map(
+        (move) => move.textContent,
+      ),
     pending: () => element.querySelector<HTMLElement>('.move--pending'),
   };
 }
@@ -39,7 +38,6 @@ describe('the move list', () => {
     const { moves } = setup();
 
     expect(moves()[0]?.textContent).toBe('Start');
-    expect(moves()[0]?.dataset.ply).toBe('0');
     expect(moves().map((move) => move.dataset.ply)).toEqual(['0', '1', '2', '3', '4', '5']);
   });
 
@@ -68,22 +66,17 @@ describe('the cursor', () => {
   it('rests on the start entry before any move is made', () => {
     const { current } = setup();
 
-    expect(current()?.textContent).toBe('Start');
-    expect(current()?.classList.contains('move--current')).toBe(true);
+    expect(current()).toEqual(['Start']);
   });
 
   it('points at the move that was just made', () => {
-    const { emit, current, element } = setup();
+    const { emit, current } = setup();
 
     emit({ ply: 3 });
-
-    expect(current()?.textContent).toBe('Nf3');
-    expect(element.querySelectorAll('.move--current')).toHaveLength(1);
+    expect(current()).toEqual(['Nf3']);
 
     emit({ ply: 4 });
-
-    expect(current()?.textContent).toBe('Nc6');
-    expect(element.querySelectorAll('.move--current')).toHaveLength(1);
+    expect(current()).toEqual(['Nc6']);
   });
 
   it('is scrolled into view as it moves', () => {
@@ -118,7 +111,7 @@ describe('the move about to be made', () => {
     emit({ ply: 2, pending: 2 });
 
     expect(pending()?.textContent).toBe('Nf3');
-    expect(current()?.textContent).toBe('e5');
+    expect(current()).toEqual(['e5']);
   });
 
   it('is unmarked once it has been made', () => {
