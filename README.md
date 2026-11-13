@@ -65,8 +65,9 @@ TypeScript, built with Vite, with no UI framework and no runtime dependencies.
 
 | Where            | What                                                                                           |
 | ---------------- | ---------------------------------------------------------------------------------------------- |
-| `data/`          | The vendored opening data, a directory to a source: `lichess/` and `wikibooks/`                |
+| `data/`          | The vendored data, a directory to a source: `lichess/`, `wikibooks/` and `lichess-games/`      |
 | `scripts/`       | Build-time: parse the data, replay every line with chess.js, write `public/openings.json`      |
+| `scripts/games/` | Counting a month of lichess's games for the catalog's positions, on every core                 |
 | `src/eco/`       | The ECO taxonomy: five volumes, 86 hand-curated groups of codes with their defining moves      |
 | `src/wikibooks/` | How the Wikibook's lines are laid out: by first move, then by the tree of the book's pages     |
 | `src/catalog/`   | Collection → section → group → family → line tree, search, the openings offered to a newcomer  |
@@ -192,7 +193,8 @@ appearance is declared that way.
 
 ## Opening data
 
-The openings come from two sources, each vendored in a directory of `data/`.
+The openings come from two sources, each vendored in a directory of `data/`; a third directory
+holds what lichess's games say of how they are played.
 `npm run data` (run automatically before `dev` and `build`) replays every line of both with
 [chess.js](https://github.com/jhlywa/chess.js) and writes `public/openings.json`. Each opening gets
 its ECO code, its name, its moves in both SAN and UCI (so the browser can animate a line without a
@@ -269,10 +271,74 @@ shortest name comes first. The book gives one name to every position of an openi
 the shortest line comes first, and matches that share a name have the moves that tell them
 apart added to it.
 
+### How the openings are played, from the lichess database
+
+[The lichess database](https://database.lichess.org/) is every rated game played on lichess, a
+month to a file, released under CC0: October 2026 is 95 million games. `data/lichess-games/`
+holds what one month of them has to say about the positions the catalog's lines end in — how
+often each is reached, how it scores, who plays it, and what is played next.
+`data/lichess-games/SOURCE.json` records which month that is, how many games it held and how
+many were counted. Nothing on the site shows these numbers yet.
+
+**What a game counts for.** Every position that a line of either collection ends in is a
+position of interest, and so is the one every game begins in. A game counts once for each of
+them that it passes through, however it got there: by the position — the board, the side to
+move, the castling rights — not by the moves, and not by the name lichess gives the game. So a
+Najdorf game is also a Sicilian game; a game that reaches the Queen's Gambit by 1. Nf3 counts for
+it; and a line of the Wikibook has numbers though lichess has no name for it. Games are read as
+deep as the catalog's longest line, 36 moves counting each side's. (The `Opening` tag of a game
+will not do instead: it names only the deepest named line the game reached, so the Sicilian's
+games are spread over its variations, and its names are not always the ones vendored here.)
+
+**How the games are kept apart.** By speed — bullet (with ultrabullet), blitz, rapid, classical —
+and by strength, going by the mean of the two players' ratings: under 1200, 1200–1599,
+1600–1999, 2000–2399, 2400 and over. The ratings are lichess's own, which are not FIDE's and run
+higher.
+
+**What is written.**
+
+- `positions.tsv` — a row for each position of interest, in the order of the catalog, the
+  starting position first: its `id`, which is its place in the file; the `position`, as the first
+  three fields of its FEN; and the ten `moves` most played from it with the number of games each
+  was played in, whatever their speed and strength. A position no game reached is listed with no
+  moves.
+- `tallies.tsv` — a row for each position, speed and band in which there were games: how many
+  White won (`white`), how many were drawn (`draws`) and how many Black won (`black`); what the
+  two ratings said White would score, added up over the games (`expected`), which is what an
+  opening's actual score is to be held against; how long the games were, added up, in moves of
+  either side (`plies`); and how many were over within twenty moves (`short`). The rows for the
+  starting position are the totals: every game that is counted counts for it.
+
+**What is left out**, and counted as left out in `SOURCE.json`: correspondence games; games
+without a result; games in which a player has no rating; games abandoned before they began, or
+in which no move was made; games with a bot; and games that cannot be read.
+
+**To count another month:** `npm run data:update:games` for the newest there is, or
+`npm run data:update:games 2026-10` for one in particular, then `npm run verify`. The month is
+read as it arrives — 31 GB that become 220 GB of PGN, none of which is kept — and a download that
+breaks off is taken up where it stopped. @@TIMING@@ A file that has been downloaded already can be
+given in place of the month, under the name lichess gave it
+(`lichess_db_standard_rated_2026-10.pgn.zst`).
+
+The tallies are for the positions the catalog had when they were counted. After new lines are
+vendored, or a collection is added, the new positions have no numbers until a month is counted
+again.
+
+How it is done quickly enough: lichess compresses its files with pzstd, which starts a new zstd
+frame every 32 MB, so [`scripts/games/frames.ts`](scripts/games/frames.ts) cuts the file into
+frames as it arrives and [`scripts/games/pool.ts`](scripts/games/pool.ts) hands them to a thread
+for each core to decompress and count. And the games are played through without a rules engine:
+they are known to be legal, so [`scripts/games/play.ts`](scripts/games/play.ts) finds the piece
+a move names by looking back from the square it goes to, which is some forty times quicker than
+validating the move. It is tested against chess.js, move for move.
+
 ## Credits
 
 - **Opening names and lines** — [lichess-org/chess-openings](https://github.com/lichess-org/chess-openings),
   released into the public domain (CC0).
+- **How the openings are played** — counted from the
+  [lichess.org open database](https://database.lichess.org/) of rated games, released into the
+  public domain (CC0).
 - **The Wikibooks collection** — names and lines from
   [Chess Opening Theory](https://en.wikibooks.org/wiki/Chess_Opening_Theory) by Wikibooks
   contributors, used under the
