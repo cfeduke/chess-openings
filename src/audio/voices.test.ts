@@ -1,0 +1,92 @@
+import { describe, expect, it } from 'vitest';
+import { asAudioContext, FakeAudioContext } from '../../tests/support/fake-audio.ts';
+import { SOUND_CUES, type SoundCue } from '../playback/player.ts';
+import { scheduleCue } from './voices.ts';
+
+const AT = 10;
+
+function schedule(...cues: SoundCue[]) {
+  const context = new FakeAudioContext();
+  const output = context.createGain();
+  for (const cue of cues)
+    scheduleCue(asAudioContext(context), output as unknown as AudioNode, cue, AT);
+  /** The gain nodes that shape individual sounds, as opposed to the output. */
+  const envelopes = context.gains.filter((gain) => gain !== output);
+  return { context, output, envelopes };
+}
+
+describe.each(SOUND_CUES)('the %s cue', (cue) => {
+  const { context, output, envelopes } = schedule(cue);
+
+  it('makes sound, and sends all of it to the output', () => {
+    expect(context.sources.length).toBeGreaterThan(0);
+    for (const source of context.sources) expect(source.reaches(output)).toBe(true);
+  });
+
+  it('starts no earlier than asked and always stops', () => {
+    for (const { startedAt, stoppedAt } of context.sources) {
+      expect(startedAt).toBeGreaterThanOrEqual(AT);
+      expect(stoppedAt).toBeGreaterThan(startedAt as number);
+      expect(stoppedAt).toBeLessThan(AT + 2);
+    }
+  });
+
+  it('rises from silence and dies away to silence, so nothing clicks', () => {
+    expect(envelopes.length).toBeGreaterThan(0);
+    for (const { gain } of envelopes) {
+      expect(gain.scheduled.at(0)).toBeLessThanOrEqual(0.001);
+      expect(gain.scheduled.at(-1)).toBeLessThanOrEqual(0.001);
+      expect(Math.max(...gain.scheduled)).toBeGreaterThan(0.01);
+      expect(Math.max(...gain.scheduled)).toBeLessThanOrEqual(1);
+    }
+  });
+});
+
+describe('what tells the cues apart', () => {
+  const startTimes = (cue: SoundCue) =>
+    [...new Set(schedule(cue).context.sources.map((source) => source.startedAt as number))].sort();
+  it('a move is a single knock of wood on wood', () => {
+    expect(startTimes('move')).toEqual([AT]);
+    expect(schedule('move').context.bufferSources).toHaveLength(1);
+  });
+
+  it('castling is two knocks, king then rook', () => {
+    const [first, second, ...rest] = startTimes('castle');
+
+    expect(rest).toEqual([]);
+    expect((second as number) - (first as number)).toBeGreaterThanOrEqual(0.08);
+    expect(schedule('castle').context.bufferSources).toHaveLength(2);
+  });
+
+  it('check rings out just after the move that gives it', () => {
+    const [first] = startTimes('check');
+
+    expect(first).toBeGreaterThanOrEqual(AT + 0.05);
+    expect(first).toBeLessThanOrEqual(AT + 0.2);
+    expect(schedule('check').context.bufferSources).toHaveLength(0);
+  });
+
+  it('the end of a line is three rising notes', () => {
+    const notes = schedule('complete')
+      .context.oscillators.map((oscillator) => ({
+        at: oscillator.startedAt as number,
+        pitch: oscillator.frequency.scheduled[0] as number,
+      }))
+      .sort((a, b) => a.at - b.at);
+
+    expect(new Set(notes.map((note) => note.at)).size).toBe(3);
+    const melody = [...new Map(notes.map((note) => [note.at, note.pitch])).values()];
+    expect(melody).toEqual([...melody].sort((a, b) => a - b));
+    expect(new Set(melody).size).toBe(3);
+  });
+});
+
+describe('noise', () => {
+  it('is generated once per audio context, however many knocks are played', () => {
+    const { context } = schedule('move', 'capture', 'castle', 'move');
+
+    expect(context.bufferSources.length).toBeGreaterThan(3);
+    expect(context.buffersCreated).toBe(1);
+    expect(new Set(context.bufferSources.map((source) => source.buffer)).size).toBe(1);
+  });
+});
