@@ -1,11 +1,12 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from 'vitest';
 import { ITALIAN, NAJDORF, SMALL_BOOK } from '../../tests/support/openings.ts';
+import { BUDAPEST, TWO_ARRANGEMENTS, TWO_COLLECTIONS } from '../../tests/support/pamphlet.ts';
 import { buildCatalog, type CatalogPlace } from '../catalog/catalog.ts';
 import type { Opening } from '../data/opening.ts';
 import { createOpeningHeader } from './opening-header.ts';
 
-const catalog = buildCatalog(SMALL_BOOK);
+const catalog = buildCatalog(TWO_COLLECTIONS.collections, TWO_ARRANGEMENTS);
 const placeOf = (opening: Opening) => catalog.locate(opening.id) as CatalogPlace;
 const named = (name: string) => SMALL_BOOK.find((opening) => opening.name === name) as Opening;
 const POLISH = named('Polish Opening');
@@ -75,6 +76,17 @@ describe('with an opening on the board', () => {
 
     expect(text('.opening__place')).toBe(
       'Volume B · Semi-Open Games › B90–B99 · Sicilian Defense: Najdorf',
+    );
+  });
+
+  it('says where it sits in a collection that files without codes, in that collection’s terms', () => {
+    const { header, text } = setup();
+
+    header.show(placeOf(BUDAPEST));
+
+    expect(text('.opening__eco')).toBe('A51');
+    expect(text('.opening__place')).toBe(
+      'Chapter 1. d4 · Queen’s Pawn Gambits › Gambits after 1. d4',
     );
   });
 

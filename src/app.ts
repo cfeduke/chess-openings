@@ -3,7 +3,7 @@ import './app.css';
 import { createSoundEffects } from './audio/sound-effects.ts';
 import { APPEARANCES, type Appearances, appearanceById } from './board/appearance.ts';
 import { createBoardView } from './board/board-view.ts';
-import { buildCatalog } from './catalog/catalog.ts';
+import { type Arrangement, buildCatalog } from './catalog/catalog.ts';
 import { featuredOpenings } from './catalog/featured.ts';
 import { createSearch } from './catalog/search.ts';
 import { buildTimeline } from './chess/timeline.ts';
@@ -27,26 +27,29 @@ interface AppOptions {
   signal?: AbortSignal;
   /** The looks the board can be given, the default first. */
   appearances?: Appearances;
+  /** How each collection of openings is laid out, by its id, if not the way the site does it. */
+  arrangements?: Record<string, Arrangement>;
 }
 
 /** The board with nothing chosen: the starting position, and no moves to play. */
 const NO_LINE = { san: [], uci: [] };
 
+/** How the credits put a licence, by its SPDX identifier. One not listed is named as it is. */
+const LICENCES: Record<string, string> = {
+  'CC0-1.0': 'in the public domain',
+};
+
 /**
- * Says where the openings come from and, in `pieceCredit` — which the caller keeps up to date —
- * where the pieces do.
+ * Says where the openings of each collection come from and, in `pieceCredit` — which the caller
+ * keeps up to date — where the pieces do.
  */
-function credits({ repository, commit }: DataSource, pieceCredit: HTMLElement): HTMLElement {
-  const source = el('a', { href: `https://github.com/${repository}/tree/${commit}` }, repository);
-  return el(
-    'p',
-    { class: 'credits' },
-    'Openings from ',
-    source,
-    ` @ ${commit.slice(0, 7)}, in the public domain. Chess pieces `,
-    pieceCredit,
-    '.',
-  );
+function credits(sources: DataSource[], pieceCredit: HTMLElement): HTMLElement {
+  const openings = sources.flatMap(({ title, url, revision, license }, index) => [
+    index === 0 ? 'Openings from ' : '; from ',
+    el('a', { href: url }, title),
+    ` @ ${revision}, ${LICENCES[license] ?? `under ${license}`}`,
+  ]);
+  return el('p', { class: 'credits' }, ...openings, '. Chess pieces ', pieceCredit, '.');
 }
 
 /**
@@ -54,7 +57,7 @@ function credits({ repository, commit }: DataSource, pieceCredit: HTMLElement): 
  * when the openings have been fetched, which is when the returned promise settles.
  */
 export async function mountApp(root: HTMLElement, options: AppOptions = {}): Promise<void> {
-  const { load = loadOpenings, signal, appearances = APPEARANCES } = options;
+  const { load = loadOpenings, signal, appearances = APPEARANCES, arrangements } = options;
   /** The page's title before an opening adds its name to it. */
   const siteTitle = document.title;
 
@@ -141,7 +144,7 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
       return;
     }
 
-    const catalog = buildCatalog(dataset.openings);
+    const catalog = buildCatalog(dataset.collections, arrangements);
 
     /**
      * The address says which opening is on the board; this makes the page agree with it. It is
@@ -170,10 +173,16 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
 
     const catalogView = createCatalog({
       catalog,
-      search: createSearch(dataset.openings),
+      search: createSearch(dataset.collections.flatMap((collection) => collection.openings)),
       onSelect: open,
     });
-    catalogPanel.replaceChildren(catalogView.element, credits(dataset.source, pieceCredit));
+    catalogPanel.replaceChildren(
+      catalogView.element,
+      credits(
+        dataset.collections.map((collection) => collection.source),
+        pieceCredit,
+      ),
+    );
     header.suggest(featuredOpenings(catalog));
 
     window.addEventListener('hashchange', showFromAddress, { signal });

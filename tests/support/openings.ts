@@ -1,4 +1,9 @@
-import type { Opening, OpeningsDataset } from '../../src/data/opening.ts';
+import type {
+  DataSource,
+  Opening,
+  OpeningCollection,
+  OpeningsDataset,
+} from '../../src/data/opening.ts';
 import { slugify } from '../../src/text/slug.ts';
 import { ITALIAN_GAME } from './lines.ts';
 
@@ -37,7 +42,19 @@ export const SMALL_BOOK: Opening[] = [
   opening('D10', 'Slav Defense', 'd4 d5 c4 c6'),
 ];
 
-export const SMALL_DATASET: OpeningsDataset = {
-  source: { repository: 'lichess-org/chess-openings', commit: 'abc1234def', license: 'CC0-1.0' },
-  openings: SMALL_BOOK,
+/** Where the encyclopaedia's lines come from. */
+export const LICHESS: DataSource = {
+  title: 'lichess-org/chess-openings',
+  url: 'https://github.com/lichess-org/chess-openings/tree/abc1234def',
+  revision: 'abc1234',
+  license: 'CC0-1.0',
 };
+
+/** The encyclopaedia's collection, holding `openings`. */
+export const encyclopaedia = (openings: Opening[]): OpeningCollection => ({
+  id: 'eco',
+  source: LICHESS,
+  openings,
+});
+
+export const SMALL_DATASET: OpeningsDataset = { collections: [encyclopaedia(SMALL_BOOK)] };

@@ -60,7 +60,7 @@ TypeScript, built with Vite, with no UI framework and no runtime dependencies.
 | `data/lichess/` | The upstream TSV files, pinned to a commit                                                     |
 | `scripts/`      | Build-time: parse the TSVs, replay every line with chess.js, write `public/openings.json`      |
 | `src/eco/`      | The ECO taxonomy: five volumes, 86 hand-curated groups of codes with their defining moves      |
-| `src/catalog/`  | Volume → group → family → line tree, search, and the openings offered to a first-time visitor  |
+| `src/catalog/`  | Collection → section → group → family → line tree, search, the openings offered to a newcomer  |
 | `src/chess/`    | A small board model: enough to play a known-legal line and say what each move did              |
 | `src/board/`    | The board on screen: pieces, highlight, arrow, slides — and its piece sets and board themes    |
 | `src/playback/` | The player: the schedule of a move's three beats and the play/pause/step/seek state            |
@@ -196,6 +196,29 @@ links to them — survive data updates. The build fails if a row is malformed or
 
 To pick up new upstream data: `npm run data:update` (optionally with a branch, tag or commit),
 then `npm run verify`.
+
+### Collections
+
+`openings.json` is a list of **collections**: bodies of openings from one source each, laid out
+each in its own way. So far there is one — the encyclopaedia, `eco`, which is the lichess lines
+filed under the five ECO volumes.
+
+A collection is declared in two places, under one id:
+
+- **The build** has a loader for it, listed in
+  [`scripts/openings/dataset.ts`](scripts/openings/dataset.ts), that gives it its openings and
+  its source: what the source is called, where it is, which revision was used and the SPDX
+  identifier of its licence. The credits under the catalog are written from that. The
+  encyclopaedia's loader is [`scripts/openings/lichess.ts`](scripts/openings/lichess.ts).
+- **The site** ([`src/catalog/arrangements.ts`](src/catalog/arrangements.ts)) gives it an
+  _arrangement_: what its tab says, what its sections are called, and a function that files
+  every opening under section → group → family → line. The encyclopaedia's sections are the
+  volumes and its groups are runs of ECO codes; another collection can have chapters and no
+  codes at all.
+
+The catalog lists the collections in the order the dataset has them and opens on the first. As
+soon as there is more than one, a row of tabs above the section tabs chooses between them, search
+covers them all, and a search result from any but the first says which collection it is from.
 
 ## Credits
 

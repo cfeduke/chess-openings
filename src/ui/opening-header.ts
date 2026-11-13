@@ -2,7 +2,6 @@ import './opening-header.css';
 import { type CatalogLine, type CatalogPlace, lineLabel } from '../catalog/catalog.ts';
 import type { Opening } from '../data/opening.ts';
 import { el } from '../dom.ts';
-import { ecoRangeLabel } from '../eco/taxonomy.ts';
 import { dress, iconButton } from './icon-button.ts';
 import type { IconName } from './icons.ts';
 
@@ -53,7 +52,7 @@ export function createOpeningHeader({ onSelect }: { onSelect(opening: Opening): 
         ),
       );
     } else {
-      const { opening, volume, group, family, index } = shown;
+      const { opening, section, group, family, index } = shown;
       const variation = family.lines[index]?.variation;
       const name = el(
         'h2',
@@ -63,8 +62,8 @@ export function createOpeningHeader({ onSelect }: { onSelect(opening: Opening): 
       );
       if (variation) name.append(el('span', { class: 'opening__variation' }, variation));
       const filedUnder =
-        `Volume ${volume.volume.letter} · ${volume.volume.title} › ` +
-        `${ecoRangeLabel(group.group)} · ${group.group.title}`;
+        `${section.name} · ${section.title} › ` +
+        [group.codes, group.title].filter(Boolean).join(' · ');
       title.replaceChildren(el('p', { class: 'opening__place' }, filedUnder), name);
 
       lines.setAttribute('aria-label', `Lines of ${family.name}`);

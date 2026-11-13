@@ -1,5 +1,6 @@
 .catalog,
-.catalog__browse {
+.catalog__browse,
+.catalog__shelf {
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -44,17 +45,56 @@
   font-size: 0.85rem;
 }
 
-/* Volumes --------------------------------------------------------------------------------- */
+/* Collections ----------------------------------------------------------------------------- */
 
-.catalog__tabs {
+/* One control with a choice in it, rather than tabs to match the ones underneath. */
+.catalog__collections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin: 0 12px 6px;
+  padding: 3px;
+  border: 1px solid var(--rule);
+  border-radius: 9px;
+  background: var(--paper);
+}
+
+.catalog__collections-tab {
+  flex: 1 1 0;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.catalog__collections-tab:hover {
+  color: var(--ink);
+}
+
+.catalog__collections-tab[aria-selected="true"] {
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgb(60 40 20 / 0.18);
+  color: var(--ink);
+}
+
+/* Sections -------------------------------------------------------------------------------- */
+
+/* However many there are, they share the width between them. */
+.catalog__sections {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
   gap: 4px;
   padding: 0 12px;
   border-bottom: 1px solid var(--rule);
 }
 
-.catalog__tab {
+.catalog__sections-tab {
   padding: 8px 0 9px;
   border: 0;
   border-bottom: 3px solid transparent;
@@ -62,14 +102,15 @@
   background: transparent;
   color: var(--ink-soft);
   font: 600 1.15rem / 1 var(--font-display);
+  white-space: nowrap;
   cursor: pointer;
 }
 
-.catalog__tab:hover {
+.catalog__sections-tab:hover {
   background: var(--accent-soft);
 }
 
-.catalog__tab[aria-selected="true"] {
+.catalog__sections-tab[aria-selected="true"] {
   border-bottom-color: var(--accent);
   color: var(--ink);
 }
@@ -81,19 +122,19 @@
   overflow-y: auto;
 }
 
-.volume__title {
+.section__title {
   margin: 0 4px 4px;
   font: 600 1.2rem / 1.2 var(--font-display);
 }
 
-.volume__summary,
-.volume__empty {
+.section__summary,
+.section__empty {
   margin: 0 4px 12px;
   color: var(--ink-soft);
   font-size: 0.85rem;
 }
 
-/* Groups of ECO codes ------------------------------------------------------------------------ */
+/* Groups ------------------------------------------------------------------------------------ */
 
 .groups,
 .lines {
@@ -196,7 +237,7 @@
 
 .line {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: baseline;
   gap: 1px 8px;
   width: 100%;
@@ -220,7 +261,24 @@
 }
 
 .line__name {
+  grid-column: 2 / -1;
   line-height: 1.25;
+}
+
+/* Which collection a line is from, beside its name. */
+.line:has(.line__source) .line__name {
+  grid-column: 2;
+}
+
+.line__source {
+  align-self: start;
+  padding: 2px 6px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 .group__moves {
@@ -228,7 +286,7 @@
 }
 
 .line__moves {
-  grid-column: 2;
+  grid-column: 2 / -1;
 }
 
 /* The opening on the board. */
@@ -244,4 +302,9 @@
 
 .line[aria-current="true"] .line__eco {
   border-color: transparent;
+}
+
+.line[aria-current="true"] .line__source {
+  border-color: currentcolor;
+  color: inherit;
 }

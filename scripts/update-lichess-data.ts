@@ -1,12 +1,8 @@
 // Refreshes the vendored opening data: `node scripts/update-lichess-data.ts [ref]`.
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import {
-  LICHESS_DATA_DIR,
-  SOURCE_FILE,
-  type VendoredSource,
-  VOLUME_FILES,
-} from './openings/dataset.ts';
+import { DATA_DIR } from './openings/dataset.ts';
+import { LICHESS_DIR, SOURCE_FILE, type VendoredSource, VOLUME_FILES } from './openings/lichess.ts';
 
 const REPOSITORY = 'lichess-org/chess-openings';
 
@@ -48,7 +44,8 @@ export async function updateLichessData(
 }
 
 if (import.meta.main) {
-  const sha = await updateLichessData(process.argv[2] ?? 'master', LICHESS_DATA_DIR, {
+  const dataDir = join(DATA_DIR, LICHESS_DIR);
+  const sha = await updateLichessData(process.argv[2] ?? 'master', dataDir, {
     fetchText: async (url) => {
       const response = await fetch(url);
       if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
@@ -57,7 +54,5 @@ if (import.meta.main) {
     writeFile,
     today: () => new Date().toISOString().slice(0, 10),
   });
-  console.log(
-    `${LICHESS_DATA_DIR}: now at ${REPOSITORY}@${sha}. Run "npm run verify" before committing.`,
-  );
+  console.log(`${dataDir}: now at ${REPOSITORY}@${sha}. Run "npm run verify" before committing.`);
 }

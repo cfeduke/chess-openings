@@ -1,208 +1,151 @@
 import { describe, expect, it } from 'vitest';
-import { realOpenings } from '../../tests/support/real-openings.ts';
-import type { Opening } from '../data/opening.ts';
+import { encyclopaedia, opening } from '../../tests/support/openings.ts';
+import {
+  BUDAPEST,
+  DANISH,
+  PAMPHLET,
+  PAMPHLET_ARRANGEMENT,
+  TWO_ARRANGEMENTS,
+} from '../../tests/support/pamphlet.ts';
+import { realDataset, realOpenings } from '../../tests/support/real-openings.ts';
 import { buildCatalog, lineLabel } from './catalog.ts';
 
-let nextId = 0;
-const opening = (eco: string, name: string, san: string): Opening => ({
-  id: `opening-${nextId++}`,
-  eco,
-  name,
-  san: san.split(' '),
-  uci: [],
-});
+const najdorf = opening('B90', 'Sicilian Defense: Najdorf Variation', 'e4 c5 Nf3 d6');
+const english = opening(
+  'B90',
+  'Sicilian Defense: Najdorf Variation, English Attack',
+  'e4 c5 Nf3 d6 Be3',
+);
+const italian = opening('C50', 'Italian Game', 'e4 e5');
 
 describe('buildCatalog', () => {
-  it('always lists the five volumes, even when some are empty', () => {
-    const { volumes } = buildCatalog([
-      opening('B90', 'Sicilian Defense: Najdorf Variation', 'e4 c5'),
-    ]);
+  const catalog = buildCatalog(
+    [encyclopaedia([english, najdorf, italian]), PAMPHLET],
+    TWO_ARRANGEMENTS,
+  );
+  const [eco, pamphlet] = catalog.collections;
 
-    expect(volumes.map((volume) => [volume.volume.letter, volume.count])).toEqual([
-      ['A', 0],
-      ['B', 1],
-      ['C', 0],
-      ['D', 0],
-      ['E', 0],
-    ]);
-  });
-
-  it('files each opening under volume → ECO group → family → line', () => {
-    const najdorf = opening('B90', 'Sicilian Defense: Najdorf Variation', 'e4 c5 Nf3 d6');
-    const {
-      volumes: [, volumeB],
-    } = buildCatalog([najdorf]);
-
-    expect(volumeB?.groups).toEqual([
-      {
-        group: expect.objectContaining({
-          from: 'B90',
-          to: 'B99',
-          title: 'Sicilian Defense: Najdorf',
-        }),
-        count: 1,
-        families: [
-          {
-            name: 'Sicilian Defense',
-            lines: [
-              { opening: najdorf, family: 'Sicilian Defense', variation: 'Najdorf Variation' },
-            ],
-          },
-        ],
-      },
-    ]);
-  });
-
-  it('omits ECO groups that have no openings', () => {
-    const {
-      volumes: [volumeA],
-    } = buildCatalog([opening('A01', 'Nimzo-Larsen Attack', 'b3')]);
-
-    expect(volumeA?.groups.map((entry) => entry.group.from)).toEqual(['A01']);
-  });
-
-  it('keeps one family together across the codes of a group, including its "with …" names', () => {
-    const {
-      volumes: [volumeA],
-    } = buildCatalog([
-      opening('A07', "King's Indian Attack, with Bf5", 'Nf3 d5 g3 Bf5'),
-      opening('A05', "King's Indian Attack", 'Nf3 Nf6 g3'),
-      opening('A04', 'Zukertort Opening', 'Nf3'),
-      opening('A08', "King's Indian Attack: French Variation", 'Nf3 d5 g3 c5 Bg2 Nc6'),
-    ]);
-
-    expect(volumeA?.groups[0]?.families).toEqual([
-      {
-        name: "King's Indian Attack",
-        lines: [
-          expect.objectContaining({ variation: '' }),
-          expect.objectContaining({ variation: 'with Bf5' }),
-          expect.objectContaining({ variation: 'French Variation' }),
-        ],
-      },
-      { name: 'Zukertort Opening', lines: [expect.objectContaining({ variation: '' })] },
-    ]);
-  });
-
-  it('leads each group with its biggest family, and breaks ties by ECO order', () => {
-    const {
-      volumes: [volumeA],
-    } = buildCatalog([
-      opening('A04', 'Colle System: Rhamphorhynchus Variation', 'Nf3 g6'),
-      opening('A04', 'Zukertort Opening', 'Nf3'),
-      opening('A06', 'Zukertort Opening: Tennison Gambit', 'Nf3 d5 e4'),
-      opening('A09', 'Réti Opening', 'Nf3 d5 c4'),
-    ]);
-
-    expect(volumeA?.groups[0]?.families.map((family) => family.name)).toEqual([
-      'Zukertort Opening',
-      'Colle System',
-      'Réti Opening',
-    ]);
-  });
-
-  it('orders lines by ECO code, then name, then length — whatever order they arrive in', () => {
-    const {
-      volumes: [, , volumeC],
-    } = buildCatalog([
-      opening('C51', 'Italian Game: Evans Gambit', 'e4 e5 Nf3 Nc6 Bc4 Bc5 b4'),
-      opening('C50', 'Italian Game: Giuoco Pianissimo', 'e4 e5 Nf3 Nc6 Bc4 Bc5 d3 Nf6'),
-      opening('C50', 'Italian Game', 'e4 e5 Nf3 Nc6 Bc4'),
-      opening('C50', 'Italian Game: Giuoco Pianissimo', 'e4 e5 Nf3 Nc6 Bc4 Bc5 d3'),
-    ]);
-
-    const lines = volumeC?.groups[0]?.families[0]?.lines ?? [];
+  it('lists the collections in the order they are given, each as its arrangement presents it', () => {
     expect(
-      lines.map((line) => [line.opening.eco, line.variation, line.opening.san.length]),
+      catalog.collections.map(({ id, name, title, sectionsLabel }) => [
+        id,
+        name,
+        title,
+        sectionsLabel,
+      ]),
     ).toEqual([
-      ['C50', '', 5],
-      ['C50', 'Giuoco Pianissimo', 7],
-      ['C50', 'Giuoco Pianissimo', 8],
-      ['C51', 'Evans Gambit', 7],
+      ['eco', 'ECO', 'Encyclopaedia of Chess Openings', 'ECO volumes'],
+      ['pamphlet', 'Pamphlet', 'A Pamphlet of Gambits', 'Pamphlet chapters'],
     ]);
   });
 
-  describe('for the real dataset', () => {
-    const catalog = buildCatalog(realOpenings);
-    const groups = catalog.volumes.flatMap((volume) => volume.groups);
-    const lines = groups.flatMap((group) => group.families).flatMap((family) => family.lines);
+  it('lays each collection out in the sections and groups its arrangement gives it', () => {
+    expect(eco?.sections.map((section) => section.tab)).toEqual(['A', 'B', 'C', 'D', 'E']);
+    expect(pamphlet?.sections).toEqual(
+      PAMPHLET_ARRANGEMENT.arrange(PAMPHLET.openings).map((section) =>
+        expect.objectContaining({
+          ...section,
+          groups: section.groups.map((group) => expect.objectContaining(group)),
+        }),
+      ),
+    );
+  });
 
-    it('contains every opening exactly once', () => {
-      expect(lines).toHaveLength(realOpenings.length);
-      expect(new Set(lines.map((line) => line.opening)).size).toBe(realOpenings.length);
-    });
+  it('counts the lines of every group, section and collection', () => {
+    expect(eco?.count).toBe(3);
+    expect(eco?.sections.map((section) => section.count)).toEqual([0, 2, 1, 0, 0]);
+    expect(eco?.sections[1]?.groups.map((group) => group.count)).toEqual([2]);
+    expect(pamphlet?.count).toBe(4);
+    expect(pamphlet?.sections.map((section) => section.count)).toEqual([3, 1, 0]);
+    expect(catalog.count).toBe(7);
+  });
 
-    it('keeps the counts consistent at every level', () => {
-      for (const volume of catalog.volumes) {
-        expect(volume.count).toBe(volume.groups.reduce((sum, group) => sum + group.count, 0));
-      }
-      for (const group of groups) {
-        expect(group.count).toBe(
-          group.families.reduce((sum, family) => sum + family.lines.length, 0),
-        );
-      }
-    });
+  it('uses the site’s own arrangements unless it is given others', () => {
+    const [collection] = buildCatalog([encyclopaedia([italian])]).collections;
 
-    it('never mixes volumes or groups up', () => {
-      for (const volume of catalog.volumes) {
-        for (const { group, families } of volume.groups) {
-          for (const { opening: line } of families.flatMap((family) => family.lines)) {
-            expect(line.eco[0]).toBe(volume.volume.letter);
-            expect(
-              line.eco >= group.from && line.eco <= group.to,
-              `${line.eco} in ${group.from}`,
-            ).toBe(true);
-          }
-        }
-      }
-    });
+    expect(collection?.name).toBe('ECO');
+  });
 
-    it('has the Sicilian as the only family of the Najdorf group', () => {
-      const najdorf = groups.find((entry) => entry.group.from === 'B90');
-
-      expect(najdorf?.families.map((family) => family.name)).toEqual(['Sicilian Defense']);
-      expect(najdorf?.families[0]?.lines[0]?.variation).toBe('Najdorf Variation');
-    });
+  it('refuses a collection it has no arrangement for', () => {
+    expect(() => buildCatalog([PAMPHLET])).toThrow('no arrangement for the collection "pamphlet"');
   });
 
   describe('locate', () => {
-    const najdorf = opening('B90', 'Sicilian Defense: Najdorf Variation', 'e4 c5 Nf3 d6');
-    const english = opening(
-      'B90',
-      'Sicilian Defense: Najdorf Variation, English Attack',
-      'e4 c5 Nf3 d6 Be3',
-    );
-    const catalog = buildCatalog([english, najdorf, opening('C50', 'Italian Game', 'e4 e5')]);
-
-    it('says where an opening is filed: its volume, group and family, and its place among the lines', () => {
+    it('says where an opening is filed, down to its place among the lines of its family', () => {
       const place = catalog.locate(english.id);
 
       expect(place?.opening).toBe(english);
-      expect(place?.volume.volume.letter).toBe('B');
-      expect(place?.group.group.from).toBe('B90');
+      expect(place?.collection).toBe(eco);
+      expect(place?.section.tab).toBe('B');
+      expect(place?.group.id).toBe('B90');
       expect(place?.family.name).toBe('Sicilian Defense');
       expect(place?.family.lines[place.index]?.opening).toBe(english);
       expect(place?.index).toBe(1);
       expect(catalog.locate(najdorf.id)?.index).toBe(0);
     });
 
+    it('finds the openings of every collection', () => {
+      const place = catalog.locate(BUDAPEST.id);
+
+      expect(place?.collection).toBe(pamphlet);
+      expect(place?.section.tab).toBe('1. d4');
+      expect(place?.group.title).toBe('Gambits after 1. d4');
+      expect(catalog.locate(DANISH.id)?.section.tab).toBe('1. e4');
+    });
+
     it('finds nothing for an id it does not know', () => {
       expect(catalog.locate('no-such-opening')).toBeUndefined();
     });
+  });
 
-    it('finds every opening of the real dataset', () => {
-      const real = buildCatalog(realOpenings);
+  describe('for the real dataset', () => {
+    const real = buildCatalog(realDataset.collections);
+    const everyOpening = realDataset.collections.flatMap((collection) => collection.openings);
+    const sections = real.collections.flatMap((collection) => collection.sections);
+    const groups = sections.flatMap((section) => section.groups);
+    const lines = groups.flatMap((group) => group.families).flatMap((family) => family.lines);
 
-      expect(realOpenings.filter((entry) => real.locate(entry.id)?.opening !== entry)).toEqual([]);
+    it('contains every opening exactly once', () => {
+      expect(lines).toHaveLength(everyOpening.length);
+      expect(new Set(lines.map((line) => line.opening)).size).toBe(everyOpening.length);
+    });
+
+    it('keeps the counts consistent at every level', () => {
+      const sum = (counts: number[]) => counts.reduce((total, count) => total + count, 0);
+
+      for (const collection of real.collections) {
+        expect(collection.count).toBe(sum(collection.sections.map((section) => section.count)));
+      }
+      for (const section of sections) {
+        expect(section.count).toBe(sum(section.groups.map((group) => group.count)));
+      }
+      for (const group of groups) {
+        expect(group.count).toBe(sum(group.families.map((family) => family.lines.length)));
+      }
+    });
+
+    it('gives every group an id of its own within its collection', () => {
+      for (const collection of real.collections) {
+        const ids = collection.sections.flatMap((section) => section.groups).map(({ id }) => id);
+
+        expect(new Set(ids).size).toBe(ids.length);
+      }
+    });
+
+    it('finds every opening', () => {
+      expect(everyOpening.filter((entry) => real.locate(entry.id)?.opening !== entry)).toEqual([]);
+    });
+
+    it('has the encyclopaedia first, holding the lichess lines', () => {
+      expect(real.collections[0]?.id).toBe('eco');
+      expect(real.collections[0]?.count).toBe(realOpenings.length);
     });
   });
 });
 
 describe('lineLabel', () => {
   it('is what distinguishes a line within its family, or "Main line" for the family’s own', () => {
-    expect(lineLabel({ family: 'Italian Game', variation: 'Giuoco Pianissimo' })).toBe(
-      'Giuoco Pianissimo',
-    );
-    expect(lineLabel({ family: 'Italian Game', variation: '' })).toBe('Main line');
+    expect(lineLabel({ variation: 'Giuoco Pianissimo' })).toBe('Giuoco Pianissimo');
+    expect(lineLabel({ variation: '' })).toBe('Main line');
   });
 });
