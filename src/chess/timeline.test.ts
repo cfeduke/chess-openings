@@ -1,5 +1,6 @@
 import { Chess } from 'chess.js';
 import { describe, expect, it } from 'vitest';
+import { EXCHANGE_SPANISH, firstMoves } from '../../tests/support/lines.ts';
 import { realOpenings } from '../../tests/support/real-openings.ts';
 import { type Position, type Square, startingPosition } from './board.ts';
 import { givesCheck } from './san.ts';
@@ -23,10 +24,7 @@ function placement(position: Position): string {
 
 describe('buildTimeline', () => {
   // 1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Bxc6 dxc6 5. O-O
-  const exchangeSpanish = buildTimeline({
-    san: ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'a6', 'Bxc6', 'dxc6', 'O-O'],
-    uci: ['e2e4', 'e7e5', 'g1f3', 'b8c6', 'f1b5', 'a7a6', 'b5c6', 'd7c6', 'e1g1'],
-  });
+  const exchangeSpanish = buildTimeline(firstMoves(EXCHANGE_SPANISH, 9));
 
   it('starts from the starting position and has one position per move after it', () => {
     expect(exchangeSpanish.positions).toHaveLength(exchangeSpanish.moves.length + 1);

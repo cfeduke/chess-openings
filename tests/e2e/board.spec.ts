@@ -1,12 +1,5 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
-
-const boardOn = (page: Page) => page.getByRole('img', { name: 'Chess board' });
-
-async function box(locator: Locator) {
-  const bounds = await locator.boundingBox();
-  if (!bounds) throw new Error('element has no bounding box');
-  return bounds;
-}
+import { expect, test } from '@playwright/test';
+import { boardOn, box } from './support.ts';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
