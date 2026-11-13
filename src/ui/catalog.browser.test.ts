@@ -1,6 +1,6 @@
 import '../styles/theme.css';
 import { afterEach, describe, expect, it } from 'vitest';
-import { encyclopaedia, SMALL_BOOK } from '../../tests/support/openings.ts';
+import { encyclopaedia, opening, SMALL_BOOK } from '../../tests/support/openings.ts';
 import { TWO_ARRANGEMENTS, TWO_COLLECTIONS } from '../../tests/support/pamphlet.ts';
 import { buildCatalog } from '../catalog/catalog.ts';
 import { createSearch } from '../catalog/search.ts';
@@ -13,11 +13,12 @@ const NARROWEST = 260;
 
 /** The catalog in a column of its own, as the page lays it out. */
 function mount(collections: OpeningCollection[] = TWO_COLLECTIONS.collections) {
-  const { element } = createCatalog({
+  const view = createCatalog({
     catalog: buildCatalog(collections, TWO_ARRANGEMENTS),
     search: createSearch(collections.flatMap((collection) => collection.openings)),
     onSelect: () => {},
   });
+  const { element } = view;
   const host = el(
     'div',
     { style: `display: flex; flex-direction: column; width: ${NARROWEST}px; height: 480px` },
@@ -40,7 +41,7 @@ function mount(collections: OpeningCollection[] = TWO_COLLECTIONS.collections) {
     box(found).left >= box(host).left - 0.5 &&
     box(found).right <= box(host).right + 0.5 &&
     found.scrollWidth <= found.clientWidth;
-  return { element, tabs, tab, box, fits };
+  return { view, element, tabs, tab, box, fits };
 }
 
 afterEach(() => {
@@ -119,5 +120,26 @@ describe('the section tabs in a real browser', () => {
     const [volumeA] = tabs('ECO volumes') as [HTMLElement];
 
     expect(box(volumeA).top - box(search).bottom).toBeLessThan(16);
+  });
+});
+
+describe('the panel in a real browser', () => {
+  /** Sixty lines of one family: far more than the panel can show at once. */
+  const longFamily = Array.from({ length: 60 }, (_, index) =>
+    opening('C50', `Italian Game: Line ${index + 1}`, 'e4 e5 Nf3 Nc6 Bc4'),
+  );
+
+  it('stays where it was scrolled to when another line already in view is shown', () => {
+    const { view, element } = mount([encyclopaedia(longFamily)]);
+    const panel = element.querySelector('#section-panel') as HTMLElement;
+    view.show(longFamily[0] as (typeof longFamily)[number]);
+    const tenth = element.querySelector(`.line[data-opening="${longFamily[9]?.id}"]`);
+    tenth?.scrollIntoView({ block: 'start' });
+    const scrolledTo = panel.scrollTop;
+    expect(scrolledTo).toBeGreaterThan(0);
+
+    view.show(longFamily[10] as (typeof longFamily)[number]);
+
+    expect(panel.scrollTop).toBe(scrolledTo);
   });
 });

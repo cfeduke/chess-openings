@@ -205,9 +205,11 @@ filed under the five ECO volumes.
 
 A collection is declared in two places, under one id:
 
-- **The build** ([`scripts/openings/dataset.ts`](scripts/openings/dataset.ts)) gives it its
-  openings and its source: what the source is called, where it is, which revision was used and
-  the SPDX identifier of its licence. The credits under the catalog are written from that.
+- **The build** has a loader for it, listed in
+  [`scripts/openings/dataset.ts`](scripts/openings/dataset.ts), that gives it its openings and
+  its source: what the source is called, where it is, which revision was used and the SPDX
+  identifier of its licence. The credits under the catalog are written from that. The
+  encyclopaedia's loader is [`scripts/openings/lichess.ts`](scripts/openings/lichess.ts).
 - **The site** ([`src/catalog/arrangements.ts`](src/catalog/arrangements.ts)) gives it an
   _arrangement_: what its tab says, what its sections are called, and a function that files
   every opening under section → group → family → line. The encyclopaedia's sections are the

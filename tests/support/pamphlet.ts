@@ -2,14 +2,12 @@ import { ARRANGEMENTS } from '../../src/catalog/arrangements.ts';
 import type { Arrangement } from '../../src/catalog/catalog.ts';
 import type { Opening, OpeningCollection, OpeningsDataset } from '../../src/data/opening.ts';
 import { slugify } from '../../src/text/slug.ts';
-import { encyclopaedia, SMALL_BOOK } from './openings.ts';
+import { encyclopaedia, opening, SMALL_BOOK } from './openings.ts';
 
+/** An opening of the pamphlet: its id says which collection it is from. */
 const gambit = (eco: string, name: string, san: string, uci = ''): Opening => ({
+  ...opening(eco, name, san, uci),
   id: `pamphlet-${slugify(name)}`,
-  eco,
-  name,
-  san: san.split(' '),
-  uci: uci ? uci.split(' ') : [],
 });
 
 /** The Danish Gambit can be played through; the rest are there to be browsed. */
@@ -75,7 +73,7 @@ export const PAMPHLET_ARRANGEMENT: Arrangement = {
                   moves: [first],
                   families: gambits.map((opening) => ({
                     name: opening.name,
-                    lines: [{ opening, family: opening.name, variation: '' }],
+                    lines: [{ opening, variation: '' }],
                   })),
                 },
               ],

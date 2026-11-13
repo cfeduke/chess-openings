@@ -93,11 +93,14 @@ function tabRow<T>({
     element,
     /** Makes the tab of `chosen` the chosen one, and returns its id. */
     mark(chosen: T | undefined): string {
-      items.forEach((item, index) => {
-        tabs[index]?.setAttribute('aria-selected', String(item === chosen));
-        tabs[index]?.setAttribute('tabindex', item === chosen ? '0' : '-1');
+      let id = '';
+      tabs.forEach((tab, index) => {
+        const isChosen = items[index] === chosen;
+        tab.setAttribute('aria-selected', String(isChosen));
+        tab.setAttribute('tabindex', isChosen ? '0' : '-1');
+        if (isChosen) id = tab.id;
       });
-      return tabs[items.indexOf(chosen as T)]?.id ?? '';
+      return id;
     },
   };
 }
@@ -175,7 +178,7 @@ export function createCatalog({ catalog, search, onSelect }: CatalogOptions): Ca
   };
 
   /** What the panel shows of a section: what the section is, and its groups. */
-  const pageOf = (section: CatalogSection): HTMLElement => {
+  const pageOf = (collection: CatalogCollection, section: CatalogSection): HTMLElement => {
     const page = el(
       'div',
       { class: 'section' },
@@ -188,7 +191,11 @@ export function createCatalog({ catalog, search, onSelect }: CatalogOptions): Ca
 
     const list = el('ul', { class: 'groups' });
     for (const group of section.groups) {
-      const body = el('div', { class: 'group__body', id: `group-${group.id}`, hidden: '' });
+      const body = el('div', {
+        class: 'group__body',
+        id: `group-${collection.id}-${group.id}`,
+        hidden: '',
+      });
       const toggle = el(
         'button',
         {
@@ -219,15 +226,20 @@ export function createCatalog({ catalog, search, onSelect }: CatalogOptions): Ca
         class: 'catalog__sections',
         controls: panel.id,
         items: collection.sections,
-        about: ({ id, tab, name, title }) => ({
-          id: `section-tab-${collection.id}-${id}`,
-          text: tab,
-          name: `${name}: ${title}`,
-          title: `${name}: ${title}`,
-        }),
+        about: ({ id, tab, name, title }) => {
+          const inFull = `${name}: ${title}`;
+          return {
+            id: `section-tab-${collection.id}-${id}`,
+            text: tab,
+            name: inFull,
+            title: inFull,
+          };
+        },
         onChoose: (section) => turnTo(collection, section),
       });
-      const pages = new Map(collection.sections.map((section) => [section, pageOf(section)]));
+      const pages = new Map(
+        collection.sections.map((section) => [section, pageOf(collection, section)]),
+      );
       return [collection, { sectionTabs, pages, current: collection.sections[0] }];
     }),
   );
@@ -254,9 +266,15 @@ export function createCatalog({ catalog, search, onSelect }: CatalogOptions): Ca
 
     const collectionTab = collectionTabs?.mark(collection);
     if (collectionTab) shelf.setAttribute('aria-labelledby', collectionTab);
-    shelf.replaceChildren(kept.sectionTabs.element, panel);
     panel.setAttribute('aria-labelledby', kept.sectionTabs.mark(kept.current));
-    panel.replaceChildren((kept.current && kept.pages.get(kept.current)) ?? '');
+
+    // Only what has changed is put in place: taking the panel or its page out of the document,
+    // even to put it straight back, would lose how far the panel had been scrolled.
+    const page = (kept.current && kept.pages.get(kept.current)) ?? null;
+    if (kept.sectionTabs.element.parentNode !== shelf) {
+      shelf.replaceChildren(kept.sectionTabs.element, panel);
+    }
+    if (panel.firstChild !== page) panel.replaceChildren(page ?? '');
   };
 
   // Search --------------------------------------------------------------------------------
@@ -265,7 +283,7 @@ export function createCatalog({ catalog, search, onSelect }: CatalogOptions): Ca
     type: 'search',
     class: 'catalog__search',
     'aria-label': 'Search openings',
-    placeholder: `Search ${count(collections.reduce((sum, { count }) => sum + count, 0))}`,
+    placeholder: `Search ${count(catalog.count)}`,
     autocomplete: 'off',
     spellcheck: 'false',
   });

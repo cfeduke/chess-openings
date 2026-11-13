@@ -3,7 +3,6 @@ import './app.css';
 import { createSoundEffects } from './audio/sound-effects.ts';
 import { APPEARANCES, type Appearances, appearanceById } from './board/appearance.ts';
 import { createBoardView } from './board/board-view.ts';
-import { ARRANGEMENTS } from './catalog/arrangements.ts';
 import { type Arrangement, buildCatalog } from './catalog/catalog.ts';
 import { featuredOpenings } from './catalog/featured.ts';
 import { createSearch } from './catalog/search.ts';
@@ -28,7 +27,7 @@ interface AppOptions {
   signal?: AbortSignal;
   /** The looks the board can be given, the default first. */
   appearances?: Appearances;
-  /** How each collection of openings is laid out, by its id. */
+  /** How each collection of openings is laid out, by its id, if not the way the site does it. */
   arrangements?: Record<string, Arrangement>;
 }
 
@@ -58,12 +57,7 @@ function credits(sources: DataSource[], pieceCredit: HTMLElement): HTMLElement {
  * when the openings have been fetched, which is when the returned promise settles.
  */
 export async function mountApp(root: HTMLElement, options: AppOptions = {}): Promise<void> {
-  const {
-    load = loadOpenings,
-    signal,
-    appearances = APPEARANCES,
-    arrangements = ARRANGEMENTS,
-  } = options;
+  const { load = loadOpenings, signal, appearances = APPEARANCES, arrangements } = options;
   /** The page's title before an opening adds its name to it. */
   const siteTitle = document.title;
 
@@ -185,7 +179,7 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
     catalogPanel.replaceChildren(
       catalogView.element,
       credits(
-        catalog.collections.map((collection) => collection.source),
+        dataset.collections.map((collection) => collection.source),
         pieceCredit,
       ),
     );

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { encyclopaedia, LICHESS } from '../../tests/support/openings.ts';
+import { encyclopaedia, opening } from '../../tests/support/openings.ts';
 import {
   BUDAPEST,
   DANISH,
@@ -8,17 +8,7 @@ import {
   TWO_ARRANGEMENTS,
 } from '../../tests/support/pamphlet.ts';
 import { realDataset, realOpenings } from '../../tests/support/real-openings.ts';
-import type { Opening } from '../data/opening.ts';
 import { buildCatalog, lineLabel } from './catalog.ts';
-
-let nextId = 0;
-const opening = (eco: string, name: string, san: string): Opening => ({
-  id: `opening-${nextId++}`,
-  eco,
-  name,
-  san: san.split(' '),
-  uci: [],
-});
 
 const najdorf = opening('B90', 'Sicilian Defense: Najdorf Variation', 'e4 c5 Nf3 d6');
 const english = opening(
@@ -49,11 +39,6 @@ describe('buildCatalog', () => {
     ]);
   });
 
-  it('keeps each collection’s source, to be credited', () => {
-    expect(eco?.source).toBe(LICHESS);
-    expect(pamphlet?.source).toBe(PAMPHLET.source);
-  });
-
   it('lays each collection out in the sections and groups its arrangement gives it', () => {
     expect(eco?.sections.map((section) => section.tab)).toEqual(['A', 'B', 'C', 'D', 'E']);
     expect(pamphlet?.sections).toEqual(
@@ -72,6 +57,7 @@ describe('buildCatalog', () => {
     expect(eco?.sections[1]?.groups.map((group) => group.count)).toEqual([2]);
     expect(pamphlet?.count).toBe(4);
     expect(pamphlet?.sections.map((section) => section.count)).toEqual([3, 1, 0]);
+    expect(catalog.count).toBe(7);
   });
 
   it('uses the site’s own arrangements unless it is given others', () => {
@@ -138,8 +124,12 @@ describe('buildCatalog', () => {
       }
     });
 
-    it('gives every group an id of its own', () => {
-      expect(new Set(groups.map((group) => group.id)).size).toBe(groups.length);
+    it('gives every group an id of its own within its collection', () => {
+      for (const collection of real.collections) {
+        const ids = collection.sections.flatMap((section) => section.groups).map(({ id }) => id);
+
+        expect(new Set(ids).size).toBe(ids.length);
+      }
     });
 
     it('finds every opening', () => {
@@ -155,9 +145,7 @@ describe('buildCatalog', () => {
 
 describe('lineLabel', () => {
   it('is what distinguishes a line within its family, or "Main line" for the family’s own', () => {
-    expect(lineLabel({ family: 'Italian Game', variation: 'Giuoco Pianissimo' })).toBe(
-      'Giuoco Pianissimo',
-    );
-    expect(lineLabel({ family: 'Italian Game', variation: '' })).toBe('Main line');
+    expect(lineLabel({ variation: 'Giuoco Pianissimo' })).toBe('Giuoco Pianissimo');
+    expect(lineLabel({ variation: '' })).toBe('Main line');
   });
 });

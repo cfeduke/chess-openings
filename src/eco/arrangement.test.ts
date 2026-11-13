@@ -1,16 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { opening } from '../../tests/support/openings.ts';
 import { realOpenings } from '../../tests/support/real-openings.ts';
-import type { Opening } from '../data/opening.ts';
 import { ECO_ARRANGEMENT } from './arrangement.ts';
-
-let nextId = 0;
-const opening = (eco: string, name: string, san: string): Opening => ({
-  id: `opening-${nextId++}`,
-  eco,
-  name,
-  san: san.split(' '),
-  uci: [],
-});
 
 const { arrange } = ECO_ARRANGEMENT;
 
@@ -54,9 +45,7 @@ describe('the encyclopaedia’s arrangement', () => {
         families: [
           {
             name: 'Sicilian Defense',
-            lines: [
-              { opening: najdorf, family: 'Sicilian Defense', variation: 'Najdorf Variation' },
-            ],
+            lines: [{ opening: najdorf, variation: 'Najdorf Variation' }],
           },
         ],
       },

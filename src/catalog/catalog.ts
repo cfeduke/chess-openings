@@ -1,10 +1,11 @@
-import type { DataSource, Opening, OpeningCollection } from '../data/opening.ts';
+import type { Opening, OpeningCollection } from '../data/opening.ts';
 import { ARRANGEMENTS } from './arrangements.ts';
-import type { OpeningName } from './name.ts';
 
-/** One opening, with its name split into its family and what distinguishes it within it. */
-export interface CatalogLine extends OpeningName {
+/** One opening, as a line of its family. */
+export interface CatalogLine {
   opening: Opening;
+  /** What distinguishes it within the family; empty for the family's own main line. */
+  variation: string;
 }
 
 /** The lines of one opening family that fall inside one group. */
@@ -15,7 +16,7 @@ export interface CatalogFamily {
 
 /** Lines that belong together: in the encyclopaedia, those of a run of ECO codes. */
 export interface CatalogGroup {
-  /** Unique in the whole catalog, and fit to be part of an element's id. */
+  /** Unique in its collection, and fit to be part of an element's id. */
   id: string;
   /** The codes it covers, such as `B90–B99`. Empty where the collection does not file by code. */
   codes: string;
@@ -64,7 +65,6 @@ export interface Arrangement {
 /** A body of openings from one source, laid out by its arrangement. */
 export interface CatalogCollection extends Omit<Arrangement, 'arrange'> {
   id: string;
-  source: DataSource;
   sections: CatalogSection[];
   /** Number of lines in the collection. */
   count: number;
@@ -85,12 +85,14 @@ export interface CatalogPlace {
 export interface Catalog {
   /** In the order they are offered. */
   collections: CatalogCollection[];
+  /** Number of lines in all of them. */
+  count: number;
   /** Where the opening with this id is filed, if there is one. */
   locate(id: string): CatalogPlace | undefined;
 }
 
 /** What a line is called among the lines of its family. */
-export function lineLabel({ variation }: OpeningName): string {
+export function lineLabel({ variation }: Pick<CatalogLine, 'variation'>): string {
   return variation || 'Main line';
 }
 
@@ -106,7 +108,7 @@ export function buildCatalog(
 ): Catalog {
   const places = new Map<string, CatalogPlace>();
 
-  const laidOut = collections.map(({ id, source, openings }): CatalogCollection => {
+  const laidOut = collections.map(({ id, openings }): CatalogCollection => {
     const arrangement = arrangements[id];
     if (!arrangement) throw new Error(`no arrangement for the collection ${JSON.stringify(id)}`);
     const { arrange, ...about } = arrangement;
@@ -120,7 +122,7 @@ export function buildCatalog(
       );
       return { ...plan, groups, count: total(groups) };
     });
-    const collection = { ...about, id, source, sections, count: total(sections) };
+    const collection = { ...about, id, sections, count: total(sections) };
 
     for (const section of sections) {
       for (const group of section.groups) {
@@ -134,5 +136,5 @@ export function buildCatalog(
     return collection;
   });
 
-  return { collections: laidOut, locate: (id) => places.get(id) };
+  return { collections: laidOut, count: total(laidOut), locate: (id) => places.get(id) };
 }

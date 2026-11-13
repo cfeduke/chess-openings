@@ -4,7 +4,10 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { isSlug } from '../../src/text/slug.ts';
 import { realOpenings as openings, realDataset } from '../../tests/support/real-openings.ts';
-import { DATA_DIR, LICHESS_DATA_DIR, loadDataset, SOURCE_FILE, VOLUME_FILES } from './dataset.ts';
+import { DATA_DIR, loadDataset } from './dataset.ts';
+import { LICHESS_DIR, SOURCE_FILE, VOLUME_FILES } from './lichess.ts';
+
+const LICHESS_DATA_DIR = join(DATA_DIR, LICHESS_DIR);
 
 describe('the dataset', () => {
   it('is a list of collections, of which the encyclopaedia is the first', () => {
@@ -73,7 +76,7 @@ describe('loadDataset', () => {
     const dataDir = mkdtempSync(join(tmpdir(), 'openings-data-'));
     cpSync(DATA_DIR, dataDir, { recursive: true });
     writeFileSync(
-      join(dataDir, 'lichess', SOURCE_FILE),
+      join(dataDir, LICHESS_DIR, SOURCE_FILE),
       JSON.stringify({ repository: 'lichess-org/chess-openings' }),
     );
 
