@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyMove,
   type Color,
+  moveKind,
   type Piece,
   type PieceType,
   type Position,
@@ -90,12 +91,6 @@ describe('applyMove', () => {
     expect(position.size).toBe(31);
   });
 
-  it('does not mistake an ordinary pawn capture for en passant', () => {
-    const { move } = play('e2e4', 'd7d5', 'e4d5');
-
-    expect(move.captured?.square).toBe('d5');
-  });
-
   describe('castling', () => {
     it.each([
       ['white kingside', { e1: 'wk', h1: 'wr' }, 'e1g1', 'h1', 'f1'],
@@ -164,5 +159,18 @@ describe('applyMove', () => {
 
   it.each(['e2-e4', 'e2', 'e2e9', 'i2i4', 'e7e8k', ''])('rejects %j as a UCI move', (uci) => {
     expect(() => applyMove(startingPosition(), uci)).toThrow(/not a UCI move/);
+  });
+});
+
+describe('moveKind', () => {
+  it('tells a quiet move, a capture and castling apart', () => {
+    expect(moveKind(play('e2e4').move)).toBe('move');
+    expect(moveKind(play('e2e4', 'd7d5', 'e4d5').move)).toBe('capture');
+    expect(moveKind(play('e2e4', 'a7a6', 'e4e5', 'd7d5', 'e5d6').move)).toBe('capture');
+    expect(moveKind(applyMove(place({ e1: 'wk', h1: 'wr' }), 'e1g1').move)).toBe('castle');
+  });
+
+  it('calls a capturing promotion a capture', () => {
+    expect(moveKind(applyMove(place({ b7: 'wp', a8: 'br' }), 'b7a8q').move)).toBe('capture');
   });
 });

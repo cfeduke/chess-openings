@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { foldSan, formatMoveText, looksLikeSan, parseMoveText } from './san.ts';
+import { foldSan, formatMoveText, givesCheck, looksLikeSan, parseMoveText } from './san.ts';
 
 describe('parseMoveText', () => {
   it('drops move numbers and keeps the moves in order', () => {
@@ -65,5 +65,15 @@ describe('looksLikeSan', () => {
 
   it.each(['sicilian', 'B90', 'e9', 'i4', 'd', '4', '', 'O-O-O-O'])('rejects %j', (text) => {
     expect(looksLikeSan(text)).toBe(false);
+  });
+});
+
+describe('givesCheck', () => {
+  it.each(['Bb5+', 'Qxf7#', 'O-O+', 'fxg1=N+'])('is true for %j', (san) => {
+    expect(givesCheck(san)).toBe(true);
+  });
+
+  it.each(['e4', 'Nxe5', 'O-O-O', 'e8=Q'])('is false for %j', (san) => {
+    expect(givesCheck(san)).toBe(false);
   });
 });

@@ -2,6 +2,7 @@ import { Chess } from 'chess.js';
 import { describe, expect, it } from 'vitest';
 import { realOpenings } from '../../tests/support/real-openings.ts';
 import { type Position, type Square, startingPosition } from './board.ts';
+import { givesCheck } from './san.ts';
 import { buildTimeline } from './timeline.ts';
 
 /** The piece-placement field of a FEN, for comparing against a reference engine. */
@@ -48,33 +49,12 @@ describe('buildTimeline', () => {
 
     expect(e4).toEqual({
       san: 'e4',
-      check: false,
       from: 'e2',
       to: 'e4',
       piece: { id: 'e2', color: 'w', type: 'p' },
     });
     expect(bxc6?.captured).toEqual({ piece: { id: 'b8', color: 'b', type: 'n' }, square: 'c6' });
     expect(castles?.castle).toMatchObject({ from: 'h1', to: 'f1' });
-  });
-
-  it('flags checks and mates from the notation', () => {
-    // 1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7#  — and 1. e4 d5 2. Bb5+ on the way to nowhere
-    const scholarsMate = buildTimeline({
-      san: ['e4', 'e5', 'Qh5', 'Nc6', 'Bc4', 'Nf6', 'Qxf7#'],
-      uci: ['e2e4', 'e7e5', 'd1h5', 'b8c6', 'f1c4', 'g8f6', 'h5f7'],
-    });
-    const check = buildTimeline({ san: ['e4', 'd5', 'Bb5+'], uci: ['e2e4', 'd7d5', 'f1b5'] });
-
-    expect(scholarsMate.moves.map((move) => move.check)).toEqual([
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      true,
-    ]);
-    expect(check.moves.at(-1)?.check).toBe(true);
   });
 
   it('handles a line with no moves', () => {
@@ -86,6 +66,8 @@ describe('buildTimeline', () => {
 });
 
 describe('every line in the real dataset', () => {
+  const lines = realOpenings.map((opening) => ({ opening, timeline: buildTimeline(opening) }));
+
   it('ends in the same position a full rules engine reaches', () => {
     // Lines share most of their moves, so ask the reference engine about each sequence once.
     const reference = new Map<string, string>([['', new Chess().fen()]]);
@@ -94,28 +76,27 @@ describe('every line in the real dataset', () => {
       let fen = reference.get(key);
       if (!fen) {
         const game = new Chess(fenAfter(uci.slice(0, -1)));
-        const last = uci.at(-1) as string;
-        game.move({ from: last.slice(0, 2), to: last.slice(2, 4), promotion: last[4] });
+        game.move(uci.at(-1) as string);
         fen = game.fen();
         reference.set(key, fen);
       }
       return fen;
     };
 
-    const wrong = realOpenings.filter((opening) => {
-      const { positions } = buildTimeline(opening);
-      return placement(positions.at(-1) as Position) !== fenAfter(opening.uci).split(' ')[0];
-    });
+    const wrong = lines.filter(
+      ({ opening, timeline }) =>
+        placement(timeline.positions.at(-1) as Position) !== fenAfter(opening.uci).split(' ')[0],
+    );
 
-    expect(wrong.map((opening) => opening.name)).toEqual([]);
+    expect(wrong.map(({ opening }) => opening.name)).toEqual([]);
   });
 
-  it('has a capture, a castle and a check to show for itself', () => {
-    const moves = realOpenings.flatMap((opening) => buildTimeline(opening).moves);
+  it('has a capture, an en passant capture, a long castle and a check to show for itself', () => {
+    const moves = lines.flatMap(({ timeline }) => timeline.moves);
 
     expect(moves.some((move) => move.captured)).toBe(true);
     expect(moves.some((move) => move.captured && move.captured.square !== move.to)).toBe(true);
     expect(moves.some((move) => move.castle?.to === 'd1')).toBe(true);
-    expect(moves.some((move) => move.check)).toBe(true);
+    expect(moves.some((move) => givesCheck(move.san))).toBe(true);
   });
 });
