@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { boardOn, centre } from './support.ts';
+import { boardOn, centre, startWithDelay } from './support.ts';
 
 test('a move is demonstrated in order: highlight the piece, draw the arrow, move the piece', async ({
   page,
 }) => {
+  await startWithDelay(page, 900);
   await page.goto('/');
   const board = boardOn(page);
   const pawn = board.locator('.piece[data-piece="e2"]');

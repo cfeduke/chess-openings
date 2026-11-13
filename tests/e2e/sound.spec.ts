@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { boardOn } from './support.ts';
+import { boardOn, startWithDelay } from './support.ts';
 
 declare global {
   interface Window {
@@ -20,6 +20,7 @@ test('moves are heard once the visitor has interacted with the page, and not bef
       return start.apply(this, args);
     };
   });
+  await startWithDelay(page, 400);
   await page.goto('/');
   const board = boardOn(page);
   const pawn = board.locator('.piece[data-piece="e2"]');
