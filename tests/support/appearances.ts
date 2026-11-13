@@ -10,7 +10,6 @@ const stencil = (kind: PieceKind) =>
 
 export const STENCIL: PieceSet = {
   id: 'stencil',
-  name: 'Stencil',
   credit: 'A. Tester',
   artwork: Object.fromEntries(PIECE_KINDS.map((kind) => [kind, stencil(kind)])) as Record<
     PieceKind,
@@ -21,7 +20,6 @@ export const STENCIL: PieceSet = {
 /** Colours written as a browser reports them back, so a spec can compare them as they are. */
 export const SLATE: BoardTheme = {
   id: 'slate',
-  name: 'Slate',
   colors: {
     light: 'rgb(220, 227, 234)',
     dark: 'rgb(84, 104, 128)',

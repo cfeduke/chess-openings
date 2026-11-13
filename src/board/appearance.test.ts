@@ -1,26 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { STUDY, TWO_APPEARANCES } from '../../tests/support/appearances.ts';
 import { APPEARANCES, appearanceById, DEFAULT_APPEARANCE } from './appearance.ts';
-import { BOARD_COLORS, BOARD_THEMES } from './board-themes.ts';
+import { BOARD_THEMES } from './board-themes.ts';
 import { PIECE_SETS } from './piece-sets.ts';
-
-describe('the board themes', () => {
-  it('begin with the brown board', () => {
-    expect(BOARD_THEMES[0]).toMatchObject({
-      id: 'brown',
-      colors: { light: '#f0d9b5', dark: '#b58863' },
-    });
-  });
-
-  it('each have an id of their own, and every colour a board needs', () => {
-    const ids = BOARD_THEMES.map((theme) => theme.id);
-
-    expect(new Set(ids).size).toBe(ids.length);
-    for (const theme of BOARD_THEMES) {
-      expect(Object.keys(theme.colors).sort()).toEqual([...BOARD_COLORS].sort());
-    }
-  });
-});
 
 describe('the appearances', () => {
   it('begin with the default: the classic pieces on the brown board', () => {
@@ -37,10 +19,13 @@ describe('the appearances', () => {
     }
   });
 
-  it('are made of declared piece sets and board themes', () => {
+  it('are made of listed piece sets and board themes, which have ids of their own too', () => {
     for (const { pieces, board } of APPEARANCES) {
       expect(PIECE_SETS).toContain(pieces);
       expect(BOARD_THEMES).toContain(board);
+    }
+    for (const listed of [PIECE_SETS, BOARD_THEMES]) {
+      expect(new Set(listed.map(({ id }) => id)).size).toBe(listed.length);
     }
   });
 });
@@ -48,7 +33,6 @@ describe('the appearances', () => {
 describe('finding an appearance by its id', () => {
   it('finds the one that was asked for', () => {
     expect(appearanceById('study', TWO_APPEARANCES)).toBe(STUDY);
-    expect(appearanceById('classic')).toBe(DEFAULT_APPEARANCE);
   });
 
   it('falls back to the first for an id nothing answers to', () => {

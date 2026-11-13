@@ -4,37 +4,13 @@ import { artworkOf, PIECE_KINDS, PIECE_SETS } from './piece-sets.ts';
 
 const PIECES_DIRECTORY = new URL('./pieces/', import.meta.url);
 
-describe('the kinds of piece', () => {
-  it('are the twelve file names of a set: colour, then piece', () => {
-    expect(PIECE_KINDS).toEqual([
-      ...['wk', 'wq', 'wr', 'wb', 'wn', 'wp'],
-      ...['bk', 'bq', 'br', 'bb', 'bn', 'bp'],
-    ]);
-  });
-});
-
 describe('the piece sets', () => {
-  it('begin with the pieces drawn by Colin M.L. Burnett', () => {
-    expect(PIECE_SETS[0]).toMatchObject({
-      id: 'cburnett',
-      name: 'Classic',
-      credit: 'Colin M.L. Burnett',
-    });
-  });
-
-  it('each have an id of their own', () => {
-    const ids = PIECE_SETS.map((set) => set.id);
-
-    expect(new Set(ids).size).toBe(ids.length);
-  });
-
   it.each(PIECE_SETS)('$id has a different SVG for each of the twelve pieces', ({ artwork }) => {
-    expect(Object.keys(artwork).sort()).toEqual([...PIECE_KINDS].sort());
     expect(new Set(Object.values(artwork)).size).toBe(12);
     for (const image of Object.values(artwork)) expect(image).toContain('svg');
   });
 
-  it('are the directories of pieces: none undeclared, none declared and missing', () => {
+  it('are the directories of pieces: none unlisted, none listed and missing', () => {
     const directories = readdirSync(PIECES_DIRECTORY, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name);

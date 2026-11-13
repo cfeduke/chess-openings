@@ -323,24 +323,17 @@ describe('orientation', () => {
 
 describe('the board’s appearance', () => {
   it('is the default one unless another is asked for', () => {
-    const { view, element } = setup();
+    const { element } = setup();
 
-    expect(view.appearance).toBe(DEFAULT_APPEARANCE);
-    expect(element.dataset.pieces).toBe('cburnett');
-    expect(element.dataset.theme).toBe('brown');
+    expect(element.dataset.pieces).toBe(DEFAULT_APPEARANCE.pieces.id);
+    expect(element.dataset.theme).toBe(DEFAULT_APPEARANCE.board.id);
   });
 
-  it('can be chosen when the board is made', () => {
-    const view = createBoardView({ appearance: STUDY });
-
-    expect(view.appearance).toBe(STUDY);
-    expect(view.element.dataset.pieces).toBe('stencil');
-    expect(view.element.dataset.theme).toBe('slate');
-  });
-
-  it('hands the stylesheet the artwork of its piece set and the colours of its theme', () => {
+  it('can be chosen when the board is made: its artwork and colours go to the stylesheet', () => {
     const { element } = createBoardView({ appearance: STUDY });
 
+    expect(element.dataset.pieces).toBe('stencil');
+    expect(element.dataset.theme).toBe('slate');
     expect(element.style.getPropertyValue('--piece-wk')).toBe(`url("${STUDY.pieces.artwork.wk}")`);
     expect(element.style.getPropertyValue('--piece-bn')).toBe(`url("${STUDY.pieces.artwork.bn}")`);
     expect(element.style.getPropertyValue('--board-light')).toBe(STUDY.board.colors.light);
@@ -358,7 +351,6 @@ describe('the board’s appearance', () => {
 
     view.setAppearance(STUDY);
 
-    expect(view.appearance).toBe(STUDY);
     expect(element.dataset.pieces).toBe('stencil');
     expect(element.style.getPropertyValue('--board-dark')).toBe(STUDY.board.colors.dark);
     expect(piece('e2')).toBe(pawn);

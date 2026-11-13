@@ -8,7 +8,6 @@ import { arrowGeometry, type Cell, type Orientation, squareCell } from './geomet
 export interface BoardView {
   readonly element: HTMLElement;
   readonly orientation: Orientation;
-  readonly appearance: Appearance;
   /**
    * Shows `position`, tinting the squares of `lastMove`, the move that led to it. Pieces that
    * were already on the board slide to their new squares over `durationMs` and pieces that are
@@ -46,7 +45,6 @@ export function createBoardView(
   options: { orientation?: Orientation; appearance?: Appearance } = {},
 ): BoardView {
   let orientation = options.orientation ?? 'white';
-  let appearance = options.appearance ?? DEFAULT_APPEARANCE;
 
   const element = div('board');
   setAttributes(element, { role: 'img', 'aria-label': 'Chess board' });
@@ -137,8 +135,8 @@ export function createBoardView(
    * Hands the stylesheet the look to draw: `--piece-wk` and the rest for the artwork,
    * `--board-light` and the rest for the colours. It names no file and no colour of its own.
    */
-  const dress = () => {
-    const { pieces, board } = appearance;
+  const dress = ({ pieces, board }: Appearance) => {
+    // Named on the element for whoever inspects the page; nothing is styled by these.
     element.dataset.pieces = pieces.id;
     element.dataset.theme = board.id;
     for (const [kind, image] of Object.entries(pieces.artwork)) {
@@ -150,17 +148,13 @@ export function createBoardView(
   };
 
   layOut();
-  dress();
+  dress(options.appearance ?? DEFAULT_APPEARANCE);
 
   return {
     element,
 
     get orientation() {
       return orientation;
-    },
-
-    get appearance() {
-      return appearance;
     },
 
     setPosition(position, { lastMove, durationMs = 0 } = {}) {
@@ -234,9 +228,6 @@ export function createBoardView(
       layOut();
     },
 
-    setAppearance(next) {
-      appearance = next;
-      dress();
-    },
+    setAppearance: dress,
   };
 }

@@ -172,7 +172,7 @@ describe('the board’s appearance in a real browser', () => {
   const artworkDrawn = (piece: (id: string) => HTMLElement) =>
     new Map(
       [...startingPosition().values()].map(({ id, color, type }) => [
-        `${color}${type}`,
+        `${color}${type}` as const,
         getComputedStyle(piece(id)).backgroundImage,
       ]),
     );
@@ -188,7 +188,7 @@ describe('the board’s appearance in a real browser', () => {
     expect(new Set(after.values()).size).toBe(12);
     for (const [kind, image] of after) {
       expect(image, kind).not.toBe(before.get(kind));
-      expect(image, kind).toBe(`url("${STUDY.pieces.artwork[kind as 'wk']}")`);
+      expect(image, kind).toBe(`url("${STUDY.pieces.artwork[kind]}")`);
     }
   });
 

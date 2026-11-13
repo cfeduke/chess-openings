@@ -3,16 +3,16 @@ import type { Color, PieceType } from '../chess/board.ts';
 /** A colour and a piece — `wk`, `bn` — which is also the name of its file in a piece set. */
 export type PieceKind = `${Color}${PieceType}`;
 
-export const PIECE_KINDS: readonly PieceKind[] = (['w', 'b'] as const).flatMap((color) =>
-  (['k', 'q', 'r', 'b', 'n', 'p'] as const).map((type) => `${color}${type}` as const),
-);
+// biome-ignore format: one colour to a line
+export const PIECE_KINDS = [
+  'wk', 'wq', 'wr', 'wb', 'wn', 'wp',
+  'bk', 'bq', 'br', 'bb', 'bn', 'bp',
+] as const satisfies readonly PieceKind[];
 
 /** One set of artwork for the pieces. */
 export interface PieceSet {
   /** The name of its directory under `src/board/pieces/`. */
   readonly id: string;
-  /** What a visitor would call it. */
-  readonly name: string;
   /** Who drew it. */
   readonly credit: string;
   /** Where the image of each piece is. */
@@ -40,17 +40,15 @@ const FILES = import.meta.glob<string>('./pieces/*/*.svg', {
   import: 'default',
 });
 
-const pieceSet = (id: string, name: string, credit: string): PieceSet => ({
+const pieceSet = (id: string, credit: string): PieceSet => ({
   id,
-  name,
   credit,
   artwork: artworkOf(id, FILES),
 });
 
-/**
- * The piece sets there are. To add one, put its twelve SVGs and a LICENSE.md in a directory
- * under `src/board/pieces/` and declare it here.
- */
-export const PIECE_SETS: readonly PieceSet[] = [
-  pieceSet('cburnett', 'Classic', 'Colin M.L. Burnett'),
-];
+// To add a piece set, put its twelve SVGs and a LICENSE.md in a directory under
+// `src/board/pieces/`, declare it here and list it in PIECE_SETS.
+
+export const CBURNETT = pieceSet('cburnett', 'Colin M.L. Burnett');
+
+export const PIECE_SETS: readonly PieceSet[] = [CBURNETT];

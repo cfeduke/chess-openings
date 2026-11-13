@@ -32,7 +32,7 @@ export const ICONS = {
   /** A little chequered board. */
   appearance: svg(
     'fill="currentColor"',
-    `${path('M4 4h8v8H4zM12 12h8v8h-8z')}<rect x="4" y="4" width="16" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/>`,
+    `${path('M4 4h8v8H4zM12 12h8v8h-8z')}<rect x="4" y="4" width="16" height="16" rx="1.5" ${LINES}/>`,
   ),
 } as const;
 

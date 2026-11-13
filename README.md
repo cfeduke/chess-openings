@@ -124,7 +124,7 @@ it whichever appearance is in use, and the choice is remembered between visits.
   square; and
 - a `LICENSE.md` saying where the artwork comes from and under what terms it is used,
 
-then declare it in [`src/board/piece-sets.ts`](src/board/piece-sets.ts) with its name and artist.
+then declare it in [`src/board/piece-sets.ts`](src/board/piece-sets.ts) with its artist.
 The files are found by that naming; the tests fail for a set with a piece missing and for a
 directory nobody declared.
 
