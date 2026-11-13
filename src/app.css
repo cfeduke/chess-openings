@@ -5,6 +5,24 @@
   height: 100dvh;
 }
 
+/* Off the top of the page until the keyboard reaches it. */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 12px;
+  z-index: 10;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.skip-link:focus {
+  top: 10px;
+}
+
 .app__header {
   display: flex;
   align-items: baseline;
@@ -25,7 +43,11 @@
   font-size: 0.9rem;
 }
 
-/* Three columns: the catalog to choose from, the board to watch, the moves to follow. */
+/*
+ * Three columns: the catalog to choose from, the board to watch, the moves to follow. In the
+ * document the catalog comes last, which is the order to read the page in; here it is moved to
+ * the left, where a reader of the page expects a table of contents.
+ */
 .app__main {
   display: grid;
   grid-template-columns: minmax(280px, 360px) minmax(0, 1fr) minmax(220px, 280px);
@@ -42,6 +64,7 @@
 }
 
 .catalog-panel {
+  order: -1;
   display: flex;
   flex-direction: column;
   border: 1px solid var(--rule);
@@ -100,4 +123,58 @@
   width: min(100cqw, 100cqh);
   border-radius: 6px;
   box-shadow: var(--shadow);
+}
+
+/* A small laptop: the side columns give way so that the board keeps its size. */
+@media (max-width: 1199px) {
+  .app__main {
+    grid-template-columns: 260px minmax(0, 1fr) 200px;
+    gap: 16px;
+    padding: 16px;
+  }
+}
+
+/*
+ * Too narrow for three columns: one column in document order — the board, its moves, then the
+ * catalog — and the page scrolls.
+ */
+@media (max-width: 959px) {
+  .app {
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .app__header {
+    padding: 10px 14px;
+  }
+
+  .app__main {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    max-width: 760px;
+    padding: 14px;
+  }
+
+  .catalog-panel {
+    order: 0;
+  }
+
+  /*
+   * Nothing fixes the height of the board's frame here, so the board is sized from the width —
+   * but never taller than the window less the controls pinned to its bottom edge (about 7rem,
+   * in two rows), so that it can always be seen whole.
+   */
+  .stage__board {
+    container-type: normal;
+  }
+
+  .stage__board .board {
+    width: min(100%, 100dvh - 8rem);
+  }
+}
+
+@media (max-width: 519px) {
+  .app__tagline {
+    display: none;
+  }
 }

@@ -1,4 +1,6 @@
 .move-list {
+  /* A container, so that the moves can be laid out by how wide the list itself is. */
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -8,9 +10,21 @@
   box-shadow: var(--shadow);
 }
 
+.move-list__title {
+  margin: 0;
+  padding: 12px 16px 0;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .move-list__moves {
+  /* Whatever is positioned inside the list scrolls with it. */
+  position: relative;
   min-height: 0;
-  padding: 10px;
+  padding: 6px 10px 10px;
   overflow-y: auto;
   font-variant-numeric: tabular-nums;
 }
@@ -102,5 +116,34 @@
 @media (prefers-reduced-motion: reduce) {
   .move--pending::after {
     animation: none;
+  }
+}
+
+/*
+ * A list wider than it ever is as a side column (280px at most) is spanning the page, as in the
+ * single-column layout: there it runs its moves across rather than down, and is kept to about
+ * four rows of them.
+ */
+@container (min-width: 290px) {
+  .move-list__moves {
+    max-height: 8.5rem;
+  }
+
+  .move-list__rows {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 6px;
+  }
+
+  .move-row {
+    grid-template-columns: auto auto auto;
+  }
+
+  .move-row__number {
+    padding-left: 0.4em;
+  }
+
+  .move--start {
+    width: auto;
   }
 }

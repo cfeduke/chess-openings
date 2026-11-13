@@ -1,8 +1,19 @@
+/* The name on the left; the steps through its family, when there are any, on the right. */
 .opening {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0 12px;
   min-width: 0;
 }
 
+/* The title's parts are laid out by the header's own grid: where it is filed runs full width. */
+.opening__title {
+  display: contents;
+}
+
 .opening__place {
+  grid-column: 1 / -1;
   margin: 0 0 4px;
   overflow: hidden;
   color: var(--ink-soft);
@@ -16,7 +27,7 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 4px 12px;
-  margin: 0;
+  margin: 0 0 4px;
   font: 600 1.55rem / 1.15 var(--font-display);
 }
 
@@ -30,4 +41,47 @@
   font-size: 0.72em;
   font-style: italic;
   font-weight: 500;
+}
+
+/* Stepping through the lines of the family. */
+.opening__lines {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* `hidden` alone would lose to the `display` above. */
+.opening__lines[hidden] {
+  display: none;
+}
+
+/* The well-known openings offered before anything is chosen. */
+.opening__offers {
+  grid-column: 1 / -1;
+}
+
+.opening__classics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.classic {
+  padding: 7px 13px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.classic:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }

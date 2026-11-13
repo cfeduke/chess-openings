@@ -1,4 +1,4 @@
-import type { Locator, Page } from '@playwright/test';
+import { devices, type Locator, type Page } from '@playwright/test';
 import { hashForOpening } from '../../src/routing.ts';
 import { delaySetting } from '../../src/settings.ts';
 
@@ -22,6 +22,23 @@ export const openingNameOn = (page: Page) =>
 /** The address of the site with an opening on the board. */
 export const linkTo = (openingId: string) => `/${hashForOpening(openingId)}`;
 export const ITALIAN_GAME = linkTo('italian-game');
+export const NAJDORF = linkTo('sicilian-defense-najdorf-variation');
+
+export const controlsOn = (page: Page) => page.getByRole('group', { name: 'Player controls' });
+
+/** What `test.use` needs to run a spec on a phone. */
+export const PHONE = { viewport: devices['iPhone 13'].viewport, hasTouch: true };
+
+/**
+ * Opens an opening and makes its first `moves` moves by hand, leaving it paused: a page that
+ * holds still to be looked at, reached without waiting for anything to play.
+ */
+export async function stepInto(page: Page, link: string, moves: number) {
+  await startWithDelay(page, 5000);
+  await page.goto(link);
+  await page.keyboard.press('Space');
+  for (let move = 0; move < moves; move++) await page.keyboard.press('ArrowRight');
+}
 
 /** Where an element is on the page. Fails if it is not rendered. */
 export async function box(locator: Locator) {

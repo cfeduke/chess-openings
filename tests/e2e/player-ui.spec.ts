@@ -3,6 +3,7 @@ import {
   beatsOn,
   boardOn,
   box,
+  controlsOn,
   ITALIAN_GAME,
   movesOn,
   pieceFrom,
@@ -18,7 +19,7 @@ test.describe('layout', () => {
     await page.goto(ITALIAN_GAME);
     const board = await box(boardOn(page));
     const moves = await box(movesOn(page));
-    const transport = await box(page.getByRole('group', { name: 'Player controls' }));
+    const transport = await box(controlsOn(page));
     const viewport = page.viewportSize();
 
     expect(moves.x).toBeGreaterThanOrEqual(board.x + board.width);

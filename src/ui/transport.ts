@@ -3,7 +3,8 @@ import type { SoundEffects } from '../audio/sound-effects.ts';
 import { el } from '../dom.ts';
 import type { Player, PlayerSnapshot } from '../playback/player.ts';
 import { MAX_DELAY_MS, MIN_DELAY_MS } from '../playback/schedule.ts';
-import { ICONS, type IconName } from './icons.ts';
+import { dress, iconButton } from './icon-button.ts';
+import { ICONS } from './icons.ts';
 
 interface TransportOptions {
   player: Player;
@@ -14,26 +15,15 @@ interface TransportOptions {
 /** `1.5` for a delay of 1500 ms. */
 const seconds = (delayMs: number) => (delayMs / 1000).toFixed(1);
 
-/** A button that is all icon: its name is for assistive technology and the tooltip. */
-function iconButton(name: string, icon: IconName, onClick: () => void): HTMLButtonElement {
-  const button = el('button', { type: 'button', class: 'icon-button' });
-  dress(button, name, icon);
-  button.addEventListener('click', onClick);
-  return button;
-}
-
-function dress(button: HTMLButtonElement, name: string, icon: IconName): void {
-  if (button.getAttribute('aria-label') === name) return;
-  button.setAttribute('aria-label', name);
-  button.title = name;
-  button.innerHTML = ICONS[icon];
-}
-
 /**
  * The controls along the bottom of the interface: playback buttons, the slider for the delay
  * between moves, and the sound and board-orientation toggles.
  */
-export function createTransport(options: TransportOptions): { element: HTMLElement } {
+export function createTransport(options: TransportOptions): {
+  element: HTMLElement;
+  /** Moves the keyboard focus to the play button. */
+  focus(): void;
+} {
   const { player, sounds, onFlip } = options;
 
   const restart = iconButton('Restart', 'restart', player.restart);
@@ -59,12 +49,19 @@ export function createTransport(options: TransportOptions): { element: HTMLEleme
     min: MIN_DELAY_MS,
     max: MAX_DELAY_MS,
     step: 100,
+    // The whole name, whatever part of the label there is room to show.
+    'aria-label': 'Delay between moves',
   });
   const readout = el('output', { for: slider.id, class: 'transport__readout' });
   const delay = el(
     'div',
     { class: 'transport__delay' },
-    el('label', { for: slider.id }, 'Delay between moves'),
+    el(
+      'label',
+      { for: slider.id },
+      'Delay',
+      el('span', { class: 'transport__label-rest' }, ' between moves'),
+    ),
     slider,
     readout,
   );
@@ -107,5 +104,5 @@ export function createTransport(options: TransportOptions): { element: HTMLEleme
   renderSound();
   render(player.snapshot);
   player.subscribe(render);
-  return { element };
+  return { element, focus: () => toggle.focus() };
 }

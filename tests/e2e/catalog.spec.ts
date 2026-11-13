@@ -1,17 +1,17 @@
 import { expect, test } from '@playwright/test';
+import { FEATURED_OPENINGS } from '../../src/catalog/featured.ts';
 import {
   boardOn,
   box,
   catalogOn,
+  controlsOn,
   ITALIAN_GAME,
-  linkTo,
   movesOn,
+  NAJDORF,
   openingNameOn,
   pieceFrom,
   startWithDelay,
 } from './support.ts';
-
-const NAJDORF = linkTo('sicilian-defense-najdorf-variation');
 
 test.beforeEach(async ({ page }) => {
   await startWithDelay(page, 400);
@@ -40,7 +40,7 @@ test('the catalog is to the left of the board, and nothing spills off the page',
   const catalog = await box(catalogOn(page));
   const board = await box(boardOn(page));
   const moves = await box(movesOn(page));
-  const controls = await box(page.getByRole('group', { name: 'Player controls' }));
+  const controls = await box(controlsOn(page));
 
   expect(catalog.x + catalog.width).toBeLessThanOrEqual(board.x);
   expect(board.x + board.width).toBeLessThanOrEqual(moves.x);
@@ -67,7 +67,7 @@ test('browsing: volume, group, line — and the opening plays', async ({ page })
   await group.click();
   await expect(group).toHaveAttribute('aria-expanded', 'true');
 
-  await catalog.getByRole('button', { name: 'Italian Game (C50)', exact: true }).click();
+  await catalog.getByRole('button', { name: /^C50 Italian Game: Main line/ }).click();
 
   await expect(openingNameOn(page)).toHaveAccessibleName('C50 Italian Game');
   await expect(page).toHaveURL(/#\/italian-game$/);
@@ -84,13 +84,13 @@ test('searching by name, by ECO code and by moves', async ({ page }) => {
 
   await search.fill('grunfeld exchange');
   await expect(results.getByRole('button').first()).toHaveAccessibleName(
-    /^Grünfeld Defense: Exchange Variation/,
+    /^D85 Grünfeld Defense: Exchange Variation/,
   );
 
   await search.fill('C89');
   await expect(catalog.getByRole('status')).toHaveText(/^\d+ openings$/);
   await expect(results.getByRole('button').first()).toHaveAccessibleName(
-    /Ruy Lopez: Marshall Attack.*\(C89\)/,
+    /^C89 Ruy Lopez: Marshall Attack/,
   );
 
   await search.fill('1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6');
@@ -117,7 +117,7 @@ test('a link to an opening opens it, finds it in the catalog, and plays it', asy
     'true',
   );
   const line = catalog.locator('.line[aria-current="true"]');
-  await expect(line).toHaveAccessibleName('Sicilian Defense: Najdorf Variation (B90)');
+  await expect(line).toHaveAccessibleName(/^B90 Sicilian Defense: Najdorf Variation 1\. e4 c5/);
   await expect(line).toBeInViewport();
   await expect(pieceFrom(page, 'c7')).toHaveAttribute('data-square', 'c5');
 });
@@ -150,6 +150,39 @@ test('the openings are fetched once, alongside the page rather than after it', a
     'href',
     '/openings.json',
   );
+});
+
+test('a first-time visitor can start from a well-known opening', async ({ page }) => {
+  await page.goto('/');
+  const classics = page.getByRole('list', { name: 'Well-known openings' });
+  await expect(classics.getByRole('button')).toHaveCount(FEATURED_OPENINGS.length);
+  await expect(classics.getByRole('button').first()).toHaveText('Italian Game');
+
+  await classics.getByRole('button', { name: 'Ruy Lopez' }).click();
+
+  await expect(openingNameOn(page)).toHaveAccessibleName('C60 Ruy Lopez');
+  await expect(page).toHaveTitle('Ruy Lopez (C60) — Chess Openings');
+  await expect(pieceFrom(page, 'e2')).toHaveAttribute('data-square', 'e4');
+});
+
+test('the lines of a family can be stepped through, one after another', async ({ page }) => {
+  await page.goto(NAJDORF);
+  const lines = page.getByRole('group', { name: 'Lines of Sicilian Defense' });
+  await expect(lines).toContainText(/^1 of \d+$/);
+  await expect(lines.getByRole('button', { name: /^Previous line/ })).toBeDisabled();
+
+  await lines.getByRole('button', { name: /^Next line/ }).click();
+
+  await expect(openingNameOn(page)).toHaveAccessibleName(
+    /^B90 Sicilian Defense: Najdorf Variation, /,
+  );
+  await expect(lines).toContainText(/^2 of \d+$/);
+  await expect(page).not.toHaveURL(/sicilian-defense-najdorf-variation$/);
+  await expect(catalogOn(page).locator('.line[aria-current="true"]')).toBeInViewport();
+
+  await lines.getByRole('button', { name: /^Previous line/ }).click();
+
+  await expect(openingNameOn(page)).toHaveAccessibleName('B90 Sicilian Defense: Najdorf Variation');
 });
 
 test('the page credits its sources', async ({ page }) => {

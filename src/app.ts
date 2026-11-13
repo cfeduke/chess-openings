@@ -3,6 +3,7 @@ import './app.css';
 import { createSoundEffects } from './audio/sound-effects.ts';
 import { createBoardView } from './board/board-view.ts';
 import { buildCatalog } from './catalog/catalog.ts';
+import { featuredOpenings } from './catalog/featured.ts';
 import { createSearch } from './catalog/search.ts';
 import { buildTimeline } from './chess/timeline.ts';
 import { loadOpenings } from './data/load.ts';
@@ -11,6 +12,7 @@ import { el } from './dom.ts';
 import { createPlayer } from './playback/player.ts';
 import { hashForOpening, openingIdFromHash } from './routing.ts';
 import { delaySetting, mutedSetting } from './settings.ts';
+import { createAnnouncer } from './ui/announcer.ts';
 import { createCatalog } from './ui/catalog.ts';
 import { createMoveList } from './ui/move-list.ts';
 import { createOpeningHeader } from './ui/opening-header.ts';
@@ -44,18 +46,33 @@ function credits({ repository, commit }: DataSource): HTMLElement {
  */
 export async function mountApp(root: HTMLElement, options: AppOptions = {}): Promise<void> {
   const { load = loadOpenings, signal } = options;
+  /** The page's title before an opening adds its name to it. */
+  const siteTitle = document.title;
 
   const board = createBoardView();
   const sounds = createSoundEffects({ muted: mutedSetting });
   const player = createPlayer({ board, sound: sounds.play, delay: delaySetting });
-  const header = createOpeningHeader();
+  const announcer = createAnnouncer(player);
   const moveList = createMoveList(player);
   const transport = createTransport({
     player,
     sounds,
     onFlip: () => board.setOrientation(board.orientation === 'white' ? 'black' : 'white'),
   });
+
+  /** Puts `opening` on the board, by way of the address. Nothing can be opened until the catalog is. */
+  let open = (_opening: Opening) => {};
+  const header = createOpeningHeader({ onSelect: (opening) => open(opening) });
+  const stage = el(
+    'section',
+    { class: 'stage', 'aria-label': 'Board' },
+    header.element,
+    el('div', { class: 'stage__board' }, board.element),
+  );
   const catalogPanel = el('aside', { class: 'catalog-panel' });
+
+  const skip = el('button', { type: 'button', class: 'skip-link' }, 'Skip to player controls');
+  skip.addEventListener('click', transport.focus);
 
   // Browsers only let audio start from a user gesture, and may stop it again: wake it on each.
   for (const gesture of ['click', 'keydown'] as const) {
@@ -65,25 +82,17 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
 
   root.classList.add('app');
   root.replaceChildren(
+    skip,
     el(
       'header',
       { class: 'app__header' },
       el('h1', {}, 'Chess Openings'),
       el('p', { class: 'app__tagline' }, 'Learn them by watching them.'),
     ),
-    el(
-      'main',
-      { class: 'app__main' },
-      catalogPanel,
-      el(
-        'section',
-        { class: 'stage', 'aria-label': 'Board' },
-        header.element,
-        el('div', { class: 'stage__board' }, board.element),
-      ),
-      moveList.element,
-    ),
+    // In reading order: what is being watched, then what there is to choose from.
+    el('main', { class: 'app__main' }, stage, moveList.element, catalogPanel),
     transport.element,
+    announcer.element,
   );
   player.load(buildTimeline(NO_LINE));
 
@@ -120,16 +129,22 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
      */
     const showFromAddress = () => {
       const place = catalog.locate(openingIdFromHash(location.hash) ?? '') ?? null;
+      const opening = place?.opening;
       header.show(place);
-      catalogView.show(place?.opening ?? null);
-      player.load(buildTimeline(place?.opening ?? NO_LINE));
-      if (place) player.play();
+      catalogView.show(opening ?? null);
+      document.title = opening ? `${opening.name} (${opening.eco}) — Chess Openings` : siteTitle;
+      player.load(buildTimeline(opening ?? NO_LINE));
+      if (!opening) return;
+
+      announcer.introduce(opening);
+      player.play();
     };
 
-    /** Puts `opening` on the board, by way of the address. */
-    const open = (opening: Opening) => {
+    open = (opening) => {
       history.pushState(null, '', hashForOpening(opening.id));
       showFromAddress();
+      // On a narrow screen the catalog is below the board: bring what was asked for into view.
+      stage.scrollIntoView({ block: 'nearest' });
     };
 
     const catalogView = createCatalog({
@@ -138,6 +153,7 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
       onSelect: open,
     });
     catalogPanel.replaceChildren(catalogView.element, credits(dataset.source));
+    header.suggest(featuredOpenings(catalog));
 
     window.addEventListener('hashchange', showFromAddress, { signal });
     showFromAddress();

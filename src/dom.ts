@@ -47,3 +47,14 @@ export const exclusiveAttribute = (name: string, value: string) =>
     (holder) => holder.setAttribute(name, value),
     (holder) => holder.removeAttribute(name),
   );
+
+/**
+ * Scrolls `scroller` — and nothing else — just far enough for `target`, somewhere inside it, to
+ * be in view. Unlike `scrollIntoView`, this never moves the page under the reader.
+ */
+export function revealWithin(scroller: HTMLElement, target: Element): void {
+  const frame = scroller.getBoundingClientRect();
+  const { top, bottom } = target.getBoundingClientRect();
+  if (top < frame.top) scroller.scrollTop -= frame.top - top;
+  else if (bottom > frame.bottom) scroller.scrollTop += bottom - frame.bottom;
+}

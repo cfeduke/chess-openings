@@ -1,13 +1,7 @@
 import './move-list.css';
-import { moveNumber } from '../chess/san.ts';
-import type { TimelineMove } from '../chess/timeline.ts';
-import { el, exclusiveAttribute, exclusiveClass } from '../dom.ts';
+import { moveNumber, numberedMove, START_POSITION } from '../chess/san.ts';
+import { el, exclusiveAttribute, exclusiveClass, revealWithin } from '../dom.ts';
 import type { Player, PlayerSnapshot } from '../playback/player.ts';
-
-/** `1. e4` for White's moves, `1… e5` for Black's: how a player would say where a move falls. */
-function spoken(move: TimelineMove, index: number): string {
-  return `${moveNumber(index)}${index % 2 === 0 ? '.' : '…'} ${move.san}`;
-}
 
 /**
  * The moves of the line being played, with a cursor on the one just made. Clicking a move
@@ -15,7 +9,8 @@ function spoken(move: TimelineMove, index: number): string {
  */
 export function createMoveList(player: Player): { element: HTMLElement } {
   const list = el('div', { class: 'move-list__moves' });
-  const element = el('section', { class: 'move-list', 'aria-label': 'Moves' }, list);
+  const title = el('h2', { class: 'move-list__title', id: 'moves-title' }, 'Moves');
+  const element = el('section', { class: 'move-list', 'aria-labelledby': title.id }, title, list);
 
   /** The line on show, and its buttons by the number of moves made once each is reached. */
   let shown: PlayerSnapshot['moves'] | undefined;
@@ -27,7 +22,7 @@ export function createMoveList(player: Player): { element: HTMLElement } {
   const moveButton = (ply: number, label: string, text: string) =>
     el(
       'button',
-      { type: 'button', class: 'move', 'data-ply': String(ply), 'aria-label': label },
+      { type: 'button', class: 'move', 'data-ply': ply, 'aria-label': label, tabindex: -1 },
       text,
     );
 
@@ -42,11 +37,11 @@ export function createMoveList(player: Player): { element: HTMLElement } {
       return;
     }
 
-    const start = moveButton(0, 'Start position', 'Start');
+    const start = moveButton(0, START_POSITION, 'Start');
     start.classList.add('move--start');
     buttons = [
       start,
-      ...moves.map((move, index) => moveButton(index + 1, spoken(move, index), move.san)),
+      ...moves.map((move, index) => moveButton(index + 1, numberedMove(move.san, index), move.san)),
     ];
 
     const rows = el('ol', { class: 'move-list__rows' });
@@ -62,8 +57,13 @@ export function createMoveList(player: Player): { element: HTMLElement } {
 
     const current = buttons[ply];
     if (current !== cursor) {
+      // The list is one stop in the tab order — the cursor — and a focus inside it follows along.
+      const focusInside = list.contains(document.activeElement);
+      cursor?.setAttribute('tabindex', '-1');
+      current?.setAttribute('tabindex', '0');
       holdCursor([current]);
-      current?.scrollIntoView({ block: 'nearest' });
+      if (current) revealWithin(list, current);
+      if (focusInside) current?.focus();
       cursor = current;
     }
     holdPending([pending === null ? undefined : buttons[pending + 1]]);

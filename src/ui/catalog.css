@@ -25,6 +25,12 @@
   color: var(--ink-soft);
 }
 
+/* The two lists scroll, and take whatever is positioned inside them along. */
+.catalog__results,
+.catalog__panel {
+  position: relative;
+}
+
 .catalog__results {
   flex: 1;
   min-height: 0;

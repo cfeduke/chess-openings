@@ -36,6 +36,8 @@ function mount(hash = '', load: () => Promise<OpeningsDataset> = async () => SMA
 beforeEach(() => {
   vi.useFakeTimers();
   unmount = new AbortController();
+  // What index.html gives the page before the app has anything to add.
+  document.title = 'Chess Openings — learn by watching';
 });
 
 afterEach(() => {
@@ -235,6 +237,87 @@ describe('mounted as the site mounts it, with no options', () => {
 
     expect(root.querySelector('.move-list [aria-current="step"]')?.textContent).toBe('e4');
     vi.unstubAllGlobals();
+  });
+});
+
+describe('for a first-time visitor', () => {
+  it('offers the well-known openings it has, and opens the one that is picked', async () => {
+    const { root, ready, text, cursor } = mount();
+    await ready;
+    const classics = [
+      ...root.querySelectorAll<HTMLElement>('[aria-label="Well-known openings"] button'),
+    ];
+    expect(classics.map((button) => button.textContent)).toEqual([
+      'Italian Game',
+      'Sicilian Defense: Najdorf Variation',
+    ]);
+
+    classics[1]?.click();
+
+    expect(text('.opening__variation')).toBe('Najdorf Variation');
+    expect(location.hash).toBe(hashForOpening(NAJDORF.id));
+    vi.advanceTimersByTime(1500);
+    expect(cursor()).toBe('e4');
+  });
+});
+
+describe('stepping through a family', () => {
+  it('opens the next line of the family, and plays it', async () => {
+    const { ready, $, text } = mount(hashForOpening(NAJDORF.id));
+    await ready;
+
+    $('button[aria-label^="Next line"]')?.click();
+
+    expect(text('.opening__variation')).toBe('Najdorf Variation, English Attack');
+    expect(location.hash).toBe('#/sicilian-defense-najdorf-variation-english-attack');
+  });
+});
+
+describe('for someone who cannot see the board', () => {
+  it('announces the opening, then each move as it is made', async () => {
+    const { ready, text } = mount(hashForOpening(ITALIAN.id));
+    await ready;
+    expect(text('.announcer')).toBe('Italian Game, 5 moves');
+
+    vi.advanceTimersByTime(1500);
+    expect(text('.announcer')).toBe('1. e4');
+
+    vi.advanceTimersByTime(1500);
+    expect(text('.announcer')).toBe('1… e5');
+  });
+
+  it('names the opening in the page title, and the site alone when there is none', async () => {
+    const { ready } = mount(hashForOpening(NAJDORF.id));
+    await ready;
+    expect(document.title).toBe('Sicilian Defense: Najdorf Variation (B90) — Chess Openings');
+
+    history.replaceState(null, '', '/');
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    expect(document.title).toBe('Chess Openings — learn by watching');
+  });
+
+  it('puts the board before the moves, and the moves before the catalog, in reading order', async () => {
+    const { root, ready } = mount(hashForOpening(ITALIAN.id));
+    await ready;
+
+    const regions = [...root.querySelectorAll('.stage, .move-list, .catalog-panel')];
+    expect(regions.map((region) => region.className.split(' ')[0])).toEqual([
+      'stage',
+      'move-list',
+      'catalog-panel',
+    ]);
+  });
+
+  it('has a way past the catalog, straight to the player controls', async () => {
+    const { root, ready, $ } = mount(hashForOpening(ITALIAN.id));
+    await ready;
+    const skip = root.querySelector<HTMLElement>('.skip-link');
+    expect(root.firstElementChild).toBe(skip);
+    expect(skip?.textContent).toBe('Skip to player controls');
+
+    skip?.click();
+
+    expect(document.activeElement).toBe($('[aria-label="Playback"] .icon-button--primary'));
   });
 });
 
