@@ -3,7 +3,7 @@ import type { Catalog, CatalogGroup, CatalogVolume } from '../catalog/catalog.ts
 import type { SearchResult } from '../catalog/search.ts';
 import { formatMoveText } from '../chess/san.ts';
 import type { Opening } from '../data/opening.ts';
-import { el, exclusiveAttribute } from '../dom.ts';
+import { el, exclusiveAttribute, revealWithin } from '../dom.ts';
 import { ecoRangeLabel } from '../eco/taxonomy.ts';
 
 interface CatalogOptions {
@@ -30,20 +30,20 @@ const TAB_KEYS: Record<string, (from: number, last: number) => number> = {
 const count = (openings: number) =>
   `${openings.toLocaleString('en')} ${openings === 1 ? 'opening' : 'openings'}`;
 
-/** A list item with a button for one opening. `name` is what tells it from its neighbours. */
-function lineItem(opening: Opening, name: string): HTMLElement {
+/**
+ * A list item with a button for one opening. `label` is what tells it from its neighbours;
+ * `unseen` is read out before it, for when the list it is in already shows that part.
+ */
+function lineItem(opening: Opening, label: string, unseen = ''): HTMLElement {
   const moves = formatMoveText(opening.san);
+  const name = el('span', { class: 'line__name' }, label);
+  if (unseen) name.prepend(el('span', { class: 'visually-hidden' }, unseen));
+  // The button is named by what it shows, so that asking for what is on screen finds it.
   const button = el(
     'button',
-    {
-      type: 'button',
-      class: 'line',
-      'data-opening': opening.id,
-      'aria-label': `${opening.name} (${opening.eco})`,
-      title: moves,
-    },
+    { type: 'button', class: 'line', 'data-opening': opening.id, title: moves },
     el('span', { class: 'line__eco eco-badge' }, opening.eco),
-    el('span', { class: 'line__name' }, name),
+    name,
     el('span', { class: 'line__moves' }, moves),
   );
   return el('li', {}, button);
@@ -82,7 +82,9 @@ export function createCatalog({ catalog, search, onSelect }: CatalogOptions): Ca
           el(
             'ul',
             { class: 'lines' },
-            ...family.lines.map((line) => lineItem(line.opening, line.variation || 'Main line')),
+            ...family.lines.map((line) =>
+              lineItem(line.opening, line.variation || 'Main line', `${family.name}: `),
+            ),
           ),
         );
       }
@@ -250,7 +252,8 @@ export function createCatalog({ catalog, search, onSelect }: CatalogOptions): Ca
         setExpanded(place.group, true);
       }
       markSelected();
-      if (place) panel.querySelector('.line[aria-current]')?.scrollIntoView({ block: 'nearest' });
+      const marked = panel.querySelector('.line[aria-current]');
+      if (marked) revealWithin(panel, marked);
     },
   };
 }

@@ -46,3 +46,45 @@
   justify-content: flex-end;
   gap: 6px;
 }
+
+/* In a single column the page scrolls; the controls stay at the bottom of the window. */
+@media (max-width: 959px) {
+  .transport {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    padding: 8px 14px;
+  }
+}
+
+/* Too narrow for one row: the playback buttons above, the slider and the toggles below. */
+@media (max-width: 719px) {
+  .transport {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "playback playback" "delay toggles";
+    gap: 4px 12px;
+  }
+
+  .transport__playback {
+    grid-area: playback;
+    justify-content: center;
+  }
+
+  .transport__delay {
+    grid-area: delay;
+  }
+
+  .transport__toggles {
+    grid-area: toggles;
+  }
+
+  /* "Delay" is enough to see; the rest of the label is still there to be read out. */
+  .transport__label-rest {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

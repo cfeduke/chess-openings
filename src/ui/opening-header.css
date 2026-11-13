@@ -1,8 +1,13 @@
 .opening {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0 12px;
   min-width: 0;
 }
 
 .opening__place {
+  grid-column: 1 / -1;
   margin: 0 0 4px;
   overflow: hidden;
   color: var(--ink-soft);
@@ -30,4 +35,39 @@
   font-size: 0.72em;
   font-style: italic;
   font-weight: 500;
+}
+
+/* Stepping through the lines of the family. */
+.opening__lines {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The well-known openings offered before anything is chosen. */
+.opening__classics {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.classic {
+  padding: 7px 13px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.classic:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }

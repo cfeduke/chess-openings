@@ -189,6 +189,8 @@
 }
 
 .line {
+  /* Holds the part of its name that is only read out, so that it scrolls with the list. */
+  position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: baseline;
@@ -238,4 +240,12 @@
 
 .line[aria-current="true"] .line__eco {
   border-color: transparent;
+}
+
+/* In a single column the catalog is not a box that scrolls: it is part of the page. */
+@media (max-width: 959px) {
+  .catalog__panel,
+  .catalog__results {
+    overflow-y: visible;
+  }
 }

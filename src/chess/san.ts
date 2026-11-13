@@ -14,6 +14,11 @@ export function moveNumber(index: number): number {
   return Math.floor(index / 2) + 1;
 }
 
+/** A move with its number, as a player would say where it falls: `1. e4` for White, `1… e5` for Black. */
+export function numberedMove(san: string, index: number): string {
+  return `${moveNumber(index)}${index % 2 === 0 ? '.' : '…'} ${san}`;
+}
+
 /** Numbered move text for a list of moves: `['e4', 'c5', 'Nf3']` → `1. e4 c5 2. Nf3`. */
 export function formatMoveText(san: string[]): string {
   return san

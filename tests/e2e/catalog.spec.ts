@@ -67,7 +67,7 @@ test('browsing: volume, group, line — and the opening plays', async ({ page })
   await group.click();
   await expect(group).toHaveAttribute('aria-expanded', 'true');
 
-  await catalog.getByRole('button', { name: 'Italian Game (C50)', exact: true }).click();
+  await catalog.getByRole('button', { name: /^C50 Italian Game: Main line/ }).click();
 
   await expect(openingNameOn(page)).toHaveAccessibleName('C50 Italian Game');
   await expect(page).toHaveURL(/#\/italian-game$/);
@@ -84,13 +84,13 @@ test('searching by name, by ECO code and by moves', async ({ page }) => {
 
   await search.fill('grunfeld exchange');
   await expect(results.getByRole('button').first()).toHaveAccessibleName(
-    /^Grünfeld Defense: Exchange Variation/,
+    /^D85 Grünfeld Defense: Exchange Variation/,
   );
 
   await search.fill('C89');
   await expect(catalog.getByRole('status')).toHaveText(/^\d+ openings$/);
   await expect(results.getByRole('button').first()).toHaveAccessibleName(
-    /Ruy Lopez: Marshall Attack.*\(C89\)/,
+    /^C89 Ruy Lopez: Marshall Attack/,
   );
 
   await search.fill('1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6');
@@ -117,7 +117,7 @@ test('a link to an opening opens it, finds it in the catalog, and plays it', asy
     'true',
   );
   const line = catalog.locator('.line[aria-current="true"]');
-  await expect(line).toHaveAccessibleName('Sicilian Defense: Najdorf Variation (B90)');
+  await expect(line).toHaveAccessibleName(/^B90 Sicilian Defense: Najdorf Variation 1\. e4 c5/);
   await expect(line).toBeInViewport();
   await expect(pieceFrom(page, 'c7')).toHaveAttribute('data-square', 'c5');
 });

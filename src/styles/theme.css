@@ -61,6 +61,19 @@ input {
   outline-offset: 2px;
 }
 
+/* Present for assistive technology, but taking up no room on screen. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* A round button that is all icon. */
 .icon-button {
   display: inline-grid;

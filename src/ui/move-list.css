@@ -8,9 +8,19 @@
   box-shadow: var(--shadow);
 }
 
+.move-list__title {
+  margin: 0;
+  padding: 12px 16px 0;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .move-list__moves {
   min-height: 0;
-  padding: 10px;
+  padding: 6px 10px 10px;
   overflow-y: auto;
   font-variant-numeric: tabular-nums;
 }
@@ -102,5 +112,30 @@
 @media (prefers-reduced-motion: reduce) {
   .move--pending::after {
     animation: none;
+  }
+}
+
+/* In a single column the list is as wide as the page: let the moves run across it. */
+@media (max-width: 959px) {
+  .move-list__moves {
+    max-height: 8.5rem;
+  }
+
+  .move-list__rows {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 6px;
+  }
+
+  .move-row {
+    grid-template-columns: auto auto auto;
+  }
+
+  .move-row__number {
+    padding-left: 0.4em;
+  }
+
+  .move--start {
+    width: auto;
   }
 }

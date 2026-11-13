@@ -164,7 +164,11 @@ describe('the ECO groups of a volume', () => {
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
     expect(body.hidden).toBe(false);
     expect(text('.family__name')).toEqual(['Italian Game', 'Four Knights Game']);
-    expect(text('.line__name')).toEqual(['Main line', 'Giuoco Pianissimo', 'Italian Variation']);
+    expect(text('.line__name')).toEqual([
+      'Italian Game: Main line',
+      'Italian Game: Giuoco Pianissimo',
+      'Four Knights Game: Italian Variation',
+    ]);
 
     toggle.click();
 
@@ -193,14 +197,29 @@ describe('a line', () => {
     const english = line('sicilian-defense-najdorf-variation-english-attack');
 
     expect(english?.querySelector('.line__eco')?.textContent).toBe('B90');
-    expect(english?.querySelector('.line__name')?.textContent).toBe(
+    expect(english?.querySelector('.line__name')?.lastChild?.textContent).toBe(
       'Najdorf Variation, English Attack',
     );
     expect(english?.querySelector('.line__moves')?.textContent).toBe(
       '1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6 6. Be3',
     );
-    expect(english?.getAttribute('aria-label')).toBe(
-      'Sicilian Defense: Najdorf Variation, English Attack (B90)',
+  });
+
+  it('is named in full for a screen reader, starting with what is shown', () => {
+    const { tab, group, line } = setup();
+    tab('C')?.click();
+    group('C50')?.click();
+
+    // What is visible must be part of the name, or voice control cannot find the button.
+    expect(line('italian-game')?.hasAttribute('aria-label')).toBe(false);
+    expect(line('italian-game')?.querySelector('.line__name')?.textContent).toBe(
+      'Italian Game: Main line',
+    );
+    expect(line('italian-game-giuoco-pianissimo')?.querySelector('.line__name')?.textContent).toBe(
+      'Italian Game: Giuoco Pianissimo',
+    );
+    expect(line('italian-game')?.querySelector('.line__name .visually-hidden')?.textContent).toBe(
+      'Italian Game: ',
     );
   });
 
