@@ -23,8 +23,9 @@ are there, and so are the 2,600-odd positions that Wikibooks'
   book that follow from one position, such as `Ruy López / Spanish game — 1. e4 e5 2. Nf3 Nc6
   3. Bb5`.
 - **Search** — by name (`grunfeld exchange`; accents and case do not matter), by ECO code (`C89`),
-  or by moves (`1. e4 c5 2. Nf3 d6`, or just `e4 c5 nf3 d6`). Terms combine: `e4 c5 naj`. Both
-  collections are searched, and the lines that are the Wikibook's say so.
+  or by moves (`1. e4 c5 2. Nf3 d6`, or just `e4 c5 nf3 d6`). Terms combine: `e4 c5 naj`. A
+  search looks in the collection on show; while there is one, each collection's tab says how
+  many of its lines match, and choosing the other shows those.
 - **Watch** — choosing a line plays it. The bar along the bottom has restart, step back,
   play/pause, step forward and jump to end; a slider for the **delay between moves** (0.3–5 s,
   1.5 s to begin with); and buttons to flip the board and switch the sound off.
@@ -259,8 +260,14 @@ A collection is declared in two places, under one id:
   a line can be read about, which puts a link above the board.
 
 The catalog lists the collections in the order the dataset has them and opens on the first. As
-soon as there is more than one, a row of tabs above the section tabs chooses between them, search
-covers them all, and a search result from any but the first says which collection it is from.
+soon as there is more than one, a row of tabs above the section tabs chooses between them.
+
+Each collection is searched on its own, because what makes one line more general than another
+depends on how the collection names its lines, and the arrangement says which way it is
+(`namesNest`). A lichess name grows with the line — `Family: Variation, Subvariation` — so the
+shortest name comes first. The book gives one name to every position of an opening, so there
+the shortest line comes first, and matches that share a name have the moves that tell them
+apart added to it.
 
 ## Credits
 

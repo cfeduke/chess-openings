@@ -300,6 +300,18 @@ export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogVie
   if (collectionTabs) shelf.setAttribute('role', 'tabpanel');
 
   /**
+   * What a match is called. Where names nest, its name says which line it is. Where many lines
+   * share a name, what tells it from the rest of its family is added, as lichess would write it.
+   */
+  const nameAmongMatches = (opening: Opening): string => {
+    const place = catalog.locate(opening.id);
+    const variation = place?.family.lines[place.index]?.variation;
+    return place?.collection.namesNest || !variation
+      ? opening.name
+      : `${opening.name}: ${variation}`;
+  };
+
+  /**
    * Looks for what is in the search box in the collection on show, and lists what it finds in
    * place of the sections — or goes back to the sections when the box is empty. While there is a
    * search, each collection's tab says how many matches that collection has.
@@ -316,7 +328,9 @@ export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogVie
     if (found.total === 0) status.textContent = `No openings match “${query}”${where}.`;
     else if (found.total === found.matches.length) status.textContent = count(found.total);
     else status.textContent = `Showing the first ${found.matches.length} of ${count(found.total)}`;
-    matches.replaceChildren(...found.matches.map((opening) => lineItem(opening, opening.name)));
+    matches.replaceChildren(
+      ...found.matches.map((opening) => lineItem(opening, nameAmongMatches(opening))),
+    );
     markSelected();
   };
 
@@ -347,7 +361,10 @@ export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogVie
     if (kept.sectionTabs.element.parentNode !== browse) {
       browse.replaceChildren(kept.sectionTabs.element, panel);
     }
-    if (panel.firstChild !== page) panel.replaceChildren(page ?? '');
+    if (panel.firstChild !== page) {
+      panel.replaceChildren(page ?? '');
+      panel.scrollTop = 0;
+    }
 
     // A search is of the collection on show: when that changes, so does what it finds.
     if (collection !== onShow) {
