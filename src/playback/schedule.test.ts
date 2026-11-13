@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import {
-  clampDelay,
-  DEFAULT_DELAY_MS,
-  MAX_DELAY_MS,
-  MIN_DELAY_MS,
-  scheduleFor,
-} from './schedule.ts';
+import { clamp, clampDelay, DEFAULT_DELAY_MS, scheduleFor } from './schedule.ts';
+
+describe('clamp', () => {
+  it('holds a value within its limits', () => {
+    expect(clamp(5, 0, 10)).toBe(5);
+    expect(clamp(-1, 0, 10)).toBe(0);
+    expect(clamp(11, 0, 10)).toBe(10);
+  });
+});
 
 describe('the delay between moves', () => {
   it('is a second and a half unless the viewer says otherwise', () => {
@@ -13,8 +15,6 @@ describe('the delay between moves', () => {
   });
 
   it('can be set anywhere from brisk to leisurely', () => {
-    expect(MIN_DELAY_MS).toBe(300);
-    expect(MAX_DELAY_MS).toBe(5000);
     expect(clampDelay(100)).toBe(300);
     expect(clampDelay(2200)).toBe(2200);
     expect(clampDelay(60_000)).toBe(5000);

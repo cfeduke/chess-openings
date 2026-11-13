@@ -1,57 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { BoardView } from '../board/board-view.ts';
+import { EXCHANGE_SPANISH, ITALIAN_GAME } from '../../tests/support/lines.ts';
 import { buildTimeline, type Timeline } from '../chess/timeline.ts';
-import { createPlayer, type SoundCue } from './player.ts';
+import { createPlayer, type PlayerBoard, type SoundCue } from './player.ts';
 
-// 1. e4 e5 2. Nf3 Nc6 3. Bc4
-const italian = buildTimeline({
-  san: ['e4', 'e5', 'Nf3', 'Nc6', 'Bc4'],
-  uci: ['e2e4', 'e7e5', 'g1f3', 'b8c6', 'f1c4'],
-});
-
-// 1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Bxc6 dxc6 5. O-O Bg4 6. h3 Bxf3 7. Qxf3 Qd7 8. Qxf7+
-const eventful = buildTimeline({
-  san: [
-    'e4',
-    'e5',
-    'Nf3',
-    'Nc6',
-    'Bb5',
-    'a6',
-    'Bxc6',
-    'dxc6',
-    'O-O',
-    'Bg4',
-    'h3',
-    'Bxf3',
-    'Qxf3',
-    'Qd7',
-    'Qxf7+',
-  ],
-  uci: [
-    'e2e4',
-    'e7e5',
-    'g1f3',
-    'b8c6',
-    'f1b5',
-    'a7a6',
-    'b5c6',
-    'd7c6',
-    'e1g1',
-    'c8g4',
-    'h2h3',
-    'g4f3',
-    'd1f3',
-    'd8d7',
-    'f3f7',
-  ],
-});
+const italian = buildTimeline(ITALIAN_GAME);
+const eventful = buildTimeline(EXCHANGE_SPANISH);
 
 /** A board that writes down what it is asked to do, in order. */
 function setup(timeline: Timeline = italian) {
   const log: string[] = [];
   const cues: SoundCue[] = [];
-  const board: Pick<BoardView, 'setPosition' | 'highlight' | 'showArrow' | 'clearAnnotations'> = {
+  const board: PlayerBoard = {
     setPosition(position, { lastMove, durationMs = 0 } = {}) {
       const after = timeline.positions.indexOf(position);
       const last = lastMove ? `${lastMove.from}${lastMove.to}` : 'none';
@@ -67,7 +26,7 @@ function setup(timeline: Timeline = italian) {
   /** What has happened since this was last called. */
   const happened = () => log.splice(0);
   happened();
-  return { player, happened, cues };
+  return { player, board, happened, cues };
 }
 
 beforeEach(() => {
@@ -87,8 +46,8 @@ describe('loading a line', () => {
     expect(happened()).toEqual(['position after 0 moves (last none, 0ms)']);
     expect(player.snapshot).toEqual({
       playing: false,
+      moves: italian.moves,
       ply: 0,
-      length: 5,
       pending: null,
       delayMs: 1500,
     });
@@ -104,7 +63,12 @@ describe('loading a line', () => {
 
     player.load(eventful);
 
-    expect(player.snapshot).toMatchObject({ playing: false, ply: 0, length: 15, pending: null });
+    expect(player.snapshot).toMatchObject({
+      playing: false,
+      moves: eventful.moves,
+      ply: 0,
+      pending: null,
+    });
     vi.advanceTimersByTime(10_000);
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -153,13 +117,16 @@ describe('playing', () => {
     ]);
   });
 
-  it('stops by itself after the last move', () => {
+  it('stops by itself once the last piece has landed', () => {
     const { player, happened } = setup();
 
     player.play();
     vi.advanceTimersByTime(5 * 1500);
+    expect(player.snapshot).toMatchObject({ playing: true, ply: 5, pending: null });
 
+    vi.advanceTimersByTime(375);
     expect(player.snapshot).toMatchObject({ playing: false, ply: 5, pending: null });
+
     happened();
     vi.advanceTimersByTime(10_000);
     expect(happened()).toEqual([]);
@@ -235,8 +202,19 @@ describe('sound', () => {
     expect(cues.at(-1)).toBe('complete');
   });
 
+  it('does not round off a line that was paused before the last piece landed', () => {
+    const { player, cues } = setup();
+    player.play();
+    vi.advanceTimersByTime(5 * 1500 + 100);
+
+    player.pause();
+    vi.advanceTimersByTime(10_000);
+
+    expect(cues).not.toContain('complete');
+  });
+
   it('is optional', () => {
-    const silent = createPlayer({ board: setupBoardOnly() });
+    const silent = createPlayer({ board: setup().board });
     silent.load(italian);
 
     silent.play();
@@ -244,13 +222,6 @@ describe('sound', () => {
     expect(() => vi.advanceTimersByTime(5 * 1500 + 1000)).not.toThrow();
   });
 });
-
-function setupBoardOnly(): Pick<
-  BoardView,
-  'setPosition' | 'highlight' | 'showArrow' | 'clearAnnotations'
-> {
-  return { setPosition() {}, highlight() {}, showArrow() {}, clearAnnotations() {} };
-}
 
 describe('pausing', () => {
   it('takes back the highlight and the arrow, and nothing more happens', () => {
@@ -350,13 +321,14 @@ describe('stepping', () => {
 });
 
 describe('seeking', () => {
-  it('jumps straight to a position', () => {
-    const { player, happened } = setup();
+  it('jumps straight to a position, without animation or sound', () => {
+    const { player, happened, cues } = setup();
 
     player.seek(3);
 
     expect(happened()).toEqual(['position after 3 moves (last g1f3, 0ms)']);
     expect(player.snapshot).toMatchObject({ playing: false, ply: 3, pending: null });
+    expect(cues).toEqual([]);
   });
 
   it('stays within the line', () => {
@@ -468,12 +440,6 @@ describe('changing the delay', () => {
     player.setDelay(1e9);
     expect(player.snapshot.delayMs).toBe(5000);
   });
-
-  it('can start at a delay of its own', () => {
-    const player = createPlayer({ board: setupBoardOnly(), delayMs: 2500 });
-
-    expect(player.snapshot.delayMs).toBe(2500);
-  });
 });
 
 describe('subscribing', () => {
@@ -494,6 +460,18 @@ describe('subscribing', () => {
       'playing ply 1 pending null',
       'stopped ply 1 pending null',
     ]);
+  });
+
+  it('reports a restart once, not as a stop followed by a start', () => {
+    const { player } = setup();
+    player.seek(4);
+    const listener = vi.fn();
+    player.subscribe(listener);
+
+    player.restart();
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener).toHaveBeenCalledWith(expect.objectContaining({ playing: true, ply: 0 }));
   });
 
   it('reports a change of delay', () => {

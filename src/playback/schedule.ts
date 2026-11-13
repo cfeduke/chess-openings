@@ -1,12 +1,17 @@
 /** The delay between moves, unless the viewer changes it. */
 export const DEFAULT_DELAY_MS = 1500;
+/** The limits of the delay: the ends of the slider. */
 export const MIN_DELAY_MS = 300;
 export const MAX_DELAY_MS = 5000;
 
+/** `value`, or the nearest limit if it is outside them. */
+export function clamp(value: number, low: number, high: number): number {
+  return Math.min(high, Math.max(low, value));
+}
+
 /** A delay within the limits; anything that is not a number becomes the default. */
 export function clampDelay(delayMs: number): number {
-  if (Number.isNaN(delayMs)) return DEFAULT_DELAY_MS;
-  return Math.min(MAX_DELAY_MS, Math.max(MIN_DELAY_MS, delayMs));
+  return Number.isNaN(delayMs) ? DEFAULT_DELAY_MS : clamp(delayMs, MIN_DELAY_MS, MAX_DELAY_MS);
 }
 
 /**
@@ -25,8 +30,6 @@ export interface MoveSchedule {
   /** How long the piece takes to slide to its square. */
   slideMs: number;
 }
-
-const clamp = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value));
 
 /**
  * The rhythm is the same at every delay: the board rests while the last move sinks in, the next

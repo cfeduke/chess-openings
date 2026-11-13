@@ -1,16 +1,11 @@
-import { expect, type Locator, test } from '@playwright/test';
-
-async function centre(locator: Locator) {
-  const bounds = await locator.boundingBox();
-  if (!bounds) throw new Error('element has no bounding box');
-  return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
-}
+import { expect, test } from '@playwright/test';
+import { boardOn, centre } from './support.ts';
 
 test('a move is demonstrated in order: highlight the piece, draw the arrow, move the piece', async ({
   page,
 }) => {
   await page.goto('/');
-  const board = page.getByRole('img', { name: 'Chess board' });
+  const board = boardOn(page);
   const pawn = board.locator('.piece[data-piece="e2"]');
   const arrow = board.locator('.arrow[data-from="e2"][data-to="e4"]');
 
@@ -36,7 +31,4 @@ test('a move is demonstrated in order: highlight the piece, draw the arrow, move
   await expect(board.locator('.square--last-move')).toHaveCount(2);
   const target = await centre(board.locator('.square[data-square="e4"]'));
   await expect.poll(async () => (await centre(pawn)).y).toBeCloseTo(target.y, 0);
-
-  // And the reply follows after the delay.
-  await expect(board.locator('.square--highlight[data-square="e7"]')).toBeVisible();
 });

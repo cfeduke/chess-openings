@@ -2,18 +2,27 @@ import type { BoardView } from '../board/board-view.ts';
 import { moveKind } from '../chess/board.ts';
 import { givesCheck } from '../chess/san.ts';
 import type { Timeline, TimelineMove } from '../chess/timeline.ts';
-import { clampDelay, DEFAULT_DELAY_MS, type MoveSchedule, scheduleFor } from './schedule.ts';
+import { clamp, clampDelay, DEFAULT_DELAY_MS, type MoveSchedule, scheduleFor } from './schedule.ts';
 
-/** What a moment of the demonstration sounds like. */
+/**
+ * What a moment of the demonstration sounds like. A move that gives check is voiced as its own
+ * cue followed by `check`.
+ */
 export type SoundCue = 'move' | 'capture' | 'castle' | 'check' | 'complete';
+
+/** The part of the board the player drives. */
+export type PlayerBoard = Pick<
+  BoardView,
+  'setPosition' | 'highlight' | 'showArrow' | 'clearAnnotations'
+>;
 
 /** Everything an interface needs to know to draw the player. */
 export interface PlayerSnapshot {
   playing: boolean;
-  /** How many moves have been made: the position of the cursor in the move list. */
+  /** The moves of the line that is loaded. */
+  moves: readonly TimelineMove[];
+  /** How many of them have been made: the position of the cursor in the move list. */
   ply: number;
-  /** How many moves the line has. */
-  length: number;
   /** The index of the move being pointed out on the board, before it is made; otherwise null. */
   pending: number | null;
   delayMs: number;
@@ -30,11 +39,14 @@ export interface Player {
   play(): void;
   pause(): void;
   toggle(): void;
-  /** Makes the next move at once and pauses. */
+  /** Makes the next move at once, with its slide and its sound, and pauses. */
   stepForward(): void;
   /** Takes the last move back and pauses. */
   stepBack(): void;
-  /** Jumps to the position after `ply` moves; playback carries on from there if it was running. */
+  /**
+   * Jumps to the position after `ply` moves, without animation or sound. Playback carries on
+   * from there if it was running.
+   */
   seek(ply: number): void;
   /** Plays the line from the start. */
   restart(): void;
@@ -42,44 +54,73 @@ export interface Player {
   setDelay(delayMs: number): void;
 }
 
-interface PlayerOptions {
-  board: Pick<BoardView, 'setPosition' | 'highlight' | 'showArrow' | 'clearAnnotations'>;
-  sound?: (cue: SoundCue) => void;
-  delayMs?: number;
-}
+/**
+ * What the player is waiting to do next. The first three are the beats of a move; the last is
+ * the end of the line, once the final piece has landed.
+ */
+type Beat = 'highlight' | 'arrow' | 'move' | 'finish';
 
-/** The beats of one move, in order. Each is due at a point in the schedule. */
-const BEATS = ['highlightAt', 'arrowAt', 'moveAt'] as const satisfies (keyof MoveSchedule)[];
+/** How long each beat is awaited after the one before it. */
+function gapBefore(beat: Beat, { highlightAt, arrowAt, moveAt, slideMs }: MoveSchedule): number {
+  switch (beat) {
+    case 'highlight':
+      return highlightAt;
+    case 'arrow':
+      return arrowAt - highlightAt;
+    case 'move':
+      return moveAt - arrowAt;
+    case 'finish':
+      return slideMs;
+  }
+}
 
 const EMPTY: Timeline = { positions: [], moves: [] };
 
-export function createPlayer({
-  board,
-  sound = () => {},
-  delayMs: initialDelay,
-}: PlayerOptions): Player {
+export function createPlayer(options: {
+  board: PlayerBoard;
+  sound?: (cue: SoundCue) => void;
+}): Player {
+  const { board, sound = () => {} } = options;
   let timeline = EMPTY;
-  let playing = false;
   let ply = 0;
-  let pending: number | null = null;
-  let delayMs = clampDelay(initialDelay ?? DEFAULT_DELAY_MS);
-
-  /** While playing: when the move under way began counting down, and which beat comes next. */
-  let countdownFrom = 0;
-  let beat = 0;
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  let delayMs = DEFAULT_DELAY_MS;
+  /**
+   * The beat being waited for — which is to say, whether the player is playing. Each beat is
+   * timed from the one before it rather than from a fixed start, so a timer the browser delivers
+   * late (a background tab, a sleeping laptop) delays the rest instead of bunching it up.
+   */
+  let awaiting:
+    | { beat: Beat; gap: number; since: number; timer: ReturnType<typeof setTimeout> }
+    | undefined;
 
   const listeners = new Set<(snapshot: PlayerSnapshot) => void>();
   const snapshot = (): PlayerSnapshot => ({
-    playing,
+    playing: awaiting !== undefined,
+    moves: timeline.moves,
     ply,
-    length: timeline.moves.length,
-    pending,
+    pending: awaiting?.beat === 'arrow' || awaiting?.beat === 'move' ? ply : null,
     delayMs,
   });
   const changed = () => {
     const current = snapshot();
     for (const listener of listeners) listener(current);
+  };
+
+  /** Waits for `beat`. `done` is how much of the wait is already behind us, from 0 to 1. */
+  const wait = (beat: Beat, done = 0) => {
+    clearTimeout(awaiting?.timer);
+    const gap = gapBefore(beat, scheduleFor(delayMs));
+    awaiting = {
+      beat,
+      gap,
+      since: performance.now() - done * gap,
+      timer: setTimeout(strike, Math.round((1 - done) * gap)),
+    };
+  };
+
+  const stop = () => {
+    clearTimeout(awaiting?.timer);
+    awaiting = undefined;
   };
 
   /** Shows the position after `ply` moves; `slideMs` animates the change. */
@@ -89,65 +130,58 @@ export function createPlayer({
       board.setPosition(position, { lastMove: timeline.moves[ply - 1], durationMs: slideMs });
   };
 
-  const voice = (move: TimelineMove) => {
+  /** Makes the next move, with its slide and its sound. */
+  const advance = () => {
+    const move = timeline.moves[ply];
+    if (!move) return;
+    ply += 1;
+    show(scheduleFor(delayMs).slideMs);
     sound(moveKind(move));
     if (givesCheck(move.san)) sound('check');
   };
 
-  const stopTimer = () => {
-    clearTimeout(timer);
-    timer = undefined;
-  };
-
-  /** Waits for the next beat of the move under way. */
-  const awaitBeat = () => {
-    const due = countdownFrom + scheduleFor(delayMs)[BEATS[beat] as (typeof BEATS)[number]];
-    timer = setTimeout(strike, Math.max(0, due - Date.now()));
-  };
-
-  const beginCountdown = () => {
-    countdownFrom = Date.now();
-    beat = 0;
-    awaitBeat();
-  };
-
   const strike = () => {
     const move = timeline.moves[ply];
-    if (!move) return;
-    const { arrowDrawMs, slideMs } = scheduleFor(delayMs);
-
-    if (BEATS[beat] === 'highlightAt') {
-      board.highlight(move.from);
-      pending = ply;
-      changed();
-    } else if (BEATS[beat] === 'arrowAt') {
-      board.showArrow(move.from, move.to, { durationMs: arrowDrawMs });
-    } else {
-      ply += 1;
-      pending = null;
-      show(slideMs);
-      voice(move);
-      if (ply < timeline.moves.length) {
-        beginCountdown();
-      } else {
-        playing = false;
-        timer = setTimeout(() => sound('complete'), slideMs);
-      }
-      changed();
-      return;
+    switch (awaiting?.beat) {
+      case 'highlight':
+        if (move) board.highlight(move.from);
+        wait('arrow');
+        break;
+      case 'arrow':
+        if (move)
+          board.showArrow(move.from, move.to, { durationMs: scheduleFor(delayMs).arrowDrawMs });
+        wait('move');
+        return; // Nothing in the snapshot has changed.
+      case 'move':
+        advance();
+        wait(ply < timeline.moves.length ? 'highlight' : 'finish');
+        break;
+      case 'finish':
+        stop();
+        sound('complete');
+        break;
     }
-    beat += 1;
-    awaitBeat();
+    changed();
   };
 
-  /** Stops the clock without touching the board. */
-  const halt = () => {
-    stopTimer();
-    playing = false;
-    pending = null;
+  const play = () => {
+    if (awaiting || timeline.moves.length === 0) return;
+    if (ply === timeline.moves.length) {
+      ply = 0;
+      show();
+    }
+    wait('highlight');
+    changed();
   };
 
-  const player: Player = {
+  const pause = () => {
+    if (!awaiting) return;
+    stop();
+    board.clearAnnotations();
+    changed();
+  };
+
+  return {
     get snapshot() {
       return snapshot();
     },
@@ -158,82 +192,59 @@ export function createPlayer({
     },
 
     load(next) {
-      halt();
+      stop();
       timeline = next;
       ply = 0;
       show();
       changed();
     },
 
-    play() {
-      if (playing || timeline.moves.length === 0) return;
-      stopTimer();
-      if (ply === timeline.moves.length) {
-        ply = 0;
-        show();
-      }
-      playing = true;
-      beginCountdown();
-      changed();
-    },
-
-    pause() {
-      if (!playing) return;
-      halt();
-      board.clearAnnotations();
-      changed();
-    },
+    play,
+    pause,
 
     toggle() {
-      if (playing) player.pause();
-      else player.play();
+      if (awaiting) pause();
+      else play();
     },
 
     stepForward() {
-      const move = timeline.moves[ply];
-      if (!move) return;
-      halt();
-      ply += 1;
-      show(scheduleFor(delayMs).slideMs);
-      voice(move);
+      if (ply === timeline.moves.length) return;
+      stop();
+      advance();
       changed();
     },
 
     stepBack() {
       if (ply === 0) return;
-      halt();
+      stop();
       ply -= 1;
       show(scheduleFor(delayMs).slideMs);
       changed();
     },
 
     seek(target) {
-      stopTimer();
-      ply = Math.min(timeline.moves.length, Math.max(0, target));
-      pending = null;
+      ply = clamp(target, 0, timeline.moves.length);
       show();
-      if (playing && ply < timeline.moves.length) beginCountdown();
-      else playing = false;
+      if (awaiting && ply < timeline.moves.length) wait('highlight');
+      else stop();
       changed();
     },
 
     restart() {
-      player.seek(0);
-      player.play();
+      stop();
+      ply = 0;
+      show();
+      play();
     },
 
     setDelay(next) {
-      const previous = delayMs;
       delayMs = clampDelay(next);
-      if (timer !== undefined && playing) {
-        // Keep the same place in the move under way: a fifth of the way there stays a fifth.
-        const now = Date.now();
-        countdownFrom = now - ((now - countdownFrom) / previous) * delayMs;
-        stopTimer();
-        awaitBeat();
+      if (awaiting) {
+        // Keep the same place in the wait under way: a third of the way there stays a third.
+        const done = clamp((performance.now() - awaiting.since) / awaiting.gap, 0, 1);
+        wait(awaiting.beat, done);
       }
       changed();
     },
   };
-  return player;
 }
