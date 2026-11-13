@@ -36,6 +36,8 @@ function mount(hash = '', load: () => Promise<OpeningsDataset> = async () => SMA
 beforeEach(() => {
   vi.useFakeTimers();
   unmount = new AbortController();
+  // What index.html gives the page before the app has anything to add.
+  document.title = 'Chess Openings — learn by watching';
 });
 
 afterEach(() => {
@@ -292,6 +294,18 @@ describe('for someone who cannot see the board', () => {
     history.replaceState(null, '', '/');
     window.dispatchEvent(new HashChangeEvent('hashchange'));
     expect(document.title).toBe('Chess Openings — learn by watching');
+  });
+
+  it('puts the board before the moves, and the moves before the catalog, in reading order', async () => {
+    const { root, ready } = mount(hashForOpening(ITALIAN.id));
+    await ready;
+
+    const regions = [...root.querySelectorAll('.stage, .move-list, .catalog-panel')];
+    expect(regions.map((region) => region.className.split(' ')[0])).toEqual([
+      'stage',
+      'move-list',
+      'catalog-panel',
+    ]);
   });
 
   it('has a way past the catalog, straight to the player controls', async () => {

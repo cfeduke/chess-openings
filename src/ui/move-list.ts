@@ -1,5 +1,5 @@
 import './move-list.css';
-import { moveNumber, numberedMove } from '../chess/san.ts';
+import { moveNumber, numberedMove, START_POSITION } from '../chess/san.ts';
 import { el, exclusiveAttribute, exclusiveClass, revealWithin } from '../dom.ts';
 import type { Player, PlayerSnapshot } from '../playback/player.ts';
 
@@ -22,7 +22,7 @@ export function createMoveList(player: Player): { element: HTMLElement } {
   const moveButton = (ply: number, label: string, text: string) =>
     el(
       'button',
-      { type: 'button', class: 'move', 'data-ply': String(ply), 'aria-label': label },
+      { type: 'button', class: 'move', 'data-ply': ply, 'aria-label': label, tabindex: -1 },
       text,
     );
 
@@ -37,7 +37,7 @@ export function createMoveList(player: Player): { element: HTMLElement } {
       return;
     }
 
-    const start = moveButton(0, 'Start position', 'Start');
+    const start = moveButton(0, START_POSITION, 'Start');
     start.classList.add('move--start');
     buttons = [
       start,
@@ -57,8 +57,13 @@ export function createMoveList(player: Player): { element: HTMLElement } {
 
     const current = buttons[ply];
     if (current !== cursor) {
+      // The list is one stop in the tab order — the cursor — and a focus inside it follows along.
+      const focusInside = list.contains(document.activeElement);
+      cursor?.setAttribute('tabindex', '-1');
+      current?.setAttribute('tabindex', '0');
       holdCursor([current]);
       if (current) revealWithin(list, current);
+      if (focusInside) current?.focus();
       cursor = current;
     }
     holdPending([pending === null ? undefined : buttons[pending + 1]]);

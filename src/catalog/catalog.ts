@@ -46,6 +46,11 @@ export interface Catalog {
   locate(id: string): CatalogPlace | undefined;
 }
 
+/** What a line is called among the lines of its family. */
+export function lineLabel({ variation }: OpeningName): string {
+  return variation || 'Main line';
+}
+
 function byEcoThenNameThenLength(a: Opening, b: Opening): number {
   return a.eco.localeCompare(b.eco) || a.name.localeCompare(b.name) || a.san.length - b.san.length;
 }

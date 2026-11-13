@@ -29,8 +29,6 @@ interface AppOptions {
 /** The board with nothing chosen: the starting position, and no moves to play. */
 const NO_LINE = { san: [], uci: [] };
 
-const SITE_TITLE = 'Chess Openings — learn by watching';
-
 function credits({ repository, commit }: DataSource): HTMLElement {
   const source = el('a', { href: `https://github.com/${repository}/tree/${commit}` }, repository);
   return el(
@@ -48,6 +46,8 @@ function credits({ repository, commit }: DataSource): HTMLElement {
  */
 export async function mountApp(root: HTMLElement, options: AppOptions = {}): Promise<void> {
   const { load = loadOpenings, signal } = options;
+  /** The page's title before an opening adds its name to it. */
+  const siteTitle = document.title;
 
   const board = createBoardView();
   const sounds = createSoundEffects({ muted: mutedSetting });
@@ -89,7 +89,8 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
       el('h1', {}, 'Chess Openings'),
       el('p', { class: 'app__tagline' }, 'Learn them by watching them.'),
     ),
-    el('main', { class: 'app__main' }, catalogPanel, stage, moveList.element),
+    // In reading order: what is being watched, then what there is to choose from.
+    el('main', { class: 'app__main' }, stage, moveList.element, catalogPanel),
     transport.element,
     announcer.element,
   );
@@ -131,12 +132,11 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
       const opening = place?.opening;
       header.show(place);
       catalogView.show(opening ?? null);
-      document.title = opening ? `${opening.name} (${opening.eco}) — Chess Openings` : SITE_TITLE;
+      document.title = opening ? `${opening.name} (${opening.eco}) — Chess Openings` : siteTitle;
       player.load(buildTimeline(opening ?? NO_LINE));
       if (!opening) return;
 
-      const moves = opening.san.length;
-      announcer.say(`${opening.name}, ${moves} ${moves === 1 ? 'move' : 'moves'}`);
+      announcer.introduce(opening);
       player.play();
     };
 

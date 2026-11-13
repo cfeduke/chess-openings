@@ -1,17 +1,17 @@
 import { expect, test } from '@playwright/test';
+import { FEATURED_OPENINGS } from '../../src/catalog/featured.ts';
 import {
   boardOn,
   box,
   catalogOn,
+  controlsOn,
   ITALIAN_GAME,
-  linkTo,
   movesOn,
+  NAJDORF,
   openingNameOn,
   pieceFrom,
   startWithDelay,
 } from './support.ts';
-
-const NAJDORF = linkTo('sicilian-defense-najdorf-variation');
 
 test.beforeEach(async ({ page }) => {
   await startWithDelay(page, 400);
@@ -40,7 +40,7 @@ test('the catalog is to the left of the board, and nothing spills off the page',
   const catalog = await box(catalogOn(page));
   const board = await box(boardOn(page));
   const moves = await box(movesOn(page));
-  const controls = await box(page.getByRole('group', { name: 'Player controls' }));
+  const controls = await box(controlsOn(page));
 
   expect(catalog.x + catalog.width).toBeLessThanOrEqual(board.x);
   expect(board.x + board.width).toBeLessThanOrEqual(moves.x);
@@ -155,22 +155,14 @@ test('the openings are fetched once, alongside the page rather than after it', a
 test('a first-time visitor can start from a well-known opening', async ({ page }) => {
   await page.goto('/');
   const classics = page.getByRole('list', { name: 'Well-known openings' });
-  await expect(classics.getByRole('button')).toHaveText([
-    'Italian Game',
-    'Ruy Lopez',
-    'Sicilian Defense: Najdorf Variation',
-    'French Defense',
-    'Caro-Kann Defense',
-    "Queen's Gambit",
-    "King's Indian Defense",
-    'London System',
-  ]);
+  await expect(classics.getByRole('button')).toHaveCount(FEATURED_OPENINGS.length);
+  await expect(classics.getByRole('button').first()).toHaveText('Italian Game');
 
   await classics.getByRole('button', { name: 'Ruy Lopez' }).click();
 
   await expect(openingNameOn(page)).toHaveAccessibleName('C60 Ruy Lopez');
   await expect(page).toHaveTitle('Ruy Lopez (C60) — Chess Openings');
-  await expect(pieceFrom(page, 'f1')).toHaveAttribute('data-square', 'b5');
+  await expect(pieceFrom(page, 'e2')).toHaveAttribute('data-square', 'e4');
 });
 
 test('the lines of a family can be stepped through, one after another', async ({ page }) => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { realOpenings } from '../../tests/support/real-openings.ts';
 import type { Opening } from '../data/opening.ts';
-import { buildCatalog } from './catalog.ts';
+import { buildCatalog, lineLabel } from './catalog.ts';
 
 let nextId = 0;
 const opening = (eco: string, name: string, san: string): Opening => ({
@@ -195,5 +195,14 @@ describe('buildCatalog', () => {
 
       expect(realOpenings.filter((entry) => real.locate(entry.id)?.opening !== entry)).toEqual([]);
     });
+  });
+});
+
+describe('lineLabel', () => {
+  it('is what distinguishes a line within its family, or "Main line" for the family’s own', () => {
+    expect(lineLabel({ family: 'Italian Game', variation: 'Giuoco Pianissimo' })).toBe(
+      'Giuoco Pianissimo',
+    );
+    expect(lineLabel({ family: 'Italian Game', variation: '' })).toBe('Main line');
   });
 });

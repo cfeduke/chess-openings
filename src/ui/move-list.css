@@ -1,4 +1,6 @@
 .move-list {
+  /* A container, so that the moves can be laid out by how wide the list itself is. */
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -19,6 +21,8 @@
 }
 
 .move-list__moves {
+  /* Whatever is positioned inside the list scrolls with it. */
+  position: relative;
   min-height: 0;
   padding: 6px 10px 10px;
   overflow-y: auto;
@@ -115,8 +119,12 @@
   }
 }
 
-/* In a single column the list is as wide as the page: let the moves run across it. */
-@media (max-width: 959px) {
+/*
+ * A list wider than it ever is as a side column (280px at most) is spanning the page, as in the
+ * single-column layout: there it runs its moves across rather than down, and is kept to about
+ * four rows of them.
+ */
+@container (min-width: 290px) {
   .move-list__moves {
     max-height: 8.5rem;
   }

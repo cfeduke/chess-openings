@@ -49,6 +49,8 @@ export function createTransport(options: TransportOptions): {
     min: MIN_DELAY_MS,
     max: MAX_DELAY_MS,
     step: 100,
+    // The whole name, whatever part of the label there is room to show.
+    'aria-label': 'Delay between moves',
   });
   const readout = el('output', { for: slider.id, class: 'transport__readout' });
   const delay = el(

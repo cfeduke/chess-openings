@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { fakePlayer } from '../../tests/support/fake-player.ts';
 import { ITALIAN_MOVES as italian, SPANISH_MOVES as spanish } from '../../tests/support/lines.ts';
 import { createMoveList } from './move-list.ts';
@@ -79,6 +79,43 @@ describe('the cursor', () => {
 
     emit({ ply: 4 });
     expect(current()).toEqual(['Nc6']);
+  });
+});
+
+describe('for the keyboard', () => {
+  afterEach(() => {
+    document.body.replaceChildren();
+  });
+
+  it('is a single stop in the tab order: the move the cursor is on', () => {
+    const { emit, moves } = setup();
+    const stops = () => moves().map((move) => move.tabIndex);
+    expect(stops()).toEqual([0, -1, -1, -1, -1, -1]);
+
+    emit({ ply: 3 });
+
+    expect(stops()).toEqual([-1, -1, -1, 0, -1, -1]);
+  });
+
+  it('keeps the focus on the cursor as it moves, if the focus was in the list', () => {
+    const { emit, moves, element } = setup();
+    document.body.append(element);
+    moves()[0]?.focus();
+
+    emit({ ply: 2 });
+
+    expect(document.activeElement).toBe(moves()[2]);
+  });
+
+  it('leaves the focus alone when it is somewhere else', () => {
+    const { emit, element } = setup();
+    const elsewhere = document.createElement('button');
+    document.body.append(element, elsewhere);
+    elsewhere.focus();
+
+    emit({ ply: 2 });
+
+    expect(document.activeElement).toBe(elsewhere);
   });
 });
 

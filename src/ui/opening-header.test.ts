@@ -25,11 +25,12 @@ function setup() {
 }
 
 describe('before anything is chosen', () => {
-  it('invites a choice', () => {
+  it('invites a choice, and offers no lines to step through', () => {
     const { text, element } = setup();
 
     expect(text('h2')).toBe('Choose an opening');
     expect(element.textContent).toContain('catalog');
+    expect(element.querySelector<HTMLElement>('[role="group"]')?.hidden).toBe(true);
   });
 
   it('offers the well-known openings it is given, to start from', () => {
@@ -132,6 +133,32 @@ describe('the lines beside it in its family', () => {
     expect(onSelect).toHaveBeenLastCalledWith(NAJDORF);
   });
 
+  it('keep their buttons from one line to the next, so the focus stays where it was', () => {
+    const { header, element, button } = setup();
+    document.body.append(element);
+    header.show(placeOf(NAJDORF));
+    const next = button('Next line');
+    next?.focus();
+
+    header.show(placeOf(ENGLISH_ATTACK));
+
+    expect(button('Next line')).toBe(next);
+    element.remove();
+  });
+
+  it('hand the focus to the other button when the family runs out in one direction', () => {
+    const { header, element, button } = setup();
+    document.body.append(element);
+    header.show(placeOf(NAJDORF));
+    button('Next line')?.focus();
+
+    header.show(placeOf(ENGLISH_ATTACK));
+
+    expect(button('Next line')?.disabled).toBe(true);
+    expect(document.activeElement).toBe(button('Previous line'));
+    element.remove();
+  });
+
   it('call a family’s own line its main line', () => {
     const { header, button } = setup();
 
@@ -156,6 +183,6 @@ describe('the lines beside it in its family', () => {
 
     header.show(placeOf(POLISH));
 
-    expect(element.querySelector('[role="group"]')).toBeNull();
+    expect(element.querySelector<HTMLElement>('[role="group"]')?.hidden).toBe(true);
   });
 });

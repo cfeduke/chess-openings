@@ -1,22 +1,24 @@
-import { devices, expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import {
   boardOn,
   box,
   catalogOn,
+  controlsOn,
   ITALIAN_GAME,
   linkTo,
   movesOn,
+  NAJDORF,
   openingNameOn,
+  PHONE,
   pieceFrom,
-  startWithDelay,
+  stepInto,
 } from './support.ts';
 
-const controlsOn = (page: Page) => page.getByRole('group', { name: 'Player controls' });
 const overflowsSideways = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
 
 test.describe('on a phone', () => {
-  test.use({ viewport: devices['iPhone 13'].viewport, hasTouch: true });
+  test.use(PHONE);
 
   test('everything is stacked, nothing spills sideways, and the board comes first', async ({
     page,
@@ -63,15 +65,42 @@ test.describe('on a phone', () => {
     await expect(page.getByRole('slider', { name: 'Delay between moves' })).toBeInViewport();
   });
 
-  test('the page holds still while the moves are played', async ({ page }) => {
-    await startWithDelay(page, 300);
-    await page.goto(linkTo('sicilian-defense-najdorf-variation'));
-
-    // Ten moves: the cursor in the move list travels, but the page does not follow it.
+  test('the page holds still while the cursor travels through the moves', async ({ page }) => {
+    await stepInto(page, NAJDORF, 10);
     await expect(pieceFrom(page, 'a7')).toHaveAttribute('data-square', 'a6');
 
+    // The move list has scrolled itself to keep its cursor in sight …
+    const cursorInSight = await page.evaluate(() => {
+      const list = document.querySelector('.move-list__moves')?.getBoundingClientRect();
+      const cursor = document
+        .querySelector('.move-list [aria-current="step"]')
+        ?.getBoundingClientRect();
+      return Boolean(
+        list && cursor && cursor.top >= list.top - 1 && cursor.bottom <= list.bottom + 1,
+      );
+    });
+    expect(cursorInSight).toBe(true);
+    // … and has not dragged the page along with it: the board is still where it was.
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
     await expect(boardOn(page)).toBeInViewport({ ratio: 1 });
+  });
+
+  test('the board comes before the catalog for the keyboard and for screen readers too', async ({
+    page,
+  }) => {
+    await page.goto(ITALIAN_GAME);
+
+    const boardFirst = await page.evaluate(() => {
+      const board = document.querySelector('[aria-label="Chess board"]');
+      const catalog = document.querySelector('nav[aria-label="Openings"]');
+      return Boolean(
+        board &&
+          catalog &&
+          board.compareDocumentPosition(catalog) & Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    });
+
+    expect(boardFirst).toBe(true);
   });
 
   test('choosing an opening further down the page brings the board back into view', async ({

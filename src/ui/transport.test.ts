@@ -139,6 +139,7 @@ describe('the delay slider', () => {
     expect(element.querySelector(`label[for="${slider.id}"]`)?.textContent).toBe(
       'Delay between moves',
     );
+    expect(slider.getAttribute('aria-label')).toBe('Delay between moves');
     expect(element.querySelector('output')?.textContent).toBe('1.5 s');
     expect(slider.getAttribute('aria-valuetext')).toBe('1.5 seconds');
   });

@@ -14,6 +14,9 @@ export function moveNumber(index: number): number {
   return Math.floor(index / 2) + 1;
 }
 
+/** What the board is called before any move has been made. */
+export const START_POSITION = 'Start position';
+
 /** A move with its number, as a player would say where it falls: `1. e4` for White, `1… e5` for Black. */
 export function numberedMove(san: string, index: number): string {
   return `${moveNumber(index)}${index % 2 === 0 ? '.' : '…'} ${san}`;

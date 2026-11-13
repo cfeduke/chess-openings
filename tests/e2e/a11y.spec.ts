@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
-import { devices, expect, type Page, test } from '@playwright/test';
-import { catalogOn, ITALIAN_GAME, pieceFrom, startWithDelay } from './support.ts';
+import { expect, type Page, test } from '@playwright/test';
+import { catalogOn, ITALIAN_GAME, PHONE, pieceFrom, startWithDelay, stepInto } from './support.ts';
 
 /** Runs the axe accessibility checks over the page and returns what they object to. */
 async function violations(page: Page) {
@@ -12,12 +12,10 @@ async function violations(page: Page) {
   );
 }
 
-/** Opens the Italian Game and stops it part-way, so that what is checked holds still. */
+/** The Italian Game, three moves in and paused: its group is open in the catalog. */
 async function watchItalianGame(page: Page) {
-  await startWithDelay(page, 300);
-  await page.goto(ITALIAN_GAME);
+  await stepInto(page, ITALIAN_GAME, 3);
   await expect(pieceFrom(page, 'g1')).toHaveAttribute('data-square', 'f3');
-  await page.getByRole('button', { name: 'Pause' }).click();
 }
 
 for (const colorScheme of ['light', 'dark'] as const) {
@@ -52,7 +50,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 }
 
 test.describe('on a phone', () => {
-  test.use({ viewport: devices['iPhone 13'].viewport, hasTouch: true });
+  test.use(PHONE);
 
   test('an opening being played passes the automated accessibility checks', async ({ page }) => {
     await watchItalianGame(page);
@@ -65,6 +63,7 @@ test('each move is announced to a screen reader as it is made', async ({ page })
   await startWithDelay(page, 5000);
   await page.goto(ITALIAN_GAME);
   const announcer = page.locator('.announcer');
+  await expect(announcer).toHaveRole('status');
   await expect(announcer).toHaveText('Italian Game, 5 moves');
 
   await page.keyboard.press('ArrowRight');

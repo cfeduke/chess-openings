@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { fakePlayer } from '../../tests/support/fake-player.ts';
 import { ITALIAN_MOVES as italian } from '../../tests/support/lines.ts';
+import { ITALIAN } from '../../tests/support/openings.ts';
 import { createAnnouncer } from './announcer.ts';
 
 function setup() {
@@ -50,21 +51,34 @@ describe('the announcer', () => {
     expect(said()).toBe('1. e4');
   });
 
-  it('says whatever else it is asked to', () => {
+  it('introduces an opening: its name and how many moves there are to watch', () => {
     const { announcer, said } = setup();
 
-    announcer.say('Italian Game, 5 moves');
+    announcer.introduce(ITALIAN);
+    expect(said()).toBe('Italian Game, 5 moves');
+
+    announcer.introduce({ ...ITALIAN, name: 'Amar Opening', san: ['Nh3'] });
+    expect(said()).toBe('Amar Opening, 1 move');
+  });
+
+  it('leaves the start of a line that has just been loaded to its introduction', () => {
+    const { announcer, emit, said } = setup();
+    emit({ ply: 3 });
+    announcer.introduce(ITALIAN);
+
+    emit({ moves: [...italian], ply: 0 });
 
     expect(said()).toBe('Italian Game, 5 moves');
   });
 
-  it('does not announce the start of a line that has just been loaded', () => {
-    const { announcer, emit, said } = setup();
-    emit({ ply: 3 });
-    announcer.say('Ruy Lopez, 5 moves');
+  it('changes what it says even to say the same thing again, or it would not be read out', () => {
+    const { announcer, said } = setup();
+    announcer.introduce(ITALIAN);
+    const first = said();
 
-    emit({ moves: [...italian], ply: 0 });
+    announcer.introduce(ITALIAN);
 
-    expect(said()).toBe('Ruy Lopez, 5 moves');
+    expect(said()).not.toBe(first);
+    expect(said()?.trim()).toBe('Italian Game, 5 moves');
   });
 });

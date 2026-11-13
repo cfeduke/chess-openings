@@ -1,5 +1,10 @@
 import './catalog.css';
-import type { Catalog, CatalogGroup, CatalogVolume } from '../catalog/catalog.ts';
+import {
+  type Catalog,
+  type CatalogGroup,
+  type CatalogVolume,
+  lineLabel,
+} from '../catalog/catalog.ts';
 import type { SearchResult } from '../catalog/search.ts';
 import { formatMoveText } from '../chess/san.ts';
 import type { Opening } from '../data/opening.ts';
@@ -83,7 +88,7 @@ export function createCatalog({ catalog, search, onSelect }: CatalogOptions): Ca
             'ul',
             { class: 'lines' },
             ...family.lines.map((line) =>
-              lineItem(line.opening, line.variation || 'Main line', `${family.name}: `),
+              lineItem(line.opening, lineLabel(line), `${family.name}: `),
             ),
           ),
         );

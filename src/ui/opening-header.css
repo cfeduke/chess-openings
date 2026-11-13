@@ -1,9 +1,15 @@
+/* The name on the left; the steps through its family, when there are any, on the right. */
 .opening {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
   gap: 0 12px;
   min-width: 0;
+}
+
+/* The title's parts are laid out by the header's own grid: where it is filed runs full width. */
+.opening__title {
+  display: contents;
 }
 
 .opening__place {
@@ -21,7 +27,7 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 4px 12px;
-  margin: 0;
+  margin: 0 0 4px;
   font: 600 1.55rem / 1.15 var(--font-display);
 }
 
@@ -48,13 +54,21 @@
   white-space: nowrap;
 }
 
+/* `hidden` alone would lose to the `display` above. */
+.opening__lines[hidden] {
+  display: none;
+}
+
 /* The well-known openings offered before anything is chosen. */
+.opening__offers {
+  grid-column: 1 / -1;
+}
+
 .opening__classics {
   display: flex;
   flex-wrap: wrap;
-  grid-column: 1 / -1;
   gap: 8px;
-  margin: 12px 0 0;
+  margin: 8px 0 0;
   padding: 0;
   list-style: none;
 }
