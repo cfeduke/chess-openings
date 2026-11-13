@@ -12,5 +12,7 @@ The workflow in [README.md](README.md#development-workflow) is mandatory, not ad
 Conventions:
 
 - Imports use explicit `.ts` extensions (scripts run directly under Node's type stripping).
-- Unit tests live next to the code as `*.test.ts`; integration tests live in `tests/e2e/` and run
-  against the production build.
+- Unit tests live next to the code as `*.test.ts`. A simulated DOM (happy-dom) cannot tell you where
+  something ends up on screen, so anything that depends on the stylesheet — placement, transitions,
+  what is visible — is tested in `*.browser.test.ts`, which Vitest runs in real Chromium.
+- Integration tests live in `tests/e2e/` and run against the production build.
