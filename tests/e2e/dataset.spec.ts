@@ -5,9 +5,12 @@ test('the production build ships the generated openings dataset', async ({ reque
 
   expect(response.ok()).toBe(true);
   const payload = await response.json();
-  expect(payload.source.repository).toBe('lichess-org/chess-openings');
-  expect(payload.openings.length).toBeGreaterThan(3800);
-  expect(payload.openings[0]).toEqual({
+  const [encyclopaedia] = payload.collections;
+  expect(payload.collections).toHaveLength(1);
+  expect(encyclopaedia.id).toBe('eco');
+  expect(encyclopaedia.source.title).toBe('lichess-org/chess-openings');
+  expect(encyclopaedia.openings.length).toBeGreaterThan(3800);
+  expect(encyclopaedia.openings[0]).toEqual({
     id: 'amar-opening',
     eco: 'A00',
     name: 'Amar Opening',

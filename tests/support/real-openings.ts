@@ -1,7 +1,14 @@
-import { LICHESS_DATA_DIR, loadDataset } from '../../scripts/openings/dataset.ts';
+import { DATA_DIR, loadDataset } from '../../scripts/openings/dataset.ts';
+import type { Opening } from '../../src/data/opening.ts';
 
-/** The vendored lichess data, built the way `npm run data` builds it. */
-export const realDataset = loadDataset(LICHESS_DATA_DIR);
+/** The vendored data, built the way `npm run data` builds it. */
+export const realDataset = loadDataset(DATA_DIR);
 
-/** Every opening in the vendored lichess data. */
-export const realOpenings = realDataset.openings;
+const openingsOf = (id: string): Opening[] => {
+  const collection = realDataset.collections.find((candidate) => candidate.id === id);
+  if (!collection) throw new Error(`the dataset has no "${id}" collection`);
+  return collection.openings;
+};
+
+/** Every opening in the vendored lichess data: the encyclopaedia's collection. */
+export const realOpenings = openingsOf('eco');

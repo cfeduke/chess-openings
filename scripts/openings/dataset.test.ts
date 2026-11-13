@@ -3,10 +3,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { isSlug } from '../../src/text/slug.ts';
-import { realDataset } from '../../tests/support/real-openings.ts';
-import { LICHESS_DATA_DIR, loadDataset, SOURCE_FILE, VOLUME_FILES } from './dataset.ts';
+import { realOpenings as openings, realDataset } from '../../tests/support/real-openings.ts';
+import { DATA_DIR, LICHESS_DATA_DIR, loadDataset, SOURCE_FILE, VOLUME_FILES } from './dataset.ts';
 
-const { source, openings } = realDataset;
+describe('the dataset', () => {
+  it('is a list of collections, of which the encyclopaedia is the first', () => {
+    expect(realDataset.collections.map((collection) => collection.id)).toEqual(['eco']);
+    expect(realDataset.collections[0]?.openings).toBe(openings);
+  });
+});
 
 describe('the lichess dataset', () => {
   it('contains every upstream row', () => {
@@ -50,10 +55,14 @@ describe('the lichess dataset', () => {
     );
   });
 
-  it('records where the data came from', () => {
-    expect(source).toEqual({
-      repository: 'lichess-org/chess-openings',
-      commit: expect.stringMatching(/^[0-9a-f]{40}$/),
+  it('says where the data came from: the repository, at the commit it is pinned to', () => {
+    const { commit } = JSON.parse(readFileSync(join(LICHESS_DATA_DIR, SOURCE_FILE), 'utf8'));
+
+    expect(commit).toMatch(/^[0-9a-f]{40}$/);
+    expect(realDataset.collections[0]?.source).toEqual({
+      title: 'lichess-org/chess-openings',
+      url: `https://github.com/lichess-org/chess-openings/tree/${commit}`,
+      revision: commit.slice(0, 7),
       license: 'CC0-1.0',
     });
   });
@@ -61,13 +70,13 @@ describe('the lichess dataset', () => {
 
 describe('loadDataset', () => {
   it('refuses data whose provenance record is incomplete', () => {
-    const dataDir = mkdtempSync(join(tmpdir(), 'lichess-data-'));
-    cpSync(LICHESS_DATA_DIR, dataDir, { recursive: true });
+    const dataDir = mkdtempSync(join(tmpdir(), 'openings-data-'));
+    cpSync(DATA_DIR, dataDir, { recursive: true });
     writeFileSync(
-      join(dataDir, SOURCE_FILE),
+      join(dataDir, 'lichess', SOURCE_FILE),
       JSON.stringify({ repository: 'lichess-org/chess-openings' }),
     );
 
-    expect(() => loadDataset(dataDir)).toThrow(/SOURCE\.json: missing "commit"/);
+    expect(() => loadDataset(dataDir)).toThrow(/lichess\/SOURCE\.json: missing "commit"/);
   });
 });

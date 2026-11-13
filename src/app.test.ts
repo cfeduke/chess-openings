@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { STUDY, TWO_APPEARANCES } from '../tests/support/appearances.ts';
 import { ITALIAN, NAJDORF, SMALL_DATASET } from '../tests/support/openings.ts';
+import { DANISH, TWO_ARRANGEMENTS, TWO_COLLECTIONS } from '../tests/support/pamphlet.ts';
 import { mountApp } from './app.ts';
 import type { OpeningsDataset } from './data/opening.ts';
 import { hashForOpening } from './routing.ts';
@@ -14,7 +15,12 @@ function mount(hash = '', load: () => Promise<OpeningsDataset> = async () => SMA
   history.replaceState(null, '', `/${hash}`);
   const root = document.createElement('div');
   document.body.append(root);
-  const ready = mountApp(root, { load, signal: unmount.signal, appearances: TWO_APPEARANCES });
+  const ready = mountApp(root, {
+    load,
+    signal: unmount.signal,
+    appearances: TWO_APPEARANCES,
+    arrangements: TWO_ARRANGEMENTS,
+  });
   const $ = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector);
   return {
     root,
@@ -327,11 +333,76 @@ describe('the credits', () => {
     const { ready, text, $ } = mount();
     await ready;
 
-    expect(text('.credits')).toContain('lichess-org/chess-openings');
-    expect(text('.credits')).toContain('abc1234');
+    expect(text('.credits')).toBe(
+      'Openings from lichess-org/chess-openings @ abc1234, in the public domain. ' +
+        'Chess pieces by Colin M.L. Burnett.',
+    );
     expect($<HTMLAnchorElement>('.credits a')?.href).toBe(
       'https://github.com/lichess-org/chess-openings/tree/abc1234def',
     );
+  });
+
+  it('name the source of every collection, each with its own licence', async () => {
+    const { root, ready, text } = mount('', async () => TWO_COLLECTIONS);
+    await ready;
+
+    expect(text('.credits')).toBe(
+      'Openings from lichess-org/chess-openings @ abc1234, in the public domain; ' +
+        'from A Pamphlet of Gambits @ 2nd edition, under CC-BY-4.0. ' +
+        'Chess pieces by Colin M.L. Burnett.',
+    );
+    expect(
+      [...root.querySelectorAll<HTMLAnchorElement>('.credits a')].map((link) => link.href),
+    ).toEqual([
+      'https://github.com/lichess-org/chess-openings/tree/abc1234def',
+      'https://example.org/pamphlet',
+    ]);
+  });
+});
+
+describe('with a second collection of openings', () => {
+  const selectedTabs = (root: HTMLElement) =>
+    [...root.querySelectorAll('[role="tab"][aria-selected="true"]')].map((tab) => tab.textContent);
+
+  it('lists the encyclopaedia first, with the other a tab away', async () => {
+    const { root, ready } = mount('', async () => TWO_COLLECTIONS);
+    await ready;
+
+    expect(selectedTabs(root)).toEqual(['ECO', 'A']);
+    expect(
+      [...root.querySelectorAll('[aria-label="Collections"] [role="tab"]')].map(
+        (tab) => tab.textContent,
+      ),
+    ).toEqual(['ECO', 'Pamphlet']);
+  });
+
+  it('opens a link to one of its openings: plays it, and finds it in its own collection', async () => {
+    const { root, ready, text, cursor, $ } = mount(
+      hashForOpening(DANISH.id),
+      async () => TWO_COLLECTIONS,
+    );
+    await ready;
+
+    expect(text('.opening__family')).toBe('Danish Gambit');
+    expect(text('.opening__place')).toBe(
+      'Chapter 1. e4 · King’s Pawn Gambits › Gambits after 1. e4',
+    );
+    expect(document.title).toBe('Danish Gambit (C21) — Chess Openings');
+    expect(selectedTabs(root)).toEqual(['Pamphlet', '1. e4']);
+    expect($(`.line[data-opening="${DANISH.id}"]`)?.getAttribute('aria-current')).toBe('true');
+    vi.advanceTimersByTime(1500);
+    expect(cursor()).toBe('e4');
+  });
+
+  it('goes from an opening of one collection to an opening of the other', async () => {
+    const { root, ready, text } = mount(hashForOpening(DANISH.id), async () => TWO_COLLECTIONS);
+    await ready;
+
+    history.replaceState(null, '', `/${hashForOpening(NAJDORF.id)}`);
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+
+    expect(text('.opening__family')).toBe('Sicilian Defense');
+    expect(selectedTabs(root)).toEqual(['ECO', 'B']);
   });
 });
 
