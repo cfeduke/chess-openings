@@ -28,3 +28,8 @@ const FOLDED_SAN = /^([kqrbn]?[a-h]?[1-8]?x?[a-h][1-8](=[qrbn])?|o-o(-o)?)$/;
 export function looksLikeSan(text: string): boolean {
   return FOLDED_SAN.test(foldSan(text));
 }
+
+/** Whether a SAN move is marked as giving check or mate. */
+export function givesCheck(san: string): boolean {
+  return /[+#]$/.test(san);
+}
