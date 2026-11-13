@@ -1,7 +1,9 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { STUDY } from '../../tests/support/appearances.ts';
 import { positionAfter } from '../../tests/support/positions.ts';
 import { applyMove, startingPosition } from '../chess/board.ts';
+import { DEFAULT_APPEARANCE } from './appearance.ts';
 import { createBoardView } from './board-view.ts';
 import type { Orientation } from './geometry.ts';
 
@@ -316,5 +318,44 @@ describe('orientation', () => {
     // The same arrow, re-aimed — a new one would draw itself all over again.
     expect(arrow()).toBe(drawn);
     expect(Number(arrow()?.querySelector('.arrow__shaft')?.getAttribute('x1'))).toBeCloseTo(3.5);
+  });
+});
+
+describe('the board’s appearance', () => {
+  it('is the default one unless another is asked for', () => {
+    const { element } = setup();
+
+    expect(element.dataset.pieces).toBe(DEFAULT_APPEARANCE.pieces.id);
+    expect(element.dataset.theme).toBe(DEFAULT_APPEARANCE.board.id);
+  });
+
+  it('can be chosen when the board is made: its artwork and colours go to the stylesheet', () => {
+    const { element } = createBoardView({ appearance: STUDY });
+
+    expect(element.dataset.pieces).toBe('stencil');
+    expect(element.dataset.theme).toBe('slate');
+    expect(element.style.getPropertyValue('--piece-wk')).toBe(`url("${STUDY.pieces.artwork.wk}")`);
+    expect(element.style.getPropertyValue('--piece-bn')).toBe(`url("${STUDY.pieces.artwork.bn}")`);
+    expect(element.style.getPropertyValue('--board-light')).toBe(STUDY.board.colors.light);
+    expect(element.style.getPropertyValue('--board-last-move')).toBe(
+      STUDY.board.colors['last-move'],
+    );
+  });
+
+  it('can be changed, without disturbing what is on the board', () => {
+    const { view, element, piece } = setup();
+    view.setPosition(positionAfter('e2e4'));
+    view.highlight('e7');
+    view.showArrow('e7', 'e5');
+    const pawn = piece('e2');
+
+    view.setAppearance(STUDY);
+
+    expect(element.dataset.pieces).toBe('stencil');
+    expect(element.style.getPropertyValue('--board-dark')).toBe(STUDY.board.colors.dark);
+    expect(piece('e2')).toBe(pawn);
+    expect(pawn?.dataset.square).toBe('e4');
+    expect(element.querySelector<HTMLElement>('.square--highlight')?.dataset.square).toBe('e7');
+    expect(element.querySelector('.arrow')).not.toBeNull();
   });
 });

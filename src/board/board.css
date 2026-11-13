@@ -1,10 +1,9 @@
+/*
+ * How the board looks is not decided here. The board view sets, on `.board`, the colours of its
+ * theme (`--board-light`, `--board-dark`, `--board-last-move`, `--board-highlight`,
+ * `--board-arrow`) and the artwork of its piece set (`--piece-wk` … `--piece-bp`).
+ */
 .board {
-  --board-light: #f0d9b5;
-  --board-dark: #b58863;
-  --board-last-move: rgb(205 210 106 / 0.5);
-  --board-highlight: rgb(255 214 64 / 0.65);
-  --board-arrow: rgb(21 120 27 / 0.85);
-
   position: relative;
   width: 100%;
   aspect-ratio: 1;
@@ -114,51 +113,51 @@
 }
 
 .piece--wk {
-  background-image: url("./pieces/wk.svg");
+  background-image: var(--piece-wk);
 }
 
 .piece--wq {
-  background-image: url("./pieces/wq.svg");
+  background-image: var(--piece-wq);
 }
 
 .piece--wr {
-  background-image: url("./pieces/wr.svg");
+  background-image: var(--piece-wr);
 }
 
 .piece--wb {
-  background-image: url("./pieces/wb.svg");
+  background-image: var(--piece-wb);
 }
 
 .piece--wn {
-  background-image: url("./pieces/wn.svg");
+  background-image: var(--piece-wn);
 }
 
 .piece--wp {
-  background-image: url("./pieces/wp.svg");
+  background-image: var(--piece-wp);
 }
 
 .piece--bk {
-  background-image: url("./pieces/bk.svg");
+  background-image: var(--piece-bk);
 }
 
 .piece--bq {
-  background-image: url("./pieces/bq.svg");
+  background-image: var(--piece-bq);
 }
 
 .piece--br {
-  background-image: url("./pieces/br.svg");
+  background-image: var(--piece-br);
 }
 
 .piece--bb {
-  background-image: url("./pieces/bb.svg");
+  background-image: var(--piece-bb);
 }
 
 .piece--bn {
-  background-image: url("./pieces/bn.svg");
+  background-image: var(--piece-bn);
 }
 
 .piece--bp {
-  background-image: url("./pieces/bp.svg");
+  background-image: var(--piece-bp);
 }
 
 /* Arrow: the shaft is drawn from the piece towards its destination, then the head appears. */

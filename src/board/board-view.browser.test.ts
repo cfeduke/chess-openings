@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { STUDY } from '../../tests/support/appearances.ts';
 import { positionAfter } from '../../tests/support/positions.ts';
 import { type Square, startingPosition } from '../chess/board.ts';
 import { type BoardView, createBoardView } from './board-view.ts';
@@ -163,5 +164,59 @@ describe('the board in a real browser', () => {
 
     expect(getComputedStyle(shaft).strokeDashoffset).toBe('0px');
     expect(arrow().getBoundingClientRect().bottom).toBeCloseTo(centre(square('e4')).y, 0);
+  });
+});
+
+describe('the board’s appearance in a real browser', () => {
+  /** What is drawn for each kind of piece in the starting position. */
+  const artworkDrawn = (piece: (id: string) => HTMLElement) =>
+    new Map(
+      [...startingPosition().values()].map(({ id, color, type }) => [
+        `${color}${type}` as const,
+        getComputedStyle(piece(id)).backgroundImage,
+      ]),
+    );
+
+  it('draws the pieces of the set it was given', () => {
+    const { view, piece } = mount();
+    view.setPosition(startingPosition());
+    const before = artworkDrawn(piece);
+
+    view.setAppearance(STUDY);
+
+    const after = artworkDrawn(piece);
+    expect(new Set(after.values()).size).toBe(12);
+    for (const [kind, image] of after) {
+      expect(image, kind).not.toBe(before.get(kind));
+      expect(image, kind).toBe(`url("${STUDY.pieces.artwork[kind]}")`);
+    }
+  });
+
+  it('paints the squares, the highlight and the arrow in the colours of its theme', () => {
+    const { view, square, arrow } = mount();
+    const { colors } = STUDY.board;
+    view.setPosition(positionAfter('e2e4'), { lastMove: { from: 'e2', to: 'e4' } });
+
+    view.setAppearance(STUDY);
+    view.highlight('e7');
+    view.showArrow('e7', 'e5');
+
+    expect(getComputedStyle(square('a1')).backgroundColor).toBe(colors.dark);
+    expect(getComputedStyle(square('h1')).backgroundColor).toBe(colors.light);
+    // The coordinates are written in the colour of the other kind of square.
+    expect(getComputedStyle(square('a1')).color).toBe(colors.light);
+    expect(getComputedStyle(square('e4')).backgroundImage).toContain(colors['last-move']);
+    expect(getComputedStyle(square('e7')).backgroundImage).toContain(colors.highlight);
+    const shaft = arrow().querySelector('.arrow__shaft') as SVGGraphicsElement;
+    expect(getComputedStyle(shaft).stroke).toBe(colors.arrow);
+  });
+
+  it('draws a board without being told how to look', () => {
+    const { view, square, piece } = mount();
+    view.setPosition(startingPosition());
+
+    expect(getComputedStyle(square('a1')).backgroundColor).toBe('rgb(181, 136, 99)');
+    expect(getComputedStyle(square('h1')).backgroundColor).toBe('rgb(240, 217, 181)');
+    expect(getComputedStyle(piece('e1')).backgroundImage).toContain('svg');
   });
 });

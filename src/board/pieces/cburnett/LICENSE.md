@@ -1,4 +1,4 @@
-# Chess piece artwork
+# Chess piece artwork: the `cburnett` set
 
 The twelve SVG files in this directory are the chess pieces drawn by
 **Colin M.L. Burnett** ([User:Cburnett](https://en.wikipedia.org/wiki/User:Cburnett)), taken from

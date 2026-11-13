@@ -47,8 +47,35 @@
 
 .transport__toggles {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: 6px;
+}
+
+/* The appearance dropdown, with a little board beside it to say what it is for. */
+.appearance {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+  color: var(--ink-soft);
+}
+
+.appearance__icon {
+  display: grid;
+  place-items: center;
+}
+
+.appearance__select {
+  height: 40px;
+  max-width: 11rem;
+  padding: 0 10px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background-color: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
 }
 
 /* Too narrow for one row: the playback buttons above, the slider and the toggles below. */
@@ -71,6 +98,33 @@
 
   .transport__toggles {
     grid-area: toggles;
+  }
+
+  /*
+   * No room for the name of the appearance: the little board alone, the size of a button, with
+   * the dropdown lying unseen over it so that a tap opens it all the same.
+   */
+  .appearance {
+    width: 40px;
+    height: 40px;
+    margin-left: 0;
+    justify-content: center;
+    border-radius: 50%;
+    color: var(--ink);
+  }
+
+  .appearance:focus-within {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .appearance__select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    padding: 0;
+    opacity: 0;
   }
 
   /* "Delay" is enough to see; the slider carries its whole name for those who hear it. */

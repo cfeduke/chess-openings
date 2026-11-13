@@ -1,10 +1,15 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from 'vitest';
+import { TWO_APPEARANCES } from '../../tests/support/appearances.ts';
 import { fakePlayer } from '../../tests/support/fake-player.ts';
 import { ITALIAN_MOVES as italian } from '../../tests/support/lines.ts';
 import { createTransport } from './transport.ts';
 
-function setup(initial: Parameters<typeof fakePlayer>[0] = { moves: italian }, muted = false) {
+function setup(
+  initial: Parameters<typeof fakePlayer>[0] = { moves: italian },
+  muted = false,
+  chosen = 'classic',
+) {
   const { player, emit } = fakePlayer(initial);
   const sounds = {
     muted,
@@ -13,7 +18,13 @@ function setup(initial: Parameters<typeof fakePlayer>[0] = { moves: italian }, m
     }),
   };
   const onFlip = vi.fn();
-  const { element } = createTransport({ player, sounds, onFlip });
+  const onChoose = vi.fn();
+  const { element } = createTransport({
+    player,
+    sounds,
+    onFlip,
+    appearance: { choices: TWO_APPEARANCES, chosen, onChoose },
+  });
   const button = (name: string) => {
     const found = element.querySelector<HTMLButtonElement>(`button[aria-label="${name}"]`);
     if (!found) throw new Error(`no button named ${name}`);
@@ -23,7 +34,19 @@ function setup(initial: Parameters<typeof fakePlayer>[0] = { moves: italian }, m
   /** What the big button in the middle currently offers to do. */
   const mainAction = () =>
     element.querySelector('.icon-button--primary')?.getAttribute('aria-label');
-  return { player, emit, sounds, onFlip, element, button, slider, mainAction };
+  const appearance = element.querySelector('select') as HTMLSelectElement;
+  return {
+    player,
+    emit,
+    sounds,
+    onFlip,
+    onChoose,
+    element,
+    button,
+    slider,
+    appearance,
+    mainAction,
+  };
 }
 
 describe('the transport bar', () => {
@@ -189,5 +212,39 @@ describe('the flip button', () => {
     button('Flip board').click();
 
     expect(onFlip).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('the appearance dropdown', () => {
+  it('is named, and lists the appearances there are to choose from', () => {
+    const { appearance } = setup();
+
+    expect(appearance.getAttribute('aria-label')).toBe('Appearance');
+    expect(appearance.title).toBe('Appearance');
+    expect([...appearance.options].map((option) => [option.value, option.textContent])).toEqual([
+      ['classic', 'Classic'],
+      ['study', 'Study'],
+    ]);
+  });
+
+  it('shows the one the board is wearing', () => {
+    expect(setup().appearance.value).toBe('classic');
+    expect(setup(undefined, false, 'study').appearance.value).toBe('study');
+  });
+
+  it('says which was chosen', () => {
+    const { appearance, onChoose } = setup();
+
+    appearance.value = 'study';
+    appearance.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(onChoose).toHaveBeenCalledExactlyOnceWith('study');
+  });
+
+  it('is the last of the controls, after the buttons', () => {
+    const { element, appearance } = setup();
+
+    const controls = [...element.querySelectorAll('button, input, select')];
+    expect(controls.at(-1)).toBe(appearance);
   });
 });

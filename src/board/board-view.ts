@@ -1,6 +1,7 @@
 import './board.css';
 import { FILES, type Move, type Piece, type Position, RANKS, type Square } from '../chess/board.ts';
 import { el, exclusiveClass, setAttributes } from '../dom.ts';
+import { type Appearance, DEFAULT_APPEARANCE } from './appearance.ts';
 import { arrowGeometry, type Cell, type Orientation, squareCell } from './geometry.ts';
 
 /** The chess board on screen. */
@@ -25,6 +26,8 @@ export interface BoardView {
   /** Removes the highlight and the arrow. */
   clearAnnotations(): void;
   setOrientation(orientation: Orientation): void;
+  /** Changes the pieces' artwork and the board's colours. What is on the board stays as it is. */
+  setAppearance(appearance: Appearance): void;
 }
 
 function svg(name: string, attributes: Record<string, string | number> = {}): SVGElement {
@@ -38,7 +41,9 @@ const div = (className: string) => el('div', { class: className });
 /** Board units with float noise rounded away, for SVG attributes. */
 const unit = (value: number) => Number(value.toFixed(3));
 
-export function createBoardView(options: { orientation?: Orientation } = {}): BoardView {
+export function createBoardView(
+  options: { orientation?: Orientation; appearance?: Appearance } = {},
+): BoardView {
   let orientation = options.orientation ?? 'white';
 
   const element = div('board');
@@ -126,7 +131,24 @@ export function createBoardView(options: { orientation?: Orientation } = {}): Bo
     arrowsLayer.replaceChildren();
   };
 
+  /**
+   * Hands the stylesheet the look to draw: `--piece-wk` and the rest for the artwork,
+   * `--board-light` and the rest for the colours. It names no file and no colour of its own.
+   */
+  const dress = ({ pieces, board }: Appearance) => {
+    // Named on the element for whoever inspects the page; nothing is styled by these.
+    element.dataset.pieces = pieces.id;
+    element.dataset.theme = board.id;
+    for (const [kind, image] of Object.entries(pieces.artwork)) {
+      element.style.setProperty(`--piece-${kind}`, `url(${JSON.stringify(image)})`);
+    }
+    for (const [name, color] of Object.entries(board.colors)) {
+      element.style.setProperty(`--board-${name}`, color);
+    }
+  };
+
   layOut();
+  dress(options.appearance ?? DEFAULT_APPEARANCE);
 
   return {
     element,
@@ -205,5 +227,7 @@ export function createBoardView(options: { orientation?: Orientation } = {}): Bo
       element.style.setProperty('--move-ms', '0ms');
       layOut();
     },
+
+    setAppearance: dress,
   };
 }
