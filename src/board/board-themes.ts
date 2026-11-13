@@ -25,4 +25,54 @@ export const BROWN: BoardTheme = {
   },
 };
 
-export const BOARD_THEMES: readonly BoardTheme[] = [BROWN];
+export const WALNUT_GOLD: BoardTheme = {
+  id: 'walnut-gold',
+  colors: {
+    light: '#f1e0be',
+    dark: '#956a4a',
+    'last-move': 'rgb(204 167 78 / 0.49)',
+    highlight: 'rgb(255 211 93 / 0.72)',
+    arrow: 'rgb(32 116 115 / 0.92)',
+  },
+};
+
+export const MIDNIGHT_CYAN: BoardTheme = {
+  id: 'midnight-cyan',
+  colors: {
+    light: '#aabbd0',
+    dark: '#1f3858',
+    'last-move': 'rgb(33 205 222 / 0.43)',
+    highlight: 'rgb(76 236 243 / 0.67)',
+    arrow: 'rgb(255 188 87 / 0.91)',
+  },
+};
+
+export const SAGE_SAND: BoardTheme = {
+  id: 'sage-sand',
+  colors: {
+    light: '#f5ead6',
+    dark: '#a7b69a',
+    'last-move': 'rgb(204 175 104 / 0.5)',
+    highlight: 'rgb(255 202 96 / 0.7)',
+    arrow: 'rgb(38 102 91 / 0.88)',
+  },
+};
+
+export const SLATE_IVORY: BoardTheme = {
+  id: 'slate-ivory',
+  colors: {
+    light: '#ece8e1',
+    dark: '#667a83',
+    'last-move': 'rgb(214 176 81 / 0.48)',
+    highlight: 'rgb(251 205 86 / 0.68)',
+    arrow: 'rgb(25 118 105 / 0.88)',
+  },
+};
+
+export const BOARD_THEMES: readonly BoardTheme[] = [
+  BROWN,
+  WALNUT_GOLD,
+  MIDNIGHT_CYAN,
+  SAGE_SAND,
+  SLATE_IVORY,
+];

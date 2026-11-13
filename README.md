@@ -124,7 +124,7 @@ it whichever appearance is in use, and the choice is remembered between visits.
   square; and
 - a `LICENSE.md` saying where the artwork comes from and under what terms it is used,
 
-then declare it in [`src/board/piece-sets.ts`](src/board/piece-sets.ts) with its artist.
+then declare it in [`src/board/piece-sets.ts`](src/board/piece-sets.ts) with its credit.
 The files are found by that naming; the tests fail for a set with a piece missing and for a
 directory nobody declared.
 
@@ -157,3 +157,8 @@ then `npm run verify`.
   released into the public domain (CC0).
 - **Chess pieces** — drawn by Colin M.L. Burnett, from Wikimedia Commons, used under the BSD
   3-Clause License; see [`src/board/pieces/cburnett/LICENSE.md`](src/board/pieces/cburnett/LICENSE.md).
+  This is the Classic appearance.
+- **The Walnut & Gold, Midnight & Cyan, Sage & Sand and Slate & Ivory pieces** — original artwork
+  supplied as theme packs, each with its board colours, and dedicated to the public domain (CC0
+  1.0); see the `LICENSE.md` in `src/board/pieces/walnut-gold/`, `midnight-cyan/`, `sage-sand/`
+  and `slate-ivory/`.

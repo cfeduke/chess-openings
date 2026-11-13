@@ -13,7 +13,7 @@ export const PIECE_KINDS = [
 export interface PieceSet {
   /** The name of its directory under `src/board/pieces/`. */
   readonly id: string;
-  /** Who drew it. */
+  /** Where the artwork comes from, in words that finish the sentence “Chess pieces …”. */
   readonly credit: string;
   /** Where the image of each piece is. */
   readonly artwork: Readonly<Record<PieceKind, string>>;
@@ -49,6 +49,21 @@ const pieceSet = (id: string, credit: string): PieceSet => ({
 // To add a piece set, put its twelve SVGs and a LICENSE.md in a directory under
 // `src/board/pieces/`, declare it here and list it in PIECE_SETS.
 
-export const CBURNETT = pieceSet('cburnett', 'Colin M.L. Burnett');
+export const CBURNETT = pieceSet('cburnett', 'by Colin M.L. Burnett');
 
-export const PIECE_SETS: readonly PieceSet[] = [CBURNETT];
+/** One of the theme packs: original artwork that names no artist, dedicated to the public domain. */
+const packSet = (id: string, name: string) =>
+  pieceSet(id, `from the ${name} set, in the public domain`);
+
+export const WALNUT_GOLD = packSet('walnut-gold', 'Walnut & Gold');
+export const MIDNIGHT_CYAN = packSet('midnight-cyan', 'Midnight & Cyan');
+export const SAGE_SAND = packSet('sage-sand', 'Sage & Sand');
+export const SLATE_IVORY = packSet('slate-ivory', 'Slate & Ivory');
+
+export const PIECE_SETS: readonly PieceSet[] = [
+  CBURNETT,
+  WALNUT_GOLD,
+  MIDNIGHT_CYAN,
+  SAGE_SAND,
+  SLATE_IVORY,
+];

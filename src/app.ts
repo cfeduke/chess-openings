@@ -33,8 +33,8 @@ interface AppOptions {
 const NO_LINE = { san: [], uci: [] };
 
 /**
- * Says where the openings come from and, in `artist` — which the caller keeps up to date — who
- * drew the pieces.
+ * Says where the openings come from and, in `artist` — which the caller keeps up to date — where
+ * the pieces do.
  */
 function credits({ repository, commit }: DataSource, artist: HTMLElement): HTMLElement {
   const source = el('a', { href: `https://github.com/${repository}/tree/${commit}` }, repository);
@@ -43,7 +43,7 @@ function credits({ repository, commit }: DataSource, artist: HTMLElement): HTMLE
     { class: 'credits' },
     'Openings from ',
     source,
-    ` @ ${commit.slice(0, 7)}, in the public domain. Chess pieces by `,
+    ` @ ${commit.slice(0, 7)}, in the public domain. Chess pieces `,
     artist,
     '.',
   );
@@ -60,7 +60,7 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
 
   const appearance = appearanceById(appearanceSetting.read(), appearances);
   const board = createBoardView({ appearance });
-  /** Who drew the pieces on the board, for the credits. */
+  /** Where the pieces on the board come from, for the credits. */
   const artist = el('span', {}, appearance.pieces.credit);
   const sounds = createSoundEffects({ muted: mutedSetting });
   const player = createPlayer({ board, sound: sounds.play, delay: delaySetting });

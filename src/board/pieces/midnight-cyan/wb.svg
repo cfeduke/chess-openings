@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="45" height="45" viewBox="0 0 45 45" role="img" aria-label="White bishop">
+  <title>White Bishop — Midnight &amp; Cyan</title>
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#CCD8DD"/>
+      <stop offset="35%" stop-color="#FFFFFF"/>
+      <stop offset="78%" stop-color="#F1F7F6"/>
+      <stop offset="100%" stop-color="#CCD8DD"/>
+    </linearGradient>
+    <linearGradient id="outline"><stop stop-color="#1B2A32"/></linearGradient>
+    <linearGradient id="detail"><stop stop-color="#00D8E8"/></linearGradient>
+    <linearGradient id="gleam"><stop stop-color="#FFFFFF"/></linearGradient>
+  </defs>
+  <g stroke-width="1.65">
+  <path d="M18.8 28.1 H26.2 L30.5 35.4 H14.5 Z" fill="url(#body)" stroke="url(#outline)" stroke-width="1.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M22.5 7.6 C17.9 10.2 13.2 15.5 13.2 21.4 C13.2 25.9 17.2 29.7 22.5 29.7 C27.8 29.7 31.8 25.9 31.8 21.4 C31.8 15.5 27.1 10.2 22.5 7.6 Z" fill="url(#body)" stroke="url(#outline)" stroke-width="1.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="22.5" cy="5.7" r="2.35" fill="url(#body)" stroke="url(#outline)" stroke-width="1.42"/>
+  <path d="M26.8 14 L18.4 24.5" fill="none" stroke="url(#outline)" stroke-width="2.35" opacity="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M17.1 17.6 Q15.9 21.3 18.3 24.5" fill="none" stroke="url(#gleam)" stroke-width="1.15" opacity="0.78" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M22.5 16.5 L24.6 20.8 L22.5 25 L20.4 20.8 Z" fill="url(#detail)" stroke="none" stroke-width="0" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M13.2 35 H31.8 L33.4 38 H11.6 Z" fill="url(#body)" stroke="url(#outline)" stroke-width="1.55" stroke-linejoin="round" stroke-linecap="round"/><path d="M10.5 38 H34.5 L35.8 41 H9.2 Z" fill="url(#body)" stroke="url(#outline)" stroke-width="1.55" stroke-linejoin="round" stroke-linecap="round"/><path d="M10.3 39.9 H34.7" fill="none" stroke="url(#detail)" stroke-width="1.58" opacity="1" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.1 36.8 H30.9" fill="none" stroke="url(#detail)" stroke-width="0.95" opacity="1" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
