@@ -40,30 +40,14 @@ const FILES = import.meta.glob<string>('./pieces/*/*.svg', {
   import: 'default',
 });
 
-const pieceSet = (id: string, credit: string): PieceSet => ({
+/**
+ * The piece set kept in `src/board/pieces/<id>/`: twelve SVGs named after the kinds of piece,
+ * beside a LICENSE.md. Fails if a piece is missing.
+ */
+export const pieceSet = (id: string, credit: string): PieceSet => ({
   id,
   credit,
   artwork: artworkOf(id, FILES),
 });
 
-// To add a piece set, put its twelve SVGs and a LICENSE.md in a directory under
-// `src/board/pieces/`, declare it here and list it in PIECE_SETS.
-
 export const CBURNETT = pieceSet('cburnett', 'by Colin M.L. Burnett');
-
-/** One of the theme packs: original artwork that names no artist, dedicated to the public domain. */
-const packSet = (id: string, name: string) =>
-  pieceSet(id, `from the ${name} set, in the public domain`);
-
-export const WALNUT_GOLD = packSet('walnut-gold', 'Walnut & Gold');
-export const MIDNIGHT_CYAN = packSet('midnight-cyan', 'Midnight & Cyan');
-export const SAGE_SAND = packSet('sage-sand', 'Sage & Sand');
-export const SLATE_IVORY = packSet('slate-ivory', 'Slate & Ivory');
-
-export const PIECE_SETS: readonly PieceSet[] = [
-  CBURNETT,
-  WALNUT_GOLD,
-  MIDNIGHT_CYAN,
-  SAGE_SAND,
-  SLATE_IVORY,
-];

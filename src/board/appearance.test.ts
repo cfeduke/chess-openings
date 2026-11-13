@@ -1,8 +1,10 @@
+import { existsSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { STUDY, TWO_APPEARANCES } from '../../tests/support/appearances.ts';
 import { APPEARANCES, appearanceById, DEFAULT_APPEARANCE } from './appearance.ts';
-import { BOARD_THEMES } from './board-themes.ts';
-import { PIECE_SETS } from './piece-sets.ts';
+
+const PIECES_DIRECTORY = new URL('./pieces/', import.meta.url);
+const PIECE_SETS = APPEARANCES.map((appearance) => appearance.pieces);
 
 describe('the appearances', () => {
   it('begin with the default: the classic pieces on the brown board', () => {
@@ -12,23 +14,6 @@ describe('the appearances', () => {
     expect(DEFAULT_APPEARANCE.board.id).toBe('brown');
   });
 
-  it('are Classic and then the four theme packs, each named after its two words', () => {
-    expect(APPEARANCES.map(({ id, name }) => [id, name])).toEqual([
-      ['classic', 'Classic'],
-      ['walnut-gold', 'Walnut & Gold'],
-      ['midnight-cyan', 'Midnight & Cyan'],
-      ['sage-sand', 'Sage & Sand'],
-      ['slate-ivory', 'Slate & Ivory'],
-    ]);
-  });
-
-  it('put each theme pack’s pieces on its own board', () => {
-    for (const { id, pieces, board } of APPEARANCES.slice(1)) {
-      expect(pieces.id, id).toBe(id);
-      expect(board.id, id).toBe(id);
-    }
-  });
-
   it('each have an id and a name of their own', () => {
     for (const label of ['id', 'name'] as const) {
       const labels = APPEARANCES.map((appearance) => appearance[label]);
@@ -36,14 +21,36 @@ describe('the appearances', () => {
     }
   });
 
-  it('are made of listed piece sets and board themes, which have ids of their own too', () => {
-    for (const { pieces, board } of APPEARANCES) {
-      expect(PIECE_SETS).toContain(pieces);
-      expect(BOARD_THEMES).toContain(board);
-    }
-    for (const listed of [PIECE_SETS, BOARD_THEMES]) {
-      expect(new Set(listed.map(({ id }) => id)).size).toBe(listed.length);
-    }
+  it('say where the artwork of a theme pack comes from, by the name of the pack', () => {
+    const pack = appearanceById('walnut-gold', APPEARANCES);
+
+    expect(pack.name).toBe('Walnut & Gold');
+    expect(pack.pieces.credit).toBe('from the Walnut & Gold set, in the public domain');
+  });
+});
+
+describe('the piece sets of the appearances', () => {
+  it('are the directories of pieces: none unused, none used and missing', () => {
+    const directories = readdirSync(PIECES_DIRECTORY, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+
+    expect(directories.sort()).toEqual(PIECE_SETS.map((set) => set.id).sort());
+  });
+
+  it.each(PIECE_SETS)('$id has an SVG for each of the twelve pieces', ({ artwork }) => {
+    expect(Object.values(artwork)).toHaveLength(12);
+    for (const image of Object.values(artwork)) expect(image).toContain('svg');
+  });
+
+  it('share no artwork, with one another or between two pieces', () => {
+    const images = PIECE_SETS.flatMap((set) => Object.values(set.artwork));
+
+    expect(new Set(images).size).toBe(images.length);
+  });
+
+  it.each(PIECE_SETS)('$id says under what licence its artwork is used', ({ id }) => {
+    expect(existsSync(new URL(`${id}/LICENSE.md`, PIECES_DIRECTORY))).toBe(true);
   });
 });
 

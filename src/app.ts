@@ -33,10 +33,10 @@ interface AppOptions {
 const NO_LINE = { san: [], uci: [] };
 
 /**
- * Says where the openings come from and, in `artist` — which the caller keeps up to date — where
- * the pieces do.
+ * Says where the openings come from and, in `pieceCredit` — which the caller keeps up to date —
+ * where the pieces do.
  */
-function credits({ repository, commit }: DataSource, artist: HTMLElement): HTMLElement {
+function credits({ repository, commit }: DataSource, pieceCredit: HTMLElement): HTMLElement {
   const source = el('a', { href: `https://github.com/${repository}/tree/${commit}` }, repository);
   return el(
     'p',
@@ -44,7 +44,7 @@ function credits({ repository, commit }: DataSource, artist: HTMLElement): HTMLE
     'Openings from ',
     source,
     ` @ ${commit.slice(0, 7)}, in the public domain. Chess pieces `,
-    artist,
+    pieceCredit,
     '.',
   );
 }
@@ -60,8 +60,7 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
 
   const appearance = appearanceById(appearanceSetting.read(), appearances);
   const board = createBoardView({ appearance });
-  /** Where the pieces on the board come from, for the credits. */
-  const artist = el('span', {}, appearance.pieces.credit);
+  const pieceCredit = el('span', {}, appearance.pieces.credit);
   const sounds = createSoundEffects({ muted: mutedSetting });
   const player = createPlayer({ board, sound: sounds.play, delay: delaySetting });
   const announcer = createAnnouncer(player);
@@ -76,7 +75,7 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
       onChoose(id) {
         const chosen = appearanceById(id, appearances);
         board.setAppearance(chosen);
-        artist.textContent = chosen.pieces.credit;
+        pieceCredit.textContent = chosen.pieces.credit;
         appearanceSetting.write(chosen.id);
       },
     },
@@ -174,7 +173,7 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
       search: createSearch(dataset.openings),
       onSelect: open,
     });
-    catalogPanel.replaceChildren(catalogView.element, credits(dataset.source, artist));
+    catalogPanel.replaceChildren(catalogView.element, credits(dataset.source, pieceCredit));
     header.suggest(featuredOpenings(catalog));
 
     window.addEventListener('hashchange', showFromAddress, { signal });

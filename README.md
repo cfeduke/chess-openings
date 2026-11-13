@@ -117,23 +117,25 @@ The dropdown at the right-hand end of the control bar chooses the board's **appe
 set paired with a board theme. The stylesheet names no artwork and no colour; the board view hands
 it whichever appearance is in use, and the choice is remembered between visits.
 
-**To add a piece set**, make a directory `src/board/pieces/<set-id>/` holding
+**To add a theme pack** — pieces and a board made for each other — make a directory
+`src/board/pieces/<id>/` holding
 
 - twelve SVGs named by colour then piece — `wk wq wr wb wn wp` and `bk bq br bb bn bp` (`n` is the
   knight) — each on a square canvas with a `viewBox`, since an image is stretched to fill its
   square; and
 - a `LICENSE.md` saying where the artwork comes from and under what terms it is used,
 
-then declare it in [`src/board/piece-sets.ts`](src/board/piece-sets.ts) with its credit.
-The files are found by that naming; the tests fail for a set with a piece missing and for a
-directory nobody declared.
+then add one `pack(id, name, colours)` entry to
+[`src/board/appearance.ts`](src/board/appearance.ts). The five colours are the light and dark
+squares, the translucent tints for the last move and for the piece about to move, and the arrow.
+The dropdown lists the appearances in the order they are declared, the default first. The pieces
+are found by their naming; the tests fail for a set with a piece or its licence missing, and for
+a directory no appearance uses.
 
-**To add a board theme**, declare its five colours in
-[`src/board/board-themes.ts`](src/board/board-themes.ts): the light and dark squares, the
-translucent tints for the last move and for the piece about to move, and the arrow.
-
-**To offer either to visitors**, pair a piece set with a board theme in
-[`src/board/appearance.ts`](src/board/appearance.ts). The first appearance listed is the default.
+Pieces and boards are separate things, though, and an appearance can pair any two: a piece set is
+`pieceSet(id, credit)` ([`src/board/piece-sets.ts`](src/board/piece-sets.ts)), a board theme is
+an id and five colours ([`src/board/board-themes.ts`](src/board/board-themes.ts)), and the
+Classic appearance is declared that way.
 
 ## Opening data
 

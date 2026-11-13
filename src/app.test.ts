@@ -382,7 +382,7 @@ describe('the appearance of the board', () => {
     expect($('.board')?.dataset.pieces).toBe('cburnett');
   });
 
-  it('is credited to whoever drew the pieces in use', async () => {
+  it('is credited to wherever the pieces in use come from', async () => {
     const { ready, $, text } = mount();
     await ready;
     expect(text('.credits')).toContain('Chess pieces by Colin M.L. Burnett.');
