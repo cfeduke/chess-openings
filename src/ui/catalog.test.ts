@@ -97,7 +97,7 @@ describe('the volume tabs', () => {
     expect(panel?.getAttribute('aria-labelledby')).toBe(tab('A')?.id);
     expect(tab('A')?.getAttribute('aria-controls')).toBe(panel?.id);
     expect(panel?.querySelector('h2')?.textContent).toBe('Flank Openings');
-    expect(panel?.querySelector('.volume__summary')?.textContent).toContain('English');
+    expect(panel?.querySelector('.section__summary')?.textContent).toContain('English');
   });
 
   it('switch volume when clicked', () => {

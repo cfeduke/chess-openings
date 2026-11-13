@@ -1,15 +1,15 @@
 import './catalog.css';
 import {
   type Catalog,
+  type CatalogCollection,
   type CatalogGroup,
-  type CatalogVolume,
+  type CatalogSection,
   lineLabel,
 } from '../catalog/catalog.ts';
 import type { SearchResult } from '../catalog/search.ts';
 import { formatMoveText } from '../chess/san.ts';
 import type { Opening } from '../data/opening.ts';
 import { el, exclusiveAttribute, revealWithin } from '../dom.ts';
-import { ecoRangeLabel } from '../eco/taxonomy.ts';
 
 interface CatalogOptions {
   catalog: Catalog;
@@ -17,7 +17,7 @@ interface CatalogOptions {
   onSelect(opening: Opening): void;
 }
 
-/** The catalog on screen: the encyclopaedia to browse volume by volume, or to search. */
+/** The catalog on screen: the collections to browse section by section, or to search. */
 export interface CatalogView {
   element: HTMLElement;
   /** Marks `opening` as the one on the board and brings it into view; `null` marks none. */
@@ -32,14 +32,85 @@ const TAB_KEYS: Record<string, (from: number, last: number) => number> = {
   End: (_, last) => last,
 };
 
+interface TabRowOptions<T> {
+  /** What the tabs are, all together. */
+  label: string;
+  /** The class of the row; each tab's is the same with `-tab` after it. */
+  class: string;
+  /** The id of the panel that shows what the chosen tab stands for. */
+  controls: string;
+  items: T[];
+  /** A tab's id and text — and its name, where the text alone would not say enough. */
+  about(item: T): { id: string; text: string; name?: string; title: string };
+  /** Called with the item of a tab that has been clicked, or reached with the keyboard. */
+  onChoose(item: T): void;
+}
+
+/**
+ * A row of tabs, one for each of `items`. It is one stop in the tab order: the arrow keys, Home
+ * and End move along it. Which tab is the chosen one is up to the caller, who says so with `mark`.
+ */
+function tabRow<T>({
+  label,
+  class: className,
+  controls,
+  items,
+  about,
+  onChoose,
+}: TabRowOptions<T>) {
+  const tabs = items.map((item) => {
+    const { id, text, name, title } = about(item);
+    const tab = el(
+      'button',
+      {
+        type: 'button',
+        role: 'tab',
+        class: `${className}-tab`,
+        id,
+        'aria-controls': controls,
+        title,
+      },
+      text,
+    );
+    if (name) tab.setAttribute('aria-label', name);
+    tab.addEventListener('click', () => onChoose(item));
+    return tab;
+  });
+  const element = el('div', { class: className, role: 'tablist', 'aria-label': label }, ...tabs);
+
+  element.addEventListener('keydown', (event) => {
+    const from = tabs.indexOf(event.target as HTMLButtonElement);
+    const to = TAB_KEYS[event.key]?.(from, tabs.length - 1);
+    const item = to === undefined ? undefined : items[to];
+    if (to === undefined || item === undefined) return;
+
+    event.preventDefault();
+    onChoose(item);
+    tabs[to]?.focus();
+  });
+
+  return {
+    element,
+    /** Makes the tab of `chosen` the chosen one, and returns its id. */
+    mark(chosen: T | undefined): string {
+      items.forEach((item, index) => {
+        tabs[index]?.setAttribute('aria-selected', String(item === chosen));
+        tabs[index]?.setAttribute('tabindex', item === chosen ? '0' : '-1');
+      });
+      return tabs[items.indexOf(chosen as T)]?.id ?? '';
+    },
+  };
+}
+
 const count = (openings: number) =>
   `${openings.toLocaleString('en')} ${openings === 1 ? 'opening' : 'openings'}`;
 
 /**
  * A list item with a button for one opening. `label` is what tells it from its neighbours;
- * `unseen` is read out before it, for when the list it is in already shows that part.
+ * `unseen` is read out before it, for when the list it is in already shows that part; `source`
+ * says which collection it is from, for when that is not the one a visitor would take it for.
  */
-function lineItem(opening: Opening, label: string, unseen = ''): HTMLElement {
+function lineItem(opening: Opening, label: string, { unseen = '', source = '' } = {}): HTMLElement {
   const moves = formatMoveText(opening.san);
   const name = el('span', { class: 'line__name' }, label);
   if (unseen) name.prepend(el('span', { class: 'visually-hidden' }, unseen));
@@ -49,13 +120,15 @@ function lineItem(opening: Opening, label: string, unseen = ''): HTMLElement {
     { type: 'button', class: 'line', 'data-opening': opening.id, title: moves },
     el('span', { class: 'line__eco eco-badge' }, opening.eco),
     name,
+    ...(source ? [el('span', { class: 'line__source' }, source)] : []),
     el('span', { class: 'line__moves' }, moves),
   );
   return el('li', {}, button);
 }
 
 export function createCatalog({ catalog, search, onSelect }: CatalogOptions): CatalogView {
-  const { volumes } = catalog;
+  const { collections } = catalog;
+  const [mainCollection] = collections;
   let selected: Opening | null = null;
   const holdMark = exclusiveAttribute('aria-current', 'true');
 
@@ -66,12 +139,15 @@ export function createCatalog({ catalog, search, onSelect }: CatalogOptions): Ca
 
   // Browsing ------------------------------------------------------------------------------
 
+  /** Shows one section of the collection on show. */
   const panel = el('div', {
     class: 'catalog__panel',
     role: 'tabpanel',
-    id: 'volume-panel',
+    id: 'section-panel',
     tabindex: 0,
   });
+  /** What there is of the collection on show: the tabs of its sections, and the panel. */
+  const shelf = el('div', { class: 'catalog__shelf', id: 'collection-panel' });
 
   /** The two halves of each group: the header that opens it, and where its lines go. */
   const groups = new Map<CatalogGroup, { toggle: HTMLElement; body: HTMLElement }>();
@@ -88,7 +164,7 @@ export function createCatalog({ catalog, search, onSelect }: CatalogOptions): Ca
             'ul',
             { class: 'lines' },
             ...family.lines.map((line) =>
-              lineItem(line.opening, lineLabel(line), `${family.name}: `),
+              lineItem(line.opening, lineLabel(line), { unseen: `${family.name}: ` }),
             ),
           ),
         );
@@ -98,92 +174,90 @@ export function createCatalog({ catalog, search, onSelect }: CatalogOptions): Ca
     group.body.hidden = !expanded;
   };
 
-  const pages = new Map(
-    volumes.map((entry): [CatalogVolume, HTMLElement] => {
-      const page = el(
-        'div',
-        { class: 'volume' },
-        el('h2', { class: 'volume__title' }, entry.volume.title),
-        el('p', { class: 'volume__summary' }, entry.volume.summary),
-      );
-      if (entry.groups.length === 0) {
-        page.append(el('p', { class: 'volume__empty' }, 'No openings in this volume.'));
-      }
+  /** What the panel shows of a section: what the section is, and its groups. */
+  const pageOf = (section: CatalogSection): HTMLElement => {
+    const page = el(
+      'div',
+      { class: 'section' },
+      el('h2', { class: 'section__title' }, section.title),
+      el('p', { class: 'section__summary' }, section.summary),
+    );
+    if (section.groups.length === 0) {
+      page.append(el('p', { class: 'section__empty' }, 'No openings here.'));
+    }
 
-      const list = el('ul', { class: 'groups' });
-      for (const group of entry.groups) {
-        const body = el('div', {
-          class: 'group__body',
-          id: `group-${group.group.from}`,
-          hidden: '',
-        });
-        const toggle = el(
-          'button',
-          {
-            type: 'button',
-            class: 'group__toggle',
-            'data-group': group.group.from,
-            'aria-expanded': 'false',
-            'aria-controls': body.id,
-          },
-          el('span', { class: 'group__codes' }, ecoRangeLabel(group.group)),
-          el('span', { class: 'group__title' }, group.group.title),
-          el('span', { class: 'group__moves' }, formatMoveText(group.group.moves)),
-          el('span', { class: 'group__count' }, String(group.count)),
-        );
-        toggle.addEventListener('click', () => setExpanded(group, Boolean(body.hidden)));
-        groups.set(group, { toggle, body });
-        list.append(el('li', { class: 'group' }, toggle, body));
-      }
-      page.append(list);
-      return [entry, page];
+    const list = el('ul', { class: 'groups' });
+    for (const group of section.groups) {
+      const body = el('div', { class: 'group__body', id: `group-${group.id}`, hidden: '' });
+      const toggle = el(
+        'button',
+        {
+          type: 'button',
+          class: 'group__toggle',
+          'data-group': group.id,
+          'aria-expanded': 'false',
+          'aria-controls': body.id,
+        },
+        ...(group.codes ? [el('span', { class: 'group__codes' }, group.codes)] : []),
+        el('span', { class: 'group__title' }, group.title),
+        el('span', { class: 'group__moves' }, formatMoveText(group.moves)),
+        el('span', { class: 'group__count' }, String(group.count)),
+      );
+      toggle.addEventListener('click', () => setExpanded(group, Boolean(body.hidden)));
+      groups.set(group, { toggle, body });
+      list.append(el('li', { class: 'group' }, toggle, body));
+    }
+    page.append(list);
+    return page;
+  };
+
+  /** Each collection's sections: their tabs, their pages, and the one that was last on show. */
+  const shelves = new Map(
+    collections.map((collection) => {
+      const sectionTabs = tabRow({
+        label: collection.sectionsLabel,
+        class: 'catalog__sections',
+        controls: panel.id,
+        items: collection.sections,
+        about: ({ id, tab, name, title }) => ({
+          id: `section-tab-${collection.id}-${id}`,
+          text: tab,
+          name: `${name}: ${title}`,
+          title: `${name}: ${title}`,
+        }),
+        onChoose: (section) => turnTo(collection, section),
+      });
+      const pages = new Map(collection.sections.map((section) => [section, pageOf(section)]));
+      return [collection, { sectionTabs, pages, current: collection.sections[0] }];
     }),
   );
 
-  const tabs = volumes.map((entry) => {
-    const name = `Volume ${entry.volume.letter}: ${entry.volume.title}`;
-    const tab = el(
-      'button',
-      {
-        type: 'button',
-        role: 'tab',
-        class: 'catalog__tab',
-        id: `volume-tab-${entry.volume.letter}`,
-        'aria-controls': panel.id,
-        'aria-label': name,
-        title: name,
-      },
-      entry.volume.letter,
-    );
-    tab.addEventListener('click', () => turnTo(entry));
-    return tab;
-  });
-  const tabList = el(
-    'div',
-    { class: 'catalog__tabs', role: 'tablist', 'aria-label': 'ECO volumes' },
-    ...tabs,
-  );
+  /** Shown only when there is a choice to make. */
+  const collectionTabs =
+    collections.length > 1
+      ? tabRow({
+          label: 'Collections',
+          class: 'catalog__collections',
+          controls: shelf.id,
+          items: collections,
+          about: ({ id, name, title }) => ({ id: `collection-tab-${id}`, text: name, title }),
+          onChoose: (collection) => turnTo(collection),
+        })
+      : null;
+  if (collectionTabs) shelf.setAttribute('role', 'tabpanel');
 
-  const turnTo = (volume: CatalogVolume) => {
-    volumes.forEach((candidate, index) => {
-      const chosen = candidate === volume;
-      tabs[index]?.setAttribute('aria-selected', String(chosen));
-      tabs[index]?.setAttribute('tabindex', chosen ? '0' : '-1');
-    });
-    panel.setAttribute('aria-labelledby', `volume-tab-${volume.volume.letter}`);
-    panel.replaceChildren(pages.get(volume) ?? '');
+  /** Turns to a collection, and to one of its sections: the one it was left at, unless told. */
+  const turnTo = (collection: CatalogCollection, section?: CatalogSection) => {
+    const kept = shelves.get(collection);
+    if (!kept) return;
+    kept.current = section ?? kept.current;
+
+    const collectionTab = collectionTabs?.mark(collection);
+    if (collectionTab) shelf.setAttribute('aria-labelledby', collectionTab);
+    shelf.replaceChildren(kept.sectionTabs.element, panel);
+    panel.setAttribute('aria-labelledby', kept.sectionTabs.mark(kept.current));
+    panel.replaceChildren((kept.current && kept.pages.get(kept.current)) ?? '');
   };
-
-  tabList.addEventListener('keydown', (event) => {
-    const from = tabs.indexOf(event.target as HTMLButtonElement);
-    const to = TAB_KEYS[event.key]?.(from, tabs.length - 1);
-    const volume = to === undefined ? undefined : volumes[to];
-    if (to === undefined || !volume) return;
-
-    event.preventDefault();
-    turnTo(volume);
-    tabs[to]?.focus();
-  });
 
   // Search --------------------------------------------------------------------------------
 
@@ -191,7 +265,7 @@ export function createCatalog({ catalog, search, onSelect }: CatalogOptions): Ca
     type: 'search',
     class: 'catalog__search',
     'aria-label': 'Search openings',
-    placeholder: `Search ${count(volumes.reduce((sum, volume) => sum + volume.count, 0))}`,
+    placeholder: `Search ${count(collections.reduce((sum, { count }) => sum + count, 0))}`,
     autocomplete: 'off',
     spellcheck: 'false',
   });
@@ -203,7 +277,12 @@ export function createCatalog({ catalog, search, onSelect }: CatalogOptions): Ca
     status,
     matches,
   );
-  const browse = el('div', { class: 'catalog__browse' }, tabList, panel);
+  const browse = el(
+    'div',
+    { class: 'catalog__browse' },
+    ...(collectionTabs ? [collectionTabs.element] : []),
+    shelf,
+  );
 
   const runSearch = () => {
     const query = searchBox.value.trim();
@@ -214,7 +293,13 @@ export function createCatalog({ catalog, search, onSelect }: CatalogOptions): Ca
     if (found.total === 0) status.textContent = `No openings match “${query}”.`;
     else if (found.total === found.matches.length) status.textContent = count(found.total);
     else status.textContent = `Showing the first ${found.matches.length} of ${count(found.total)}`;
-    matches.replaceChildren(...found.matches.map((opening) => lineItem(opening, opening.name)));
+    matches.replaceChildren(
+      ...found.matches.map((opening) => {
+        const from = catalog.locate(opening.id)?.collection;
+        const source = from && from !== mainCollection ? from.name : '';
+        return lineItem(opening, opening.name, { source });
+      }),
+    );
     markSelected();
   };
 
@@ -244,7 +329,7 @@ export function createCatalog({ catalog, search, onSelect }: CatalogOptions): Ca
     if (chosen) onSelect(chosen.opening);
   });
 
-  if (volumes[0]) turnTo(volumes[0]);
+  if (mainCollection) turnTo(mainCollection);
 
   return {
     element,
@@ -253,7 +338,7 @@ export function createCatalog({ catalog, search, onSelect }: CatalogOptions): Ca
       selected = opening;
       const place = opening && catalog.locate(opening.id);
       if (place) {
-        turnTo(place.volume);
+        turnTo(place.collection, place.section);
         setExpanded(place.group, true);
       }
       markSelected();
