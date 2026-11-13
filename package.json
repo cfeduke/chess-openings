@@ -29,6 +29,7 @@
     "@biomejs/biome": "^2.6.7",
     "@playwright/test": "^1.65.0",
     "@types/node": "^26.6.6",
+    "@vitest/browser-playwright": "^5.1.0",
     "chess.js": "^1.4.0",
     "happy-dom": "^21.0.4",
     "typescript": "^7.0.2",

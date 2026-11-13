@@ -43,8 +43,8 @@ describe('the board', () => {
   it('lays the squares out from White’s side by default', () => {
     const { square } = setup();
 
-    expect(square('a8')?.style.transform).toBe('translate(0%, 0%)');
-    expect(square('h1')?.style.transform).toBe('translate(700%, 700%)');
+    expect(square('a8')?.style.translate).toBe('0% 0%');
+    expect(square('h1')?.style.translate).toBe('700% 700%');
   });
 
   it('labels the files along the bottom and the ranks down the left', () => {
@@ -72,12 +72,13 @@ describe('setPosition', () => {
 
     view.setPosition(startingPosition());
 
+    // One class per kind of piece: `b` alone would mean both "black" and "bishop".
     expect(pieces()).toHaveLength(32);
-    expect(piece('e1')?.className).toBe('piece piece--w piece--k');
+    expect(piece('e1')?.className).toBe('piece piece--wk');
     expect(piece('e1')?.dataset.square).toBe('e1');
-    expect(piece('e1')?.style.transform).toBe('translate(400%, 700%)');
-    expect(piece('a8')?.className).toBe('piece piece--b piece--r');
-    expect(piece('a8')?.style.transform).toBe('translate(0%, 0%)');
+    expect(piece('e1')?.style.translate).toBe('400% 700%');
+    expect(piece('a8')?.className).toBe('piece piece--br');
+    expect(piece('a8')?.style.translate).toBe('0% 0%');
   });
 
   it('moves the same element when a piece moves, so the browser can animate it', () => {
@@ -89,7 +90,7 @@ describe('setPosition', () => {
 
     expect(piece('e2')).toBe(pawn);
     expect(pawn?.dataset.square).toBe('e4');
-    expect(pawn?.style.transform).toBe('translate(400%, 400%)');
+    expect(pawn?.style.translate).toBe('400% 400%');
     expect(pieces()).toHaveLength(32);
   });
 
@@ -175,7 +176,7 @@ describe('setPosition', () => {
     view.setPosition(applyMove(beforePromotion, 'b7b8q').position, { durationMs: 300 });
 
     expect(piece('b2')).toBe(pawn);
-    expect(pawn?.className).toBe('piece piece--w piece--q piece--moving');
+    expect(pawn?.className).toBe('piece piece--wq piece--moving');
   });
 
   it('brings a captured piece back when stepping backwards', () => {
@@ -306,8 +307,8 @@ describe('orientation', () => {
 
     expect(view.orientation).toBe('black');
     expect(element.dataset.orientation).toBe('black');
-    expect(square('a8')?.style.transform).toBe('translate(700%, 700%)');
-    expect(piece('e1')?.style.transform).toBe('translate(300%, 0%)');
+    expect(square('a8')?.style.translate).toBe('700% 700%');
+    expect(piece('e1')?.style.translate).toBe('300% 0%');
     expect(square('h8')?.dataset.file).toBe('h');
     expect(square('h8')?.dataset.rank).toBe('8');
     expect(square('a1')?.dataset.file).toBeUndefined();
@@ -320,8 +321,8 @@ describe('orientation', () => {
 
     view.setOrientation('black');
 
-    expect(square('a1')?.style.transform).toBe('translate(700%, 0%)');
-    expect(piece('e1')?.style.transform).toBe('translate(300%, 0%)');
+    expect(square('a1')?.style.translate).toBe('700% 0%');
+    expect(piece('e1')?.style.translate).toBe('300% 0%');
     expect(element.querySelectorAll('[data-file]')).toHaveLength(8);
     expect(square('a1')?.dataset.rank).toBeUndefined();
     expect(square('h1')?.dataset.rank).toBe('1');
