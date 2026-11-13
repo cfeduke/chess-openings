@@ -38,6 +38,13 @@ describe('formatMoveText', () => {
     expect(formatMoveText(['e4', 'c5', 'Nf3', 'd6', 'd4'])).toBe('1. e4 c5 2. Nf3 d6 3. d4');
   });
 
+  it('numbers moves from the middle of a game, when told how many came before', () => {
+    expect(formatMoveText(['Nf3', 'd6', 'd4'], 2)).toBe('2. Nf3 d6 3. d4');
+    expect(formatMoveText(['c5', 'Nf3', 'd6'], 1)).toBe('1… c5 2. Nf3 d6');
+    expect(formatMoveText(['a6'], 9)).toBe('5… a6');
+    expect(formatMoveText([], 4)).toBe('');
+  });
+
   it('is undone by parseMoveText', () => {
     const moves = ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'a6', 'Ba4', 'Nf6', 'O-O'];
 

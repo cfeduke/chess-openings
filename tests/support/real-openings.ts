@@ -12,3 +12,6 @@ const openingsOf = (id: string): Opening[] => {
 
 /** Every opening in the vendored lichess data: the encyclopaedia's collection. */
 export const realOpenings = openingsOf('eco');
+
+/** Every line of Wikibooks' Chess Opening Theory, as vendored. */
+export const realWikibooks = openingsOf('wikibooks');

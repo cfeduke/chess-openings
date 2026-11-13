@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { STUDY, TWO_APPEARANCES } from '../tests/support/appearances.ts';
 import { ITALIAN, NAJDORF, SMALL_DATASET } from '../tests/support/openings.ts';
-import { DANISH, TWO_ARRANGEMENTS, TWO_COLLECTIONS } from '../tests/support/pamphlet.ts';
+import { DANISH, PAMPHLET, TWO_ARRANGEMENTS, TWO_COLLECTIONS } from '../tests/support/pamphlet.ts';
 import { mountApp } from './app.ts';
 import type { OpeningsDataset } from './data/opening.ts';
 import { hashForOpening } from './routing.ts';
@@ -360,6 +360,54 @@ describe('the credits', () => {
   });
 });
 
+describe('the credit of a collection that must be attributed', () => {
+  const BOOK = {
+    collections: [
+      ...SMALL_DATASET.collections,
+      {
+        ...PAMPHLET,
+        source: {
+          title: 'Chess Opening Theory',
+          url: 'https://en.wikibooks.org/wiki/Chess_Opening_Theory',
+          author: 'Wikibooks contributors',
+          revision: '2026-11-13',
+          license: 'CC-BY-SA-4.0',
+        },
+      },
+    ],
+  };
+
+  it('names its authors, and its licence in words', async () => {
+    const { ready, text } = mount('', async () => BOOK);
+    await ready;
+
+    expect(text('.credits')).toBe(
+      'Openings from lichess-org/chess-openings @ abc1234, in the public domain; ' +
+        'from Chess Opening Theory by Wikibooks contributors @ 2026-11-13, under CC BY-SA 4.0. ' +
+        'Chess pieces by Colin M.L. Burnett.',
+    );
+  });
+
+  it('links to the work and to the licence', async () => {
+    const { root, ready } = mount('', async () => BOOK);
+    await ready;
+
+    expect(
+      [...root.querySelectorAll<HTMLAnchorElement>('.credits a')].map((link) => [
+        link.textContent,
+        link.href,
+      ]),
+    ).toEqual([
+      [
+        'lichess-org/chess-openings',
+        'https://github.com/lichess-org/chess-openings/tree/abc1234def',
+      ],
+      ['Chess Opening Theory', 'https://en.wikibooks.org/wiki/Chess_Opening_Theory'],
+      ['CC BY-SA 4.0', 'https://creativecommons.org/licenses/by-sa/4.0/'],
+    ]);
+  });
+});
+
 describe('with a second collection of openings', () => {
   const selectedTabs = (root: HTMLElement) =>
     [...root.querySelectorAll('[role="tab"][aria-selected="true"]')].map((tab) => tab.textContent);
@@ -388,6 +436,7 @@ describe('with a second collection of openings', () => {
       'Chapter 1. e4 · King’s Pawn Gambits › Gambits after 1. e4',
     );
     expect(document.title).toBe('Danish Gambit (C21) — Chess Openings');
+    expect($<HTMLAnchorElement>('.opening__more a')?.href).toBe('https://example.org/pamphlet/12');
     expect(selectedTabs(root)).toEqual(['Pamphlet', '1. e4']);
     expect($(`.line[data-opening="${DANISH.id}"]`)?.getAttribute('aria-current')).toBe('true');
     vi.advanceTimersByTime(1500);

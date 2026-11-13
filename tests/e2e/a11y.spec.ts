@@ -1,6 +1,15 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
-import { catalogOn, ITALIAN_GAME, PHONE, pieceFrom, startWithDelay, stepInto } from './support.ts';
+import {
+  catalogOn,
+  ITALIAN_GAME,
+  PHONE,
+  pieceFrom,
+  startWithDelay,
+  stepInto,
+  tabsOn,
+  volumeTabsOn,
+} from './support.ts';
 
 /** Runs the axe accessibility checks over the page and returns what they object to. */
 async function violations(page: Page) {
@@ -26,7 +35,27 @@ for (const colorScheme of ['light', 'dark'] as const) {
       page,
     }) => {
       await page.goto('/');
-      await expect(catalogOn(page).getByRole('tab')).toHaveCount(5);
+      await expect(volumeTabsOn(page)).toHaveCount(5);
+
+      expect(await violations(page)).toEqual([]);
+    });
+
+    test('so does the Wikibook, browsed and with one of its lines on the board', async ({
+      page,
+    }) => {
+      await startWithDelay(page, 5000);
+      await page.goto('/');
+      await tabsOn(page, 'Collections').filter({ hasText: 'Wikibooks' }).click();
+      await expect(tabsOn(page, 'First moves')).toHaveCount(3);
+      expect(await violations(page)).toEqual([]);
+
+      await catalogOn(page)
+        .getByRole('button', { name: /^Open game/ })
+        .click();
+      await catalogOn(page)
+        .getByRole('button', { name: /^C20 Open game: Main line/ })
+        .click();
+      await expect(page.getByRole('link', { name: /on Wikibooks$/ })).toBeVisible();
 
       expect(await violations(page)).toEqual([]);
     });

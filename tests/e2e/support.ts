@@ -15,6 +15,13 @@ export const movesOn = (page: Page) => page.getByRole('region', { name: 'Moves' 
 
 export const catalogOn = (page: Page) => page.getByRole('navigation', { name: 'Openings' });
 
+/** The tabs of the row called `name` in the catalog: `Collections`, or a collection's sections. */
+export const tabsOn = (page: Page, name: string) =>
+  catalogOn(page).getByRole('tablist', { name, exact: true }).getByRole('tab');
+
+/** The tabs of the encyclopaedia's volumes, which are what the catalog opens on. */
+export const volumeTabsOn = (page: Page) => tabsOn(page, 'ECO volumes');
+
 /** The name of the opening on the board, above the board. */
 export const openingNameOn = (page: Page) =>
   page.getByRole('region', { name: 'Board' }).getByRole('heading', { level: 2 });

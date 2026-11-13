@@ -6,13 +6,21 @@ import { isSlug } from '../../src/text/slug.ts';
 import { realOpenings as openings, realDataset } from '../../tests/support/real-openings.ts';
 import { DATA_DIR, loadDataset } from './dataset.ts';
 import { LICHESS_DIR, SOURCE_FILE, VOLUME_FILES } from './lichess.ts';
+import { WIKIBOOKS_DIR } from './wikibooks.ts';
 
 const LICHESS_DATA_DIR = join(DATA_DIR, LICHESS_DIR);
 
 describe('the dataset', () => {
   it('is a list of collections, of which the encyclopaedia is the first', () => {
-    expect(realDataset.collections.map((collection) => collection.id)).toEqual(['eco']);
+    expect(realDataset.collections.map((collection) => collection.id)).toEqual([
+      'eco',
+      'wikibooks',
+    ]);
     expect(realDataset.collections[0]?.openings).toBe(openings);
+  });
+
+  it('keeps what is only true of a book’s lines out of the encyclopaedia’s', () => {
+    expect(openings.filter((opening) => 'page' in opening)).toEqual([]);
   });
 });
 
@@ -81,5 +89,16 @@ describe('loadDataset', () => {
     );
 
     expect(() => loadDataset(dataDir)).toThrow(/lichess\/SOURCE\.json: missing "commit"/);
+  });
+
+  it('refuses a book whose provenance record is incomplete', () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'openings-data-'));
+    cpSync(DATA_DIR, dataDir, { recursive: true });
+    writeFileSync(
+      join(dataDir, WIKIBOOKS_DIR, SOURCE_FILE),
+      JSON.stringify({ book: 'Chess Opening Theory', site: 'en.wikibooks.org', license: 'X' }),
+    );
+
+    expect(() => loadDataset(dataDir)).toThrow(/wikibooks\/SOURCE\.json: missing "retrieved"/);
   });
 });

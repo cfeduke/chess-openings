@@ -11,6 +11,8 @@ import {
   openingNameOn,
   pieceFrom,
   startWithDelay,
+  tabsOn,
+  volumeTabsOn,
 } from './support.ts';
 
 test.beforeEach(async ({ page }) => {
@@ -25,10 +27,12 @@ test('arriving: a board, an invitation, and the whole encyclopaedia to browse', 
 
   await expect(page.getByRole('heading', { name: 'Choose an opening' })).toBeVisible();
   await expect(boardOn(page).locator('.piece')).toHaveCount(32);
-  await expect(catalog.getByRole('tab')).toHaveText(['A', 'B', 'C', 'D', 'E']);
+  await expect(tabsOn(page, 'Collections')).toHaveText(['ECO', 'Wikibooks']);
+  await expect(tabsOn(page, 'Collections').first()).toHaveAttribute('aria-selected', 'true');
+  await expect(volumeTabsOn(page)).toHaveText(['A', 'B', 'C', 'D', 'E']);
   await expect(catalog.getByRole('searchbox', { name: 'Search openings' })).toHaveAttribute(
     'placeholder',
-    /^Search 3,\d{3} openings$/,
+    /^Search 6,\d{3} openings$/,
   );
   await expect(movesOn(page)).toContainText('Choose an opening');
 });
@@ -143,7 +147,7 @@ test('the openings are fetched once, alongside the page rather than after it', a
   });
 
   await page.goto('/');
-  await expect(catalogOn(page).getByRole('tab')).toHaveCount(5);
+  await expect(volumeTabsOn(page)).toHaveCount(5);
 
   expect(fetched).toHaveLength(1);
   await expect(page.locator('link[rel="preload"][as="fetch"]')).toHaveAttribute(
