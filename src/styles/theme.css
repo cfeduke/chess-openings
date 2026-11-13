@@ -1,0 +1,102 @@
+/*
+ * The look of the site: a quiet study. Warm paper and ink, a serif for names as in a chess book,
+ * and one accent — the green of the arrow on the board.
+ */
+:root {
+  color-scheme: light dark;
+
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --paper: #f4eee2;
+  --surface: #fbf8f2;
+  --ink: #2a241d;
+  --ink-soft: #6c6257;
+  --rule: #ddd2c0;
+  --accent: #2f6f3a;
+  --accent-ink: #ffffff;
+  --accent-soft: #dcebdb;
+  --focus: #1d5fd1;
+  --shadow: 0 1px 2px rgb(60 40 20 / 0.08), 0 10px 28px rgb(60 40 20 / 0.1);
+  --radius: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #1b1713;
+    --surface: #25201a;
+    --ink: #efe7d9;
+    --ink-soft: #a99d8d;
+    --rule: #3b332b;
+    --accent: #7fc98a;
+    --accent-ink: #10230f;
+    --accent-soft: #24382a;
+    --focus: #8ab4ff;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 28px rgb(0 0 0 / 0.35);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: 1.4;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* A round button that is all icon. */
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease-out,
+    opacity 120ms ease-out;
+}
+
+.icon-button:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.icon-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.icon-button--primary {
+  width: 48px;
+  height: 48px;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.icon-button--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 86%, var(--ink));
+}
+
+.icon-button[aria-pressed="false"] {
+  color: var(--ink-soft);
+}

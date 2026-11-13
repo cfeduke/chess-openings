@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { boardOn, box } from './support.ts';
+import { boardOn, box, pieceFrom } from './support.ts';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -43,7 +43,7 @@ test('White starts at the bottom, with a1 in the bottom-left corner', async ({ p
 });
 
 test('the pieces are drawn with real artwork', async ({ page }) => {
-  const king = boardOn(page).locator('.piece[data-piece="e1"]');
+  const king = pieceFrom(page, 'e1');
 
   const background = await king.evaluate((element) => getComputedStyle(element).backgroundImage);
 

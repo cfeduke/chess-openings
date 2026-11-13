@@ -1,0 +1,106 @@
+.move-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.move-list__moves {
+  min-height: 0;
+  padding: 10px;
+  overflow-y: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.move-list__rows {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.move-list__empty {
+  margin: 8px;
+  color: var(--ink-soft);
+}
+
+.move-row {
+  display: grid;
+  grid-template-columns: 2.4em 1fr 1fr;
+  align-items: center;
+}
+
+.move-row__number {
+  color: var(--ink-soft);
+  font-size: 0.85em;
+  text-align: right;
+  padding-right: 0.5em;
+}
+
+.move {
+  position: relative;
+  padding: 5px 8px 5px 22px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.move:hover {
+  background: var(--accent-soft);
+}
+
+.move--start {
+  width: 100%;
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+/* The cursor: the move just made is filled in, with a pointer at its side. */
+.move[aria-current="step"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.move[aria-current="step"]::before {
+  content: "▸";
+  position: absolute;
+  left: 6px;
+  font-size: 1.15em;
+  line-height: 1.2;
+}
+
+/*
+ * The move the board is pointing out, about to be made: outlined, with a tint that pulses. The
+ * tint is a layer of its own so that only its opacity animates.
+ */
+.move--pending {
+  isolation: isolate;
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.move--pending::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--accent-soft);
+  animation: move-pending 700ms ease-in-out infinite alternate;
+}
+
+@keyframes move-pending {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .move--pending::after {
+    animation: none;
+  }
+}

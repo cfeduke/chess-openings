@@ -1,3 +1,4 @@
+import { buildTimeline } from '../../src/chess/timeline.ts';
 import type { Opening } from '../../src/data/opening.ts';
 
 type Line = Pick<Opening, 'san' | 'uci'>;
@@ -53,3 +54,7 @@ export const EXCHANGE_SPANISH: Line = {
 export function firstMoves({ san, uci }: Line, plies: number): Line {
   return { san: san.slice(0, plies), uci: uci.slice(0, plies) };
 }
+
+/** The moves of the lines above, as the player reports them. */
+export const ITALIAN_MOVES = buildTimeline(ITALIAN_GAME).moves;
+export const SPANISH_MOVES = buildTimeline(EXCHANGE_SPANISH).moves;

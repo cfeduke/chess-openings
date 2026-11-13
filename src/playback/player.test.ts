@@ -442,6 +442,27 @@ describe('changing the delay', () => {
   });
 });
 
+describe('remembering the delay', () => {
+  const remembered = (saved: number) => {
+    const write = vi.fn();
+    const player = createPlayer({ board: setup().board, delay: { read: () => saved, write } });
+    return { player, write };
+  };
+
+  it('starts at the delay the viewer chose last time', () => {
+    expect(remembered(2500).player.snapshot.delayMs).toBe(2500);
+  });
+
+  it('saves a new delay as it is set, within the limits', () => {
+    const { player, write } = remembered(2500);
+
+    player.setDelay(800);
+    player.setDelay(5);
+
+    expect(write.mock.calls).toEqual([[800], [300]]);
+  });
+});
+
 describe('subscribing', () => {
   it('reports every change of state, cursor or pending move', () => {
     const { player } = setup();
