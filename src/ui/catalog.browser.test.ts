@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { encyclopaedia, opening, SMALL_BOOK } from '../../tests/support/openings.ts';
 import { TWO_ARRANGEMENTS, TWO_COLLECTIONS } from '../../tests/support/pamphlet.ts';
 import { buildCatalog } from '../catalog/catalog.ts';
-import { createSearch } from '../catalog/search.ts';
 import type { OpeningCollection } from '../data/opening.ts';
 import { el } from '../dom.ts';
 import { createCatalog } from './catalog.ts';
@@ -15,7 +14,6 @@ const NARROWEST = 260;
 function mount(collections: OpeningCollection[] = TWO_COLLECTIONS.collections) {
   const view = createCatalog({
     catalog: buildCatalog(collections, TWO_ARRANGEMENTS),
-    search: createSearch(collections.flatMap((collection) => collection.openings)),
     onSelect: () => {},
   });
   const { element } = view;
@@ -64,6 +62,20 @@ describe('the collection tabs in a real browser', () => {
 
     expect(tabs('Collections').filter((found) => !fits(found))).toEqual([]);
     expect(tabs('ECO volumes').filter((found) => !fits(found))).toEqual([]);
+  });
+
+  it('still fit when a search has put a number on each of them', () => {
+    const { element, tabs, fits } = mount();
+    const search = element.querySelector('input[type="search"]') as HTMLInputElement;
+
+    search.value = 'gambit';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+
+    expect(tabs('Collections').map((found) => found.textContent)).toEqual([
+      'ECO 0 matches',
+      'Pamphlet 4 matches',
+    ]);
+    expect(tabs('Collections').filter((found) => !fits(found))).toEqual([]);
   });
 
   it('show which collection is on show', () => {

@@ -31,7 +31,7 @@ describe('ecoClassifier', () => {
 
   it('knows a named position however it was reached', () => {
     expect(codeOf('1. e4 e5 2. Bc4 Nc6 3. Nf3')).toBe('C50');
-    expect(codeOf('1. Nf3 Nc6 2. e4 e5')).toBe('C40');
+    expect(codeOf('1. Nf3 e5 2. e4')).toBe('C40');
   });
 
   it('refuses a line that never reaches a named position', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { realOpenings } from '../../tests/support/real-openings.ts';
+import { realOpenings, realWikibooks } from '../../tests/support/real-openings.ts';
 import { createSearch } from './search.ts';
 
 const search = createSearch(realOpenings);
@@ -107,5 +107,37 @@ describe('searching by moves', () => {
 
   it('finds nothing for a move order no line uses', () => {
     expect(search('a4 a5 h4 h5 Ra3 Ra6')).toEqual({ matches: [], total: 0 });
+  });
+});
+
+describe('searching a collection in which many lines share a name', () => {
+  const book = createSearch(realWikibooks, { namesNest: false });
+  const first = (query: string) => book(query).matches[0];
+
+  it('puts the shortest line first, which is where the opening starts', () => {
+    expect(first('ruy lopez')).toMatchObject({
+      name: 'Ruy López / Spanish game',
+      san: ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5'],
+    });
+    expect(first('sicilian')?.san).toEqual(['e4', 'c5']);
+    expect(first('caro kann')?.san).toEqual(['e4', 'c6']);
+  });
+
+  it('puts the shorter name first among lines of a length', () => {
+    const search = createSearch(
+      [
+        { id: 'b', eco: 'C50', name: 'Italian Game, the quiet one', san: ['e4', 'e5'], uci: [] },
+        { id: 'a', eco: 'C50', name: 'Italian Game', san: ['e4', 'e5'], uci: [] },
+        { id: 'c', eco: 'C50', name: 'Italian', san: ['e4', 'e5', 'Nf3'], uci: [] },
+      ],
+      { namesNest: false },
+    );
+
+    expect(search('italian').matches.map((opening) => opening.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('finds lines by ECO code and by moves, as in any collection', () => {
+    expect(book('C60').total).toBeGreaterThan(10);
+    expect(first('e4 e5 nf3 nc6 bb5')?.name).toBe('Ruy López / Spanish game');
   });
 });

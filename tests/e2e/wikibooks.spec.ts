@@ -113,7 +113,7 @@ test('the lines of one of its families can be stepped through', async ({ page })
   await expect(page).not.toHaveURL(new RegExp(`${line.id}$`));
 });
 
-test('search covers both collections, and says which lines are the Wikibook’s', async ({
+test('searching looks in the collection on show, and counts the matches in each', async ({
   page,
 }) => {
   await page.goto('/');
@@ -121,34 +121,51 @@ test('search covers both collections, and says which lines are the Wikibook’s'
   const search = catalog.getByRole('searchbox', { name: 'Search openings' });
   const results = catalog.getByRole('region', { name: 'Search results' });
 
-  await search.fill('spanish game');
-  await expect(results.getByRole('button').first()).toHaveAccessibleName(
-    /^C60 Ruy López \/ Spanish game Wikibooks 1\. e4 e5 2\. Nf3 Nc6 3\. Bb5$/,
-  );
+  await search.fill('ruy lopez');
 
-  await search.fill('1. e4 e5 2. Nf3 Nc6 3. Bb5');
-  await expect(results.getByRole('button').nth(0)).toHaveAccessibleName(
+  await expect(results.getByRole('button').first()).toHaveAccessibleName(
     /^C60 Ruy Lopez 1\. e4 e5 2\. Nf3 Nc6 3\. Bb5$/,
   );
-  await expect(results.getByRole('button').nth(1)).toHaveAccessibleName(
-    /^C60 Ruy López \/ Spanish game Wikibooks 1\. e4 e5 2\. Nf3 Nc6 3\. Bb5$/,
-  );
+  await expect(tabsOn(page, 'Collections').first()).toHaveAccessibleName(/^ECO \d+ matches$/);
+  await expect(wikibooksTab(page)).toHaveAccessibleName(/^Wikibooks \d+ matches$/);
 
-  await results.getByRole('button').nth(1).click();
+  await wikibooksTab(page).click();
+
+  await expect(results.getByRole('button').first()).toHaveAccessibleName(
+    /^C60 Ruy López \/ Spanish game 1\. e4 e5 2\. Nf3 Nc6 3\. Bb5$/,
+  );
+  await results.getByRole('button').first().click();
   await expect(page).toHaveURL(/#\/wikibooks-\d+$/);
+  await expect(openingNameOn(page)).toHaveAccessibleName('C60 Ruy López / Spanish game');
+
   await search.fill('');
+  await expect(wikibooksTab(page)).toHaveAccessibleName('Wikibooks');
   await expect(wikibooksTab(page)).toHaveAttribute('aria-selected', 'true');
+  await expect(tabsOn(page, 'First moves')).toHaveCount(3);
 });
 
-test('the Wikibook’s lines are found by ECO code too', async ({ page }) => {
+test('a search for something only the Wikibook has says where to look', async ({ page }) => {
   await page.goto('/');
   const catalog = catalogOn(page);
 
-  await catalog.getByRole('searchbox', { name: 'Search openings' }).fill('C60 spanish');
+  await catalog.getByRole('searchbox', { name: 'Search openings' }).fill('rybasov');
 
-  await expect(
-    catalog.getByRole('region', { name: 'Search results' }).getByRole('button').first(),
-  ).toHaveAccessibleName(/^C60 Ruy López \/ Spanish game Wikibooks/);
+  await expect(catalog.getByRole('status')).toHaveText('No openings match “rybasov” in ECO.');
+  await expect(wikibooksTab(page)).toHaveAccessibleName(/^Wikibooks [1-9]\d* match(es)?$/);
+});
+
+test('the Wikibook’s lines are found by ECO code and by moves too', async ({ page }) => {
+  await page.goto('/');
+  await wikibooksTab(page).click();
+  const catalog = catalogOn(page);
+  const search = catalog.getByRole('searchbox', { name: 'Search openings' });
+  const first = catalog.getByRole('region', { name: 'Search results' }).getByRole('button').first();
+
+  await search.fill('C60');
+  await expect(first).toHaveAccessibleName(/^C60 Ruy López \/ Spanish game 1\. e4/);
+
+  await search.fill('e4 c5 nf3 d6 d4');
+  await expect(first).toHaveAccessibleName(/^B5\d .* 1\. e4 c5 2\. Nf3 d6 3\. d4$/);
 });
 
 test('the page credits the book, its authors and its licence', async ({ page }) => {

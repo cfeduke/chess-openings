@@ -11,6 +11,7 @@ describe('the encyclopaedia’s arrangement', () => {
       name: 'ECO',
       title: 'Encyclopaedia of Chess Openings',
       sectionsLabel: 'ECO volumes',
+      namesNest: true,
     });
   });
 

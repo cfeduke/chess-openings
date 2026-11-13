@@ -33,6 +33,7 @@ describe('the Wikibook’s arrangement', () => {
       title: 'Chess Opening Theory, a Wikibook',
       sectionsLabel: 'First moves',
     });
+    expect(WIKIBOOKS_ARRANGEMENT.namesNest).toBeFalsy();
   });
 
   it('has a section for 1. e4, one for 1. d4 and one for every other first move', () => {
@@ -161,7 +162,7 @@ describe('the Wikibook’s arrangement', () => {
   });
 
   describe('the families of a group', () => {
-    const [section] = arrangeByMoves([
+    const [, section] = arrangeByMoves([
       page('d4', 'Queen’s Pawn opening'),
       page('d4 d5', 'Closed game'),
       page('d4 d5 c4', 'Queen’s Gambit'),

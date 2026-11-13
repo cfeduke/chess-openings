@@ -60,6 +60,17 @@ describe('buildCatalog', () => {
     expect(catalog.count).toBe(7);
   });
 
+  it('gives each collection a search of its own lines', () => {
+    expect(eco?.search('gambit').total).toBe(0);
+    expect(eco?.search('sicilian').matches.map((opening) => opening.id)).toEqual([
+      najdorf.id,
+      english.id,
+    ]);
+    expect(pamphlet?.search('gambit').total).toBe(4);
+    expect(pamphlet?.search('gambit', 2).matches).toHaveLength(2);
+    expect(pamphlet?.search('sicilian').total).toBe(0);
+  });
+
   it('uses the site’s own arrangements unless it is given others', () => {
     const [collection] = buildCatalog([encyclopaedia([italian])]).collections;
 
@@ -134,6 +145,19 @@ describe('buildCatalog', () => {
 
     it('finds every opening', () => {
       expect(everyOpening.filter((entry) => real.locate(entry.id)?.opening !== entry)).toEqual([]);
+    });
+
+    it('ranks what a search finds as suits the names of each collection', () => {
+      const [encyclopaedia, wikibooks] = real.collections;
+
+      expect(encyclopaedia?.search('grunfeld').matches[0]?.name).toBe('Grünfeld Defense');
+      expect(wikibooks?.search('ruy lopez').matches[0]?.san).toEqual([
+        'e4',
+        'e5',
+        'Nf3',
+        'Nc6',
+        'Bb5',
+      ]);
     });
 
     it('has the encyclopaedia first, holding the lichess lines', () => {
