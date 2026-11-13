@@ -8,7 +8,8 @@ import { clamp, clampDelay, DEFAULT_DELAY_MS, type MoveSchedule, scheduleFor } f
  * What a moment of the demonstration sounds like. A move that gives check is voiced as its own
  * cue followed by `check`.
  */
-export type SoundCue = 'move' | 'capture' | 'castle' | 'check' | 'complete';
+export const SOUND_CUES = ['move', 'capture', 'castle', 'check', 'complete'] as const;
+export type SoundCue = (typeof SOUND_CUES)[number];
 
 /** The part of the board the player drives. */
 export type PlayerBoard = Pick<

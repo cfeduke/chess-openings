@@ -9,35 +9,55 @@ import type { SoundCue } from '../playback/player.ts';
 /** Quiet enough to count as silence, but not zero: exponential ramps cannot reach zero. */
 const SILENCE = 0.0001;
 
-interface Note {
+/** How loud a sound gets and how quickly it comes and goes. */
+interface Envelope {
   at: number;
+  /** Loudness at the top of the attack, 0–1. */
+  peak: number;
+  attack: number;
+  decay: number;
+}
+
+/**
+ * Plays `source` through a volume that rises from silence to `peak` and dies away again — so
+ * nothing starts or stops with a click — then switches the source off. `chain` is the last
+ * node of whatever the source has already been wired into.
+ */
+function strike(
+  context: BaseAudioContext,
+  output: AudioNode,
+  source: AudioScheduledSourceNode,
+  chain: AudioNode,
+  { at, peak, attack, decay }: Envelope,
+): void {
+  const end = at + attack + decay;
+  const volume = context.createGain();
+  volume.gain.setValueAtTime(SILENCE, at);
+  volume.gain.exponentialRampToValueAtTime(peak, at + attack);
+  volume.gain.exponentialRampToValueAtTime(SILENCE, end);
+
+  chain.connect(volume).connect(output);
+  source.start(at);
+  source.stop(end + 0.01);
+}
+
+interface Note extends Omit<Envelope, 'attack'> {
   /** Pitch in hertz; it may glide to `to` as the note dies away. */
   from: number;
   to?: number;
   shape?: OscillatorType;
-  /** Loudness at the top of the attack, 0–1. */
-  peak: number;
   attack?: number;
-  decay: number;
 }
 
 function note(context: BaseAudioContext, output: AudioNode, options: Note): void {
   const { at, from, to = from, shape = 'sine', peak, attack = 0.004, decay } = options;
-  const end = at + attack + decay;
 
   const oscillator = context.createOscillator();
   oscillator.type = shape;
   oscillator.frequency.setValueAtTime(from, at);
-  if (to !== from) oscillator.frequency.exponentialRampToValueAtTime(to, end);
+  if (to !== from) oscillator.frequency.exponentialRampToValueAtTime(to, at + attack + decay);
 
-  const envelope = context.createGain();
-  envelope.gain.setValueAtTime(SILENCE, at);
-  envelope.gain.exponentialRampToValueAtTime(peak, at + attack);
-  envelope.gain.exponentialRampToValueAtTime(SILENCE, end);
-
-  oscillator.connect(envelope).connect(output);
-  oscillator.start(at);
-  oscillator.stop(end + 0.01);
+  strike(context, output, oscillator, oscillator, { at, peak, attack, decay });
 }
 
 /** A tenth of a second of white noise per audio context, shared by every knock played on it. */
@@ -54,12 +74,9 @@ function noiseFor(context: BaseAudioContext): AudioBuffer {
   return buffer;
 }
 
-interface Knock {
-  at: number;
+interface Knock extends Omit<Envelope, 'attack'> {
   /** The centre of the band of noise let through, in hertz: higher is sharper. */
   centre: number;
-  peak: number;
-  decay: number;
 }
 
 function knock(
@@ -67,9 +84,6 @@ function knock(
   output: AudioNode,
   { at, centre, peak, decay }: Knock,
 ): void {
-  const attack = 0.002;
-  const end = at + attack + decay;
-
   const noise = context.createBufferSource();
   noise.buffer = noiseFor(context);
 
@@ -78,14 +92,7 @@ function knock(
   band.frequency.setValueAtTime(centre, at);
   band.Q.setValueAtTime(1.1, at);
 
-  const envelope = context.createGain();
-  envelope.gain.setValueAtTime(SILENCE, at);
-  envelope.gain.exponentialRampToValueAtTime(peak, at + attack);
-  envelope.gain.exponentialRampToValueAtTime(SILENCE, end);
-
-  noise.connect(band).connect(envelope).connect(output);
-  noise.start(at);
-  noise.stop(end + 0.01);
+  strike(context, output, noise, noise.connect(band), { at, peak, attack: 0.002, decay });
 }
 
 /**
@@ -137,7 +144,7 @@ const C_SHARP_6 = 1108.73;
 
 const VOICES: Record<SoundCue, (context: BaseAudioContext, output: AudioNode, at: number) => void> =
   {
-    move: (context, output, at) => placePiece(context, output, at),
+    move: placePiece,
 
     // A capture lands harder, with the sharp crack of the taken piece being knocked aside.
     capture: (context, output, at) => {

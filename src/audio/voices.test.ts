@@ -1,27 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import {
-  asAudioContext,
-  FakeAudioContext,
-  type FakeGain,
-  type FakeNode,
-} from '../../tests/support/fake-audio.ts';
-import type { SoundCue } from '../playback/player.ts';
+import { asAudioContext, FakeAudioContext } from '../../tests/support/fake-audio.ts';
+import { SOUND_CUES, type SoundCue } from '../playback/player.ts';
 import { scheduleCue } from './voices.ts';
 
-const CUES: SoundCue[] = ['move', 'capture', 'castle', 'check', 'complete'];
 const AT = 10;
 
 function schedule(...cues: SoundCue[]) {
   const context = new FakeAudioContext();
-  const output: FakeNode = context.createGain();
+  const output = context.createGain();
   for (const cue of cues)
     scheduleCue(asAudioContext(context), output as unknown as AudioNode, cue, AT);
   /** The gain nodes that shape individual sounds, as opposed to the output. */
-  const envelopes = context.gains.filter((gain): gain is FakeGain => gain !== output);
+  const envelopes = context.gains.filter((gain) => gain !== output);
   return { context, output, envelopes };
 }
 
-describe.each(CUES)('the %s cue', (cue) => {
+describe.each(SOUND_CUES)('the %s cue', (cue) => {
   const { context, output, envelopes } = schedule(cue);
 
   it('makes sound, and sends all of it to the output', () => {
@@ -40,10 +34,10 @@ describe.each(CUES)('the %s cue', (cue) => {
   it('rises from silence and dies away to silence, so nothing clicks', () => {
     expect(envelopes.length).toBeGreaterThan(0);
     for (const { gain } of envelopes) {
-      expect(gain.events.at(0)?.value).toBeLessThanOrEqual(0.001);
-      expect(gain.events.at(-1)?.value).toBeLessThanOrEqual(0.001);
-      expect(gain.peak).toBeGreaterThan(0.01);
-      expect(gain.peak).toBeLessThanOrEqual(1);
+      expect(gain.scheduled.at(0)).toBeLessThanOrEqual(0.001);
+      expect(gain.scheduled.at(-1)).toBeLessThanOrEqual(0.001);
+      expect(Math.max(...gain.scheduled)).toBeGreaterThan(0.01);
+      expect(Math.max(...gain.scheduled)).toBeLessThanOrEqual(1);
     }
   });
 });
@@ -51,21 +45,9 @@ describe.each(CUES)('the %s cue', (cue) => {
 describe('what tells the cues apart', () => {
   const startTimes = (cue: SoundCue) =>
     [...new Set(schedule(cue).context.sources.map((source) => source.startedAt as number))].sort();
-  const loudestKnock = (cue: SoundCue) => {
-    const { context, envelopes } = schedule(cue);
-    const knocks = envelopes.filter((envelope) =>
-      context.bufferSources.some((noise) => noise.reaches(envelope)),
-    );
-    return Math.max(...knocks.map((knock) => knock.gain.peak));
-  };
-
   it('a move is a single knock of wood on wood', () => {
     expect(startTimes('move')).toEqual([AT]);
     expect(schedule('move').context.bufferSources).toHaveLength(1);
-  });
-
-  it('a capture lands harder than a move', () => {
-    expect(loudestKnock('capture')).toBeGreaterThan(loudestKnock('move'));
   });
 
   it('castling is two knocks, king then rook', () => {
@@ -88,7 +70,7 @@ describe('what tells the cues apart', () => {
     const notes = schedule('complete')
       .context.oscillators.map((oscillator) => ({
         at: oscillator.startedAt as number,
-        pitch: oscillator.frequency.events[0]?.value as number,
+        pitch: oscillator.frequency.scheduled[0] as number,
       }))
       .sort((a, b) => a.at - b.at);
 

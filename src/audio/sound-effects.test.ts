@@ -1,13 +1,30 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { asAudioContext, FakeAudioContext } from '../../tests/support/fake-audio.ts';
 import { createSoundEffects } from './sound-effects.ts';
 
 function setup(options: { muted?: boolean } = {}) {
   const context = new FakeAudioContext();
   const createContext = vi.fn(() => asAudioContext(context));
-  const sounds = createSoundEffects({ ...options, createContext });
-  return { context, createContext, sounds };
+  const saved = { muted: options.muted ?? false };
+  const sounds = createSoundEffects({
+    createContext,
+    muted: {
+      read: () => saved.muted,
+      write(muted) {
+        saved.muted = muted;
+      },
+    },
+  });
+  return { context, createContext, saved, sounds };
 }
+
+beforeEach(() => {
+  vi.useFakeTimers();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe('before the first user gesture', () => {
   it('creates no audio context: browsers refuse to start one uninvited', () => {
@@ -19,11 +36,11 @@ describe('before the first user gesture', () => {
   });
 });
 
-describe('unlock', () => {
+describe('wake, called on a user gesture', () => {
   it('creates the audio context and starts it', () => {
     const { context, createContext, sounds } = setup();
 
-    sounds.unlock();
+    sounds.wake();
 
     expect(createContext).toHaveBeenCalledTimes(1);
     expect(context.state).toBe('running');
@@ -32,8 +49,8 @@ describe('unlock', () => {
   it('only ever creates one', () => {
     const { createContext, sounds } = setup();
 
-    sounds.unlock();
-    sounds.unlock();
+    sounds.wake();
+    sounds.wake();
 
     expect(createContext).toHaveBeenCalledTimes(1);
   });
@@ -42,7 +59,7 @@ describe('unlock', () => {
     const { context, sounds } = setup();
     context.refusesToResume = true;
 
-    sounds.unlock();
+    sounds.wake();
     await Promise.resolve();
     sounds.play('move');
 
@@ -53,7 +70,7 @@ describe('unlock', () => {
 describe('play', () => {
   it('schedules the cue a moment ahead, through one master volume, to the speakers', () => {
     const { context, sounds } = setup();
-    sounds.unlock();
+    sounds.wake();
     const [master] = context.gains;
 
     sounds.play('move');
@@ -69,20 +86,9 @@ describe('play', () => {
     expect(master?.gain.value).toBeLessThanOrEqual(1);
   });
 
-  it('plays every cue the player can name', () => {
+  it('stays quiet while the audio context is not running, rather than queueing sounds up', () => {
     const { context, sounds } = setup();
-    sounds.unlock();
-
-    for (const cue of ['move', 'capture', 'castle', 'check', 'complete'] as const) {
-      const before = context.sources.length;
-      sounds.play(cue);
-      expect(context.sources.length, cue).toBeGreaterThan(before);
-    }
-  });
-
-  it('stays quiet while the audio context is not running', () => {
-    const { context, sounds } = setup();
-    sounds.unlock();
+    sounds.wake();
     context.state = 'suspended';
 
     sounds.play('move');
@@ -91,42 +97,89 @@ describe('play', () => {
   });
 });
 
+describe('going back to sleep', () => {
+  it('happens after twenty seconds with nothing to play, to spare the battery', () => {
+    const { context, sounds } = setup();
+    sounds.wake();
+
+    vi.advanceTimersByTime(19_999);
+    expect(context.state).toBe('running');
+
+    vi.advanceTimersByTime(1);
+    expect(context.state).toBe('suspended');
+  });
+
+  it('is put off by every cue', () => {
+    const { context, sounds } = setup();
+    sounds.wake();
+
+    vi.advanceTimersByTime(15_000);
+    sounds.play('move');
+    vi.advanceTimersByTime(15_000);
+    expect(context.state).toBe('running');
+
+    vi.advanceTimersByTime(5_000);
+    expect(context.state).toBe('suspended');
+  });
+
+  it('ends at the next gesture', () => {
+    const { context, sounds } = setup();
+    sounds.wake();
+    vi.advanceTimersByTime(20_000);
+
+    sounds.wake();
+    sounds.play('move');
+
+    expect(context.state).toBe('running');
+    expect(context.sources.length).toBeGreaterThan(0);
+  });
+});
+
 describe('muting', () => {
-  it('is off unless asked for', () => {
+  it('is as it was left on the last visit', () => {
     expect(setup().sounds.muted).toBe(false);
     expect(setup({ muted: true }).sounds.muted).toBe(true);
   });
 
-  it('schedules nothing while muted', () => {
-    const { context, sounds } = setup({ muted: true });
-    sounds.unlock();
+  it('means not even starting the audio engine', () => {
+    const { createContext, sounds } = setup({ muted: true });
 
+    sounds.wake();
     sounds.play('capture');
 
-    expect(context.sources).toEqual([]);
+    expect(createContext).not.toHaveBeenCalled();
   });
 
-  it('can be switched on and off', () => {
+  it('silences an engine that is already running', () => {
     const { context, sounds } = setup();
-    sounds.unlock();
+    sounds.wake();
 
     sounds.setMuted(true);
     sounds.play('move');
+
     expect(sounds.muted).toBe(true);
     expect(context.sources).toEqual([]);
+  });
+
+  it('switched off starts the engine there and then: the switch is itself a gesture', () => {
+    const { context, sounds } = setup({ muted: true });
 
     sounds.setMuted(false);
     sounds.play('move');
+
     expect(sounds.muted).toBe(false);
+    expect(context.state).toBe('running');
     expect(context.sources.length).toBeGreaterThan(0);
   });
 
-  it('still unlocks, so that unmuting later needs no second gesture', () => {
-    const { context, sounds } = setup({ muted: true });
+  it('is remembered', () => {
+    const { saved, sounds } = setup();
 
-    sounds.unlock();
+    sounds.setMuted(true);
+    expect(saved.muted).toBe(true);
 
-    expect(context.state).toBe('running');
+    sounds.setMuted(false);
+    expect(saved.muted).toBe(false);
   });
 });
 
@@ -135,9 +188,10 @@ describe('without Web Audio', () => {
     const sounds = createSoundEffects({ createContext: () => undefined });
 
     expect(() => {
-      sounds.unlock();
+      sounds.wake();
       sounds.play('move');
       sounds.setMuted(true);
+      sounds.setMuted(false);
     }).not.toThrow();
   });
 
@@ -145,8 +199,9 @@ describe('without Web Audio', () => {
     const sounds = createSoundEffects();
 
     expect(() => {
-      sounds.unlock();
+      sounds.wake();
       sounds.play('complete');
     }).not.toThrow();
+    expect(sounds.muted).toBe(false);
   });
 });

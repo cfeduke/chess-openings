@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { boardOn } from './support.ts';
 
 declare global {
   interface Window {
@@ -20,7 +21,8 @@ test('moves are heard once the visitor has interacted with the page, and not bef
     };
   });
   await page.goto('/');
-  const pawn = page.locator('.piece[data-piece="e2"]');
+  const board = boardOn(page);
+  const pawn = board.locator('.piece[data-piece="e2"]');
 
   // The first move is made in silence: nobody has touched the page yet.
   await expect(pawn).toHaveAttribute('data-square', 'e4');
@@ -28,6 +30,6 @@ test('moves are heard once the visitor has interacted with the page, and not bef
 
   // A click anywhere is the gesture browsers ask for. The next move can be heard.
   await page.mouse.click(4, 4);
-  await expect(page.locator('.piece[data-piece="e7"]')).toHaveAttribute('data-square', 'e5');
+  await expect(board.locator('.piece[data-piece="e7"]')).toHaveAttribute('data-square', 'e5');
   expect(await page.evaluate(() => window.soundsStarted)).toBeGreaterThan(0);
 });

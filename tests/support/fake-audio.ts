@@ -3,33 +3,20 @@
  * which nodes exist, how they are wired, and what was scheduled on them.
  */
 
-type Ramp = 'set' | 'linear' | 'exponential';
-
 export class FakeParam {
   value = 0;
-  /** Every scheduled change: how the value gets there, what it becomes, and when. */
-  readonly events: { ramp: Ramp; value: number; time: number }[] = [];
+  /** Every value scheduled on the parameter, in the order it was scheduled. */
+  readonly scheduled: number[] = [];
 
-  setValueAtTime(value: number, time: number) {
-    this.events.push({ ramp: 'set', value, time });
+  setValueAtTime(value: number) {
+    this.scheduled.push(value);
     return this;
   }
 
-  linearRampToValueAtTime(value: number, time: number) {
-    this.events.push({ ramp: 'linear', value, time });
-    return this;
-  }
-
-  exponentialRampToValueAtTime(value: number, time: number) {
+  exponentialRampToValueAtTime(value: number) {
     if (value <= 0) throw new RangeError('an exponential ramp cannot reach zero');
-    this.events.push({ ramp: 'exponential', value, time });
+    this.scheduled.push(value);
     return this;
-  }
-
-  /** The largest value the parameter takes: scheduled changes, once there are any, replace `value`. */
-  get peak(): number {
-    if (this.events.length === 0) return this.value;
-    return Math.max(...this.events.map((event) => event.value));
   }
 }
 
@@ -133,6 +120,11 @@ export class FakeAudioContext {
   resume(): Promise<void> {
     if (this.refusesToResume) return Promise.reject(new Error('not allowed to start'));
     this.state = 'running';
+    return Promise.resolve();
+  }
+
+  suspend(): Promise<void> {
+    this.state = 'suspended';
     return Promise.resolve();
   }
 }

@@ -3,7 +3,7 @@ import { createSoundEffects } from './audio/sound-effects.ts';
 import { createBoardView } from './board/board-view.ts';
 import { buildTimeline } from './chess/timeline.ts';
 import { createPlayer } from './playback/player.ts';
-import { readPreference } from './preferences.ts';
+import { preference } from './preferences.ts';
 
 // Until the catalog arrives, the board demonstrates one line: the Italian Game.
 const ITALIAN_GAME = {
@@ -16,12 +16,14 @@ export function mountApp(root: HTMLElement): void {
   heading.textContent = 'Chess Openings';
 
   const board = createBoardView();
-  const sounds = createSoundEffects({ muted: readPreference('muted', false) });
+  const sounds = createSoundEffects({
+    muted: preference('muted', false, (saved) => (typeof saved === 'boolean' ? saved : undefined)),
+  });
   const player = createPlayer({ board, sound: sounds.play });
 
-  // Browsers only let audio start from a user gesture: take the first one, wherever it lands.
-  for (const gesture of ['pointerdown', 'keydown'] as const) {
-    document.addEventListener(gesture, sounds.unlock, { once: true });
+  // Browsers only let audio start from a user gesture, and may stop it again: wake it on each.
+  for (const gesture of ['click', 'keydown'] as const) {
+    document.addEventListener(gesture, sounds.wake);
   }
 
   player.load(buildTimeline(ITALIAN_GAME));
