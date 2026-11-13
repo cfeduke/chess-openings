@@ -11,6 +11,7 @@
     "data": "node scripts/build-openings.ts",
     "data:update": "node scripts/update-lichess-data.ts",
     "data:update:wikibooks": "node scripts/update-wikibooks-data.ts",
+    "data:update:games": "node scripts/update-games-data.ts",
     "predev": "npm run data",
     "dev": "vite",
     "prebuild": "npm run data",

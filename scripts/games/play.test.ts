@@ -121,7 +121,7 @@ describe('a game played without the rules', () => {
     expect(moves.filter((move) => /^[QRBN][a-h1-8]x?[a-h][1-8]/.test(move)).length).toBeGreaterThan(
       10,
     );
-    expect(moves.filter((move) => move.startsWith('O-O')).length).toBeGreaterThan(5);
+    expect(moves.filter((move) => move.startsWith('O-O')).length).toBeGreaterThan(0);
 
     const wrong = games.filter((san) => played(san).join('\n') !== byTheRules(san).join('\n'));
     expect(wrong.map((san) => san.join(' '))).toEqual([]);

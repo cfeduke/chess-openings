@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { eachGame, movesOf, pliesOf } from './pgn.ts';
+import { eachGame, movesOf, pliesOf, type Tags } from './pgn.ts';
 
 /** Two games as lichess writes them: one with clocks, one without. */
 const TWO_GAMES = `[Event "Rated Blitz game"]
@@ -24,7 +24,7 @@ const TWO_GAMES = `[Event "Rated Blitz game"]
 `;
 
 function gamesOf(pgn: string) {
-  const games: { tags: Record<string, string>; moveText: string }[] = [];
+  const games: { tags: Tags; moveText: string }[] = [];
   eachGame(pgn, (tags, moveText) => games.push({ tags: { ...tags }, moveText }));
   return games;
 }

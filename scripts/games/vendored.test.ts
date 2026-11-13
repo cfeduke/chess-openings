@@ -1,15 +1,16 @@
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { DATA_DIR } from '../openings/dataset.ts';
 import { createReplayer } from '../openings/replay.ts';
 import { SOURCE_FILE } from '../openings/source.ts';
 import { createGame } from './play.ts';
-import { BANDS, countedGames, countsOf, createCounter, movesFrom, SPEEDS } from './tally.ts';
+import { BANDS, countsOf, createCounter, gamesReaching, movesFrom, SPEEDS } from './tally.ts';
 import {
   formatTallies,
   GAMES_DIR,
+  type GameTallies,
   POSITIONS_FILE,
   readGameTallies,
   TALLIES_FILE,
@@ -154,14 +155,20 @@ describe('readGameTallies', () => {
 });
 
 describe('the vendored tallies', () => {
-  const { source, positions, tally } = readGameTallies(join(DATA_DIR, GAMES_DIR));
+  let read: GameTallies;
+  beforeAll(() => {
+    read = readGameTallies(join(DATA_DIR, GAMES_DIR));
+  });
+
   const cells = SPEEDS.flatMap((speed) => BANDS.map((band) => ({ speed, band })));
   const gamesIn = (position: number, { speed, band }: (typeof cells)[number]) => {
-    const { white, draws, black } = countsOf(tally, position, speed, band);
+    const { white, draws, black } = countsOf(read.tally, position, speed, band);
     return white + draws + black;
   };
 
   it('say which month of which database they are of, and on what terms', () => {
+    const { source } = read;
+
     expect(source.database).toBe('lichess_db_standard_rated');
     expect(source.month).toMatch(/^20\d\d-(0[1-9]|1[0-2])$/);
     expect(source.url).toBe(
@@ -171,20 +178,22 @@ describe('the vendored tallies', () => {
   });
 
   it('account for every game that was read: counted, or left out and why', () => {
+    const { source, tally } = read;
     const leftOut = Object.values(source.leftOut).reduce((sum, games) => sum + games);
 
-    expect(countedGames(tally)).toBe(source.counted);
     expect(source.counted + leftOut).toBe(source.games);
     expect(source.counted).toBeGreaterThan(0);
+    // Every game that is counted counts for the position it began in.
+    expect(gamesReaching(tally, 0)).toBe(source.counted);
   });
 
   it('begin with the position every game begins in, each position there once', () => {
-    expect(positions[0]).toBe(START);
-    expect(new Set(positions).size).toBe(positions.length);
+    expect(read.positions[0]).toBe(START);
+    expect(new Set(read.positions).size).toBe(read.positions.length);
   });
 
   it('never count more games for a position than were played', () => {
-    const over = positions.filter((_, position) =>
+    const over = read.positions.filter((_, position) =>
       cells.some((cell) => gamesIn(position, cell) > gamesIn(0, cell)),
     );
 
@@ -192,18 +201,20 @@ describe('the vendored tallies', () => {
   });
 
   it('never count more moves from a position than games that reached it', () => {
-    const over = positions.filter((_, position) => {
-      const reached = cells.reduce((sum, cell) => sum + gamesIn(position, cell), 0);
-      return movesFrom(tally, position).reduce((sum, [, games]) => sum + games, 0) > reached;
-    });
+    const { positions, tally } = read;
+    const over = positions.filter(
+      (_, position) =>
+        movesFrom(tally, position).reduce((sum, [, games]) => sum + games, 0) >
+        gamesReaching(tally, position),
+    );
 
     expect(over).toEqual([]);
   });
 
   it('expect of White, in each speed and band, a score a game could have', () => {
-    const impossible = positions.filter((_, position) =>
+    const impossible = read.positions.filter((_, position) =>
       cells.some((cell) => {
-        const { expected } = countsOf(tally, position, cell.speed, cell.band);
+        const { expected } = countsOf(read.tally, position, cell.speed, cell.band);
         return expected < 0 || expected > gamesIn(position, cell);
       }),
     );
