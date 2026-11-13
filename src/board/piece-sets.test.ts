@@ -1,10 +1,39 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { artworkOf, PIECE_KINDS, PIECE_SETS } from './piece-sets.ts';
+import { artworkOf, CBURNETT, PIECE_KINDS, PIECE_SETS } from './piece-sets.ts';
 
 const PIECES_DIRECTORY = new URL('./pieces/', import.meta.url);
 
 describe('the piece sets', () => {
+  it('are the classic set and then the four theme packs', () => {
+    expect(PIECE_SETS.map((set) => set.id)).toEqual([
+      'cburnett',
+      'walnut-gold',
+      'midnight-cyan',
+      'sage-sand',
+      'slate-ivory',
+    ]);
+  });
+
+  it('share no artwork with one another', () => {
+    const images = PIECE_SETS.flatMap((set) => Object.values(set.artwork));
+
+    expect(new Set(images).size).toBe(PIECE_SETS.length * 12);
+  });
+
+  it('say where their artwork comes from, in words that finish “Chess pieces …”', () => {
+    const [classic, ...packs] = PIECE_SETS;
+
+    expect(classic).toBe(CBURNETT);
+    expect(CBURNETT.credit).toBe('by Colin M.L. Burnett');
+    expect(packs.map((set) => set.credit)).toEqual([
+      'from the Walnut & Gold set, in the public domain',
+      'from the Midnight & Cyan set, in the public domain',
+      'from the Sage & Sand set, in the public domain',
+      'from the Slate & Ivory set, in the public domain',
+    ]);
+  });
+
   it.each(PIECE_SETS)('$id has a different SVG for each of the twelve pieces', ({ artwork }) => {
     expect(new Set(Object.values(artwork)).size).toBe(12);
     for (const image of Object.values(artwork)) expect(image).toContain('svg');

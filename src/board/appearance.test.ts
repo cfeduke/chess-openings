@@ -12,6 +12,23 @@ describe('the appearances', () => {
     expect(DEFAULT_APPEARANCE.board.id).toBe('brown');
   });
 
+  it('are Classic and then the four theme packs, each named after its two words', () => {
+    expect(APPEARANCES.map(({ id, name }) => [id, name])).toEqual([
+      ['classic', 'Classic'],
+      ['walnut-gold', 'Walnut & Gold'],
+      ['midnight-cyan', 'Midnight & Cyan'],
+      ['sage-sand', 'Sage & Sand'],
+      ['slate-ivory', 'Slate & Ivory'],
+    ]);
+  });
+
+  it('put each theme pack’s pieces on its own board', () => {
+    for (const { id, pieces, board } of APPEARANCES.slice(1)) {
+      expect(pieces.id, id).toBe(id);
+      expect(board.id, id).toBe(id);
+    }
+  });
+
   it('each have an id and a name of their own', () => {
     for (const label of ['id', 'name'] as const) {
       const labels = APPEARANCES.map((appearance) => appearance[label]);

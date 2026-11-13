@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { STUDY } from '../../tests/support/appearances.ts';
 import { positionAfter } from '../../tests/support/positions.ts';
 import { type Square, startingPosition } from '../chess/board.ts';
+import { APPEARANCES } from './appearance.ts';
 import { type BoardView, createBoardView } from './board-view.ts';
 import type { Orientation } from './geometry.ts';
 
@@ -218,5 +219,35 @@ describe('the board’s appearance in a real browser', () => {
     expect(getComputedStyle(square('a1')).backgroundColor).toBe('rgb(181, 136, 99)');
     expect(getComputedStyle(square('h1')).backgroundColor).toBe('rgb(240, 217, 181)');
     expect(getComputedStyle(piece('e1')).backgroundImage).toContain('svg');
+  });
+});
+
+describe.each(APPEARANCES)('the $name appearance in a real browser', (appearance) => {
+  it('has artwork the browser can draw, on a square canvas, for every piece', async () => {
+    for (const [kind, source] of Object.entries(appearance.pieces.artwork)) {
+      const image = new Image();
+      image.src = source;
+      await image.decode();
+
+      expect(image.naturalWidth, kind).toBeGreaterThan(0);
+      expect(image.naturalWidth, kind).toBe(image.naturalHeight);
+    }
+  });
+
+  it('paints light and dark squares that can be told apart, in its own colours', () => {
+    const { view, square } = mount();
+    view.setAppearance(appearance);
+
+    // The browser reports colours as rgb(); let it translate the theme's the same way.
+    const asPainted = (color: string) => {
+      const probe = document.createElement('div');
+      probe.style.backgroundColor = color;
+      document.body.append(probe);
+      return getComputedStyle(probe).backgroundColor;
+    };
+    const { light, dark } = appearance.board.colors;
+    expect(getComputedStyle(square('h1')).backgroundColor).toBe(asPainted(light));
+    expect(getComputedStyle(square('a1')).backgroundColor).toBe(asPainted(dark));
+    expect(asPainted(light)).not.toBe(asPainted(dark));
   });
 });

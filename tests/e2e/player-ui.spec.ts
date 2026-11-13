@@ -169,7 +169,13 @@ test.describe('the buttons and keys', () => {
     const dropdown = controls.getByRole('combobox', { name: 'Appearance' });
 
     await expect(dropdown).toHaveValue('classic');
-    await expect(dropdown.getByRole('option')).toHaveText(['Classic']);
+    await expect(dropdown.getByRole('option')).toHaveText([
+      'Classic',
+      'Walnut & Gold',
+      'Midnight & Cyan',
+      'Sage & Sand',
+      'Slate & Ivory',
+    ]);
     await expect(boardOn(page)).toHaveAttribute('data-pieces', 'cburnett');
     await expect(boardOn(page)).toHaveAttribute('data-theme', 'brown');
 
@@ -181,6 +187,32 @@ test.describe('the buttons and keys', () => {
     expect(bar.x + bar.width - (place.x + place.width)).toBeLessThanOrEqual(24);
     expect(place.y).toBeGreaterThanOrEqual(bar.y);
     expect(place.y + place.height).toBeLessThanOrEqual(bar.y + bar.height);
+  });
+
+  test('choosing an appearance repaints the board and redraws the pieces, and is remembered', async ({
+    page,
+  }) => {
+    await page.goto(ITALIAN_GAME);
+    const dropdown = controlsOn(page).getByRole('combobox', { name: 'Appearance' });
+    const king = pieceFrom(page, 'e1');
+    const artwork = () => king.evaluate((piece) => getComputedStyle(piece).backgroundImage);
+    const classicKing = await artwork();
+    await expect(squareOn(page, 'a1')).toHaveCSS('background-color', 'rgb(181, 136, 99)');
+
+    await dropdown.selectOption({ label: 'Midnight & Cyan' });
+
+    await expect(squareOn(page, 'a1')).toHaveCSS('background-color', 'rgb(31, 56, 88)');
+    await expect(squareOn(page, 'h1')).toHaveCSS('background-color', 'rgb(170, 187, 208)');
+    expect(await artwork()).not.toBe(classicKing);
+    await expect(page.locator('.credits')).toContainText(
+      'Chess pieces from the Midnight & Cyan set, in the public domain.',
+    );
+
+    await page.reload();
+
+    await expect(dropdown).toHaveValue('midnight-cyan');
+    await expect(boardOn(page)).toHaveAttribute('data-pieces', 'midnight-cyan');
+    await expect(squareOn(page, 'a1')).toHaveCSS('background-color', 'rgb(31, 56, 88)');
   });
 
   test('the board can be turned around', async ({ page }) => {
