@@ -3,5 +3,7 @@ dist/
 coverage/
 test-results/
 playwright-report/
+# Generated from data/lichess by `npm run data`.
+public/openings.json
 .DS_Store
 *.log

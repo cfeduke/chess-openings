@@ -48,3 +48,20 @@ There is no hosted CI (no GitHub Actions). `npm run verify` is the whole pipelin
 working tree, so only commits that pass the full pipeline reach the remote.
 
 The first run of the integration tests needs a browser: `npx playwright install chromium`.
+
+## Opening data
+
+The openings are the five TSV files from
+[lichess-org/chess-openings](https://github.com/lichess-org/chess-openings), vendored under
+`data/lichess/` and pinned to the upstream commit recorded in `data/lichess/SOURCE.json`. The data
+is in the public domain (CC0).
+
+`npm run data` (run automatically before `dev` and `build`) replays every line with
+[chess.js](https://github.com/jhlywa/chess.js) and writes `public/openings.json`. Each opening gets
+its ECO code, its name, its moves in both SAN and UCI (so the browser can animate a line without a
+rules engine), and a unique id. Upstream repeats a name once per transposition: the shortest line
+keeps the plain slug of the name and the others add a fingerprint of their own moves, so ids — and
+links to them — survive data updates. The build fails if a row is malformed or a move is illegal.
+
+To pick up new upstream data: `npm run data:update` (optionally with a branch, tag or commit),
+then `npm run verify`.
