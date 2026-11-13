@@ -1,15 +1,16 @@
 import type { Opening } from '../../src/data/opening.ts';
 import type { Replay } from './replay.ts';
 
+/** Files a line under an ECO code, given the positions it passes through as `replay` gives them. */
+export type EcoOf = (positions: string[]) => string;
+
 /**
  * Files any line under an ECO code, going by the lines in `named` that already have one: a line
  * gets the code of the last named position it passes through, however it got there. This is how
  * a game is given its opening. Where two named lines end in the same position, the first to
  * name it keeps it.
- *
- * The returned function takes the positions of a line, as `replay` gives them.
  */
-export function ecoClassifier(named: Opening[], replay: Replay): (positions: string[]) => string {
+export function ecoClassifier(named: Opening[], replay: Replay): EcoOf {
   const codes = new Map<string, string>();
   for (const { eco, name, san } of named) {
     const position = replay(name, san.join(' ')).positions.at(-1);
@@ -17,9 +18,10 @@ export function ecoClassifier(named: Opening[], replay: Replay): (positions: str
   }
 
   return (positions) => {
-    const last = positions.findLast((position) => codes.has(position));
-    const eco = last === undefined ? undefined : codes.get(last);
-    if (!eco) throw new Error('a line passes through no named position');
-    return eco;
+    for (const position of positions.toReversed()) {
+      const eco = codes.get(position);
+      if (eco) return eco;
+    }
+    throw new Error('a line passes through no named position');
   };
 }

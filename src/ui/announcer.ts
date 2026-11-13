@@ -9,8 +9,8 @@ import type { Player } from '../playback/player.ts';
  */
 export function createAnnouncer(player: Player): {
   element: HTMLElement;
-  /** Announces an opening that has just been put on the board. */
-  introduce(opening: Opening): void;
+  /** Announces an opening that has just been put on the board, by the name it is given. */
+  introduce(opening: Pick<Opening, 'name' | 'san'>): void;
 } {
   const element = el('p', { class: 'announcer visually-hidden', role: 'status' });
 

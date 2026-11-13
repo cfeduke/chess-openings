@@ -1,10 +1,13 @@
 import { readFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { join } from 'node:path';
 import { formatMoveText } from '../../src/chess/san.ts';
 import type { DataSource, Opening, OpeningCollection } from '../../src/data/opening.ts';
 import { WIKIBOOKS_COLLECTION } from '../../src/wikibooks/arrangement.ts';
+import { pageAbove } from '../../src/wikibooks/book.ts';
+import type { EcoOf } from './classify.ts';
 import { parseTsv } from './parse-tsv.ts';
 import type { Replay } from './replay.ts';
+import { readSourceFile } from './source.ts';
 
 /** Where the Wikibook's data is kept within the data directory. */
 export const WIKIBOOKS_DIR = 'wikibooks';
@@ -15,11 +18,8 @@ export const PAGES_FILE = 'pages.tsv';
 /** The columns of `PAGES_FILE`. */
 export const PAGE_COLUMNS = ['page', 'revision', 'name', 'pgn'];
 
-/** The file that says which book was read, and when. */
-export const SOURCE_FILE = 'SOURCE.json';
-
-/** What `SOURCE_FILE` holds. */
-export interface VendoredBook {
+/** What the source file holds: which book was read, and when. */
+export interface VendoredWikibook {
   /** The book's title, which is also the title of its first page. */
   book: string;
   /** The wiki it is on, by host name. */
@@ -53,18 +53,13 @@ export function parsePagesTsv(text: string, fileName: string): PageRow[] {
 }
 
 /**
- * Turns the book's pages into validated openings, in the same order. `ecoOf` files a line under
- * an ECO code, given the positions it passes through.
+ * Turns the book's pages into validated openings, in the same order.
  *
  * A page says which opening its position belongs to, so a page that says nothing belongs with
  * the page it follows from: it takes the name of the nearest page above it that has one. A page
  * with no such page above it is called by its moves.
  */
-export function buildBookOpenings(
-  rows: PageRow[],
-  replay: Replay,
-  ecoOf: (positions: string[]) => string,
-): Opening[] {
+export function buildWikibooksOpenings(rows: PageRow[], replay: Replay, ecoOf: EcoOf): Opening[] {
   const lines = rows.map((row) => ({ ...row, ...replay(`page ${row.page}`, row.pgn) }));
 
   // Ids are made from page ids, and a line is filed by its moves: neither may repeat.
@@ -81,19 +76,13 @@ export function buildBookOpenings(
     byMoves.set(moves, line);
   }
 
-  /** The name of the line itself, or of the longest line it continues that has one. */
-  const nameOf = ({ san }: Pick<Opening, 'san'>): string => {
-    for (let plies = san.length; plies > 0; plies--) {
-      const name = byMoves.get(san.slice(0, plies).join(' '))?.name;
-      if (name) return name;
-    }
-    return formatMoveText(san);
-  };
+  /** The page that names a line: its own if it names anything, or else the nearest above it. */
+  const named = { orItself: true, wanted: (page: PageRow) => page.name !== '' };
 
   return lines.map((line) => ({
     id: `${WIKIBOOKS_COLLECTION}-${line.page}`,
     eco: ecoOf(line.positions),
-    name: nameOf(line),
+    name: pageAbove(byMoves, line.san, named)?.name ?? formatMoveText(line.san),
     san: line.san,
     uci: line.uci,
     page: line.page,
@@ -101,14 +90,12 @@ export function buildBookOpenings(
 }
 
 function readSource(bookDir: string): DataSource {
-  const { book, site, license, retrieved } = JSON.parse(
-    readFileSync(join(bookDir, SOURCE_FILE), 'utf8'),
-  );
-  for (const [field, value] of Object.entries({ book, site, license, retrieved })) {
-    if (typeof value !== 'string' || !value) {
-      throw new Error(`${basename(bookDir)}/${SOURCE_FILE}: missing "${field}"`);
-    }
-  }
+  const { book, site, license, retrieved } = readSourceFile(bookDir, [
+    'book',
+    'site',
+    'license',
+    'retrieved',
+  ]);
   return {
     title: book,
     url: `https://${site}/wiki/${book.replaceAll(' ', '_')}`,
@@ -119,12 +106,12 @@ function readSource(bookDir: string): DataSource {
 }
 
 /** The Wikibook: the lines in `bookDir`, each with the ECO code `ecoOf` files it under. */
-export function loadWikibooks(
-  bookDir: string,
-  replay: Replay,
-  ecoOf: (positions: string[]) => string,
-): OpeningCollection {
+export function loadWikibooks(bookDir: string, replay: Replay, ecoOf: EcoOf): OpeningCollection {
   const source = readSource(bookDir);
   const rows = parsePagesTsv(readFileSync(join(bookDir, PAGES_FILE), 'utf8'), PAGES_FILE);
-  return { id: WIKIBOOKS_COLLECTION, source, openings: buildBookOpenings(rows, replay, ecoOf) };
+  return {
+    id: WIKIBOOKS_COLLECTION,
+    source,
+    openings: buildWikibooksOpenings(rows, replay, ecoOf),
+  };
 }

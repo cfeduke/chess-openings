@@ -19,6 +19,10 @@ export const catalogOn = (page: Page) => page.getByRole('navigation', { name: 'O
 export const tabsOn = (page: Page, name: string) =>
   catalogOn(page).getByRole('tablist', { name, exact: true }).getByRole('tab');
 
+/** The tab of the collection called `name`, whether or not a search has put a number on it. */
+export const collectionTabOn = (page: Page, name: string) =>
+  tabsOn(page, 'Collections').filter({ hasText: name });
+
 /** The tabs of the encyclopaedia's volumes, which are what the catalog opens on. */
 export const volumeTabsOn = (page: Page) => tabsOn(page, 'ECO volumes');
 
@@ -37,12 +41,22 @@ export const controlsOn = (page: Page) => page.getByRole('group', { name: 'Playe
 export const PHONE = { viewport: devices['iPhone 13'].viewport, hasTouch: true };
 
 /**
+ * Goes to the address of an opening and waits for it to be on the board. The openings are
+ * fetched after the page is, so the page can be there a moment before the opening: a key
+ * pressed in that moment would have nothing to act on.
+ */
+export async function arriveAt(page: Page, link: string) {
+  await page.goto(link);
+  await movesOn(page).getByRole('button').first().waitFor();
+}
+
+/**
  * Opens an opening and makes its first `moves` moves by hand, leaving it paused: a page that
  * holds still to be looked at, reached without waiting for anything to play.
  */
 export async function stepInto(page: Page, link: string, moves: number) {
   await startWithDelay(page, 5000);
-  await page.goto(link);
+  await arriveAt(page, link);
   await page.keyboard.press('Space');
   for (let move = 0; move < moves; move++) await page.keyboard.press('ArrowRight');
 }

@@ -8,7 +8,7 @@ import {
   TWO_ARRANGEMENTS,
 } from '../../tests/support/pamphlet.ts';
 import { realDataset, realOpenings } from '../../tests/support/real-openings.ts';
-import { buildCatalog, lineLabel } from './catalog.ts';
+import { buildCatalog, type CatalogPlace, fullName, lineLabel } from './catalog.ts';
 
 const najdorf = opening('B90', 'Sicilian Defense: Najdorf Variation', 'e4 c5 Nf3 d6');
 const english = opening(
@@ -171,5 +171,27 @@ describe('lineLabel', () => {
   it('is what distinguishes a line within its family, or "Main line" for the family’s own', () => {
     expect(lineLabel({ variation: 'Giuoco Pianissimo' })).toBe('Giuoco Pianissimo');
     expect(lineLabel({ variation: '' })).toBe('Main line');
+  });
+});
+
+describe('fullName', () => {
+  const real = buildCatalog(realDataset.collections);
+  const placeOf = (collection: number, moves: string) => {
+    const opening = realDataset.collections[collection]?.openings.find(
+      (candidate) => candidate.san.join(' ') === moves,
+    );
+    return real.locate(opening?.id ?? '') as CatalogPlace;
+  };
+
+  it('is the name alone, where the name says which line it is', () => {
+    expect(fullName(placeOf(0, 'Nf3 Nf6 g3 d5 Bg2 c6 O-O Bf5'))).toBe(
+      "King's Indian Attack, with Bf5",
+    );
+    expect(fullName(placeOf(0, 'e4 e5 Nf3 Nc6 Bb5'))).toBe('Ruy Lopez');
+  });
+
+  it('adds what tells a line from the others of its name, where many share one', () => {
+    expect(fullName(placeOf(1, 'e4 e5 Nf3 Nc6 Bb5'))).toBe('Ruy López / Spanish game');
+    expect(fullName(placeOf(1, 'e4 e5 Nf3 Nc6 Bb5 Be7'))).toBe('Ruy López / Spanish game: 3… Be7');
   });
 });

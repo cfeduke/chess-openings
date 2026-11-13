@@ -60,8 +60,9 @@ export interface Arrangement {
   /** What its sections are, all together: `ECO volumes`. */
   sectionsLabel: string;
   /**
-   * Whether a longer name means a more specific line, as lichess's names do. Where it does not,
-   * many lines may share a name, and a search puts the shortest of them first.
+   * Whether a line's name says which line it is, a longer name meaning a more specific line, as
+   * lichess's names do. Where it does not, many lines share a name: a search puts the shortest
+   * of them first, and what tells one from another has to be added to say which is meant.
    */
   namesNest: boolean;
   /** Lays the openings out, each exactly once. Sections may be empty; groups may not. */
@@ -109,6 +110,15 @@ export function lineLabel({ variation }: Pick<CatalogLine, 'variation'>): string
   return variation || 'Main line';
 }
 
+/**
+ * What the opening at a place is called, in full. Where many lines share a name, that is the
+ * name and what tells the line from the rest of its family, written as lichess would write it.
+ */
+export function fullName({ opening, collection, family, index }: CatalogPlace): string {
+  const variation = family.lines[index]?.variation;
+  return collection.namesNest || !variation ? opening.name : `${opening.name}: ${variation}`;
+}
+
 const total = (counted: { count: number }[]) => counted.reduce((sum, { count }) => sum + count, 0);
 
 /**
@@ -135,8 +145,19 @@ export function buildCatalog(
       );
       return { ...plan, groups, count: total(groups) };
     });
-    const search = createSearch(openings, about);
-    const collection = { ...about, id, sections, count: total(sections), search };
+    // Getting a collection ready to be searched takes a moment, and the page is waiting to be
+    // drawn: it is left until someone searches.
+    let search: ReturnType<typeof createSearch> | undefined;
+    const collection: CatalogCollection = {
+      ...about,
+      id,
+      sections,
+      count: total(sections),
+      search(query, limit) {
+        search ??= createSearch(openings, about);
+        return search(query, limit);
+      },
+    };
 
     for (const section of sections) {
       for (const group of section.groups) {

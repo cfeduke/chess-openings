@@ -4,6 +4,7 @@ import {
   type CatalogCollection,
   type CatalogGroup,
   type CatalogSection,
+  fullName,
   lineLabel,
 } from '../catalog/catalog.ts';
 import { formatMoveText } from '../chess/san.ts';
@@ -103,27 +104,23 @@ function tabRow<T>({
       }
       return id;
     },
-    /** Says on each tab how many matches its item has; with `null`, takes the numbers off. */
-    tally(matchesOf: ((item: T) => number) | null) {
+    /** Says on each tab how many matches its item has — or, told nothing, takes the numbers off. */
+    tally(matchesOf?: (item: T) => number) {
       for (const { item, tab, text } of tabs) {
-        const matches = matchesOf?.(item);
-        const counted =
-          matches === undefined
-            ? []
-            : [
-                ' ',
-                el(
-                  'span',
-                  { class: 'tab-count' },
-                  matches.toLocaleString('en'),
-                  el('span', { class: 'visually-hidden' }, matches === 1 ? ' match' : ' matches'),
-                ),
-              ];
-        tab.replaceChildren(text, ...counted);
+        tab.replaceChildren(text, ...(matchesOf ? [' ', matchCount(matchesOf(item))] : []));
       }
     },
   };
 }
+
+/** A number of matches, to go on a tab: the number to look at, and the word to go with it. */
+const matchCount = (matches: number) =>
+  el(
+    'span',
+    { class: 'tab-count' },
+    matches.toLocaleString('en'),
+    el('span', { class: 'visually-hidden' }, matches === 1 ? ' match' : ' matches'),
+  );
 
 const count = (openings: number) =>
   `${openings.toLocaleString('en')} ${openings === 1 ? 'opening' : 'openings'}`;
@@ -300,18 +297,6 @@ export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogVie
   if (collectionTabs) shelf.setAttribute('role', 'tabpanel');
 
   /**
-   * What a match is called. Where names nest, its name says which line it is. Where many lines
-   * share a name, what tells it from the rest of its family is added, as lichess would write it.
-   */
-  const nameAmongMatches = (opening: Opening): string => {
-    const place = catalog.locate(opening.id);
-    const variation = place?.family.lines[place.index]?.variation;
-    return place?.collection.namesNest || !variation
-      ? opening.name
-      : `${opening.name}: ${variation}`;
-  };
-
-  /**
    * Looks for what is in the search box in the collection on show, and lists what it finds in
    * place of the sections — or goes back to the sections when the box is empty. While there is a
    * search, each collection's tab says how many matches that collection has.
@@ -320,16 +305,25 @@ export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogVie
     const query = searchBox.value.trim();
     results.hidden = !query;
     browse.hidden = !results.hidden;
-    collectionTabs?.tally(query ? (collection) => collection.search(query, 0).total : null);
-    if (!query || !onShow) return matches.replaceChildren();
+    if (!query || !onShow) {
+      collectionTabs?.tally();
+      matches.replaceChildren();
+      return;
+    }
 
-    const found = onShow.search(query);
+    const all = new Map(collections.map((collection) => [collection, collection.search(query)]));
+    collectionTabs?.tally((collection) => all.get(collection)?.total ?? 0);
+
+    const found = all.get(onShow) ?? { matches: [], total: 0 };
     const where = collectionTabs ? ` in ${onShow.name}` : '';
     if (found.total === 0) status.textContent = `No openings match “${query}”${where}.`;
     else if (found.total === found.matches.length) status.textContent = count(found.total);
     else status.textContent = `Showing the first ${found.matches.length} of ${count(found.total)}`;
     matches.replaceChildren(
-      ...found.matches.map((opening) => lineItem(opening, nameAmongMatches(opening))),
+      ...found.matches.map((opening) => {
+        const place = catalog.locate(opening.id);
+        return lineItem(opening, place ? fullName(place) : opening.name);
+      }),
     );
     markSelected();
   };

@@ -7,6 +7,7 @@ import type { Arrangement, CatalogFamily, GroupPlan, SectionPlan } from '../cata
 import { formatMoveText } from '../chess/san.ts';
 import type { Opening } from '../data/opening.ts';
 import { foldWords } from '../text/fold.ts';
+import { BOOK, pageAbove, SITE } from './book.ts';
 
 /** The id of the collection that is laid out this way. */
 export const WIKIBOOKS_COLLECTION = 'wikibooks';
@@ -73,12 +74,7 @@ function growTrees(openings: Opening[]): Page[] {
 
   const roots: Page[] = [];
   for (const page of pages.values()) {
-    const { san } = page.opening;
-    let parent: Page | undefined;
-    for (let plies = san.length - 1; plies > 0 && !parent; plies--) {
-      parent = pages.get(san.slice(0, plies).join(' '));
-    }
-    (parent?.children ?? roots).push(page);
+    (pageAbove(pages, page.opening.san)?.children ?? roots).push(page);
   }
 
   const measure = (page: Page): number => {
@@ -94,7 +90,7 @@ function growTrees(openings: Opening[]): Page[] {
 const branch = (page: Page): Page[] => [page, ...page.children.flatMap(branch)];
 
 /** The pages that make up a group, the first being the one the group is named after. */
-type Cut = Page[];
+type Cut = [Page, ...Page[]];
 
 /**
  * Cuts a branch into groups of no more than `limit` pages. A branch that is too big gives up its
@@ -133,10 +129,7 @@ function sharedStart(lines: Opening[]): number {
  * follow the ones they all share. Spellings of a name that differ only in capitals or
  * punctuation are one name.
  */
-function groupOf(pages: Cut): GroupPlan[] {
-  const [root] = pages;
-  if (!root) return [];
-
+function groupOf(pages: Cut): GroupPlan {
   const byName = Map.groupBy(
     pages.map((page) => page.opening),
     (opening) => foldWords(opening.name).join(' '),
@@ -152,8 +145,8 @@ function groupOf(pages: Cut): GroupPlan[] {
     };
   });
 
-  const { id, name, san } = root.opening;
-  return [{ id, codes: '', title: name, moves: san, families }];
+  const { id, name, san } = pages[0].opening;
+  return { id, codes: '', title: name, moves: san, families };
 }
 
 /** Lays the book's lines out by their moves, with no group bigger than `limit`. */
@@ -166,7 +159,7 @@ export function arrangeByMoves(openings: Opening[], limit = GROUP_LIMIT): Sectio
 
   return SECTIONS.map((section) => ({
     ...section,
-    groups: (trees.get(section.id) ?? []).flatMap((tree) => cut(tree, limit)).flatMap(groupOf),
+    groups: (trees.get(section.id) ?? []).flatMap((tree) => cut(tree, limit)).map(groupOf),
   }));
 }
 
@@ -176,7 +169,7 @@ export function arrangeByMoves(openings: Opening[], limit = GROUP_LIMIT): Sectio
  */
 export const WIKIBOOKS_ARRANGEMENT: Arrangement = {
   name: 'Wikibooks',
-  title: 'Chess Opening Theory, a Wikibook',
+  title: `${BOOK}, a Wikibook`,
   sectionsLabel: 'First moves',
   namesNest: false,
   arrange: (openings) => arrangeByMoves(openings),
@@ -184,8 +177,8 @@ export const WIKIBOOKS_ARRANGEMENT: Arrangement = {
     page === undefined
       ? undefined
       : {
-          label: 'Read about this position in Chess Opening Theory, on Wikibooks',
+          label: `Read about this position in ${BOOK}, on Wikibooks`,
           // By its id, the page is found even if it has since been renamed.
-          href: `https://en.wikibooks.org/wiki/Special:Redirect/page/${page}`,
+          href: `https://${SITE}/wiki/Special:Redirect/page/${page}`,
         },
 };

@@ -7,7 +7,7 @@ import { isSlug } from '../../src/text/slug.ts';
 import { realWikibooks as openings, realDataset } from '../../tests/support/real-openings.ts';
 import { DATA_DIR } from './dataset.ts';
 import { createReplayer } from './replay.ts';
-import { buildBookOpenings, PAGES_FILE, parsePagesTsv, WIKIBOOKS_DIR } from './wikibooks.ts';
+import { buildWikibooksOpenings, PAGES_FILE, parsePagesTsv, WIKIBOOKS_DIR } from './wikibooks.ts';
 
 const HEADER = 'page\trevision\tname\tpgn';
 
@@ -35,9 +35,9 @@ describe('parsePagesTsv', () => {
   });
 });
 
-describe('buildBookOpenings', () => {
+describe('buildWikibooksOpenings', () => {
   const build = (rows: [page: number, name: string, pgn: string][]) =>
-    buildBookOpenings(
+    buildWikibooksOpenings(
       rows.map(([page, name, pgn]) => ({ page, revision: page * 10, name, pgn })),
       createReplayer(),
       (positions) => `C${String(positions.length).padStart(2, '0')}`,

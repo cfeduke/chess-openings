@@ -1,5 +1,5 @@
 import './opening-header.css';
-import { type CatalogLine, type CatalogPlace, lineLabel } from '../catalog/catalog.ts';
+import { type CatalogLine, type CatalogPlace, fullName, lineLabel } from '../catalog/catalog.ts';
 import type { Opening } from '../data/opening.ts';
 import { el } from '../dom.ts';
 import { dress, iconButton } from './icon-button.ts';
@@ -61,7 +61,7 @@ export function createOpeningHeader({ onSelect }: { onSelect(opening: Opening): 
       const variation = family.lines[index]?.variation;
       const name = el(
         'h2',
-        { class: 'opening__name', 'aria-label': `${opening.eco} ${opening.name}` },
+        { class: 'opening__name', 'aria-label': `${opening.eco} ${fullName(shown)}` },
         el('span', { class: 'opening__eco eco-badge' }, opening.eco),
         el('span', { class: 'opening__family' }, family.name),
       );

@@ -2,7 +2,8 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { DATA_DIR } from './openings/dataset.ts';
-import { LICHESS_DIR, SOURCE_FILE, type VendoredSource, VOLUME_FILES } from './openings/lichess.ts';
+import { LICHESS_DIR, type VendoredSource, VOLUME_FILES } from './openings/lichess.ts';
+import { SOURCE_FILE } from './openings/source.ts';
 
 const REPOSITORY = 'lichess-org/chess-openings';
 

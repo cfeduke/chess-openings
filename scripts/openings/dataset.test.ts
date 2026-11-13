@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest';
 import { isSlug } from '../../src/text/slug.ts';
 import { realOpenings as openings, realDataset } from '../../tests/support/real-openings.ts';
 import { DATA_DIR, loadDataset } from './dataset.ts';
-import { LICHESS_DIR, SOURCE_FILE, VOLUME_FILES } from './lichess.ts';
+import { LICHESS_DIR, VOLUME_FILES } from './lichess.ts';
+import { SOURCE_FILE } from './source.ts';
 import { WIKIBOOKS_DIR } from './wikibooks.ts';
 
 const LICHESS_DATA_DIR = join(DATA_DIR, LICHESS_DIR);

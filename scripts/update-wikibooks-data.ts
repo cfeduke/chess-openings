@@ -4,18 +4,18 @@ import { join } from 'node:path';
 import { setTimeout as pause } from 'node:timers/promises';
 import { Chess } from 'chess.js';
 import { formatMoveText } from '../src/chess/san.ts';
+import { BOOK, SITE } from '../src/wikibooks/book.ts';
 import { DATA_DIR } from './openings/dataset.ts';
+import { SOURCE_FILE } from './openings/source.ts';
 import {
   PAGE_COLUMNS,
   PAGES_FILE,
   type PageRow,
-  SOURCE_FILE,
-  type VendoredBook,
+  type VendoredWikibook,
   WIKIBOOKS_DIR,
 } from './openings/wikibooks.ts';
-import { BOOK, movesOfTitle, nameOfPage } from './wikibooks/page.ts';
+import { movesOfTitle, nameOfPage } from './wikibooks/page.ts';
 
-const SITE = 'en.wikibooks.org';
 const API = `https://${SITE}/w/api.php`;
 
 /** Every page under the book's title, with the text of its latest revision. */
@@ -104,10 +104,14 @@ export async function updateWikibooksData(dataDir: string, io: UpdateIo): Promis
   )) {
     const moves = movesOfTitle(title);
     const san = moves ? canonicalMoves(moves) : 'not a line';
-    const pgn = typeof san === 'string' ? '' : formatMoveText(san);
+    if (typeof san === 'string') {
+      skipped.push({ title, reason: san });
+      continue;
+    }
+
+    const pgn = formatMoveText(san);
     const same = rows.get(pgn);
-    if (typeof san === 'string') skipped.push({ title, reason: san });
-    else if (same) skipped.push({ title, reason: `the same line as page ${same.page}` });
+    if (same) skipped.push({ title, reason: `the same line as page ${same.page}` });
     else rows.set(pgn, { page, revision, name: nameOfPage(text), pgn });
   }
   if (rows.size === 0) throw new Error(`${API}: "${BOOK}" has no lines`);
@@ -120,7 +124,7 @@ export async function updateWikibooksData(dataDir: string, io: UpdateIo): Promis
     `${[PAGE_COLUMNS.join('\t'), ...table].join('\n')}\n`,
   );
 
-  const source: VendoredBook = {
+  const source: VendoredWikibook = {
     book: BOOK,
     site: SITE,
     license: 'CC-BY-SA-4.0',

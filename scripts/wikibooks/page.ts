@@ -3,9 +3,7 @@
  * The book is written by many hands over many years, so neither is always there to be read.
  */
 import { moveNumber } from '../../src/chess/san.ts';
-
-/** The book. Its pages are its subpages, one for each position. */
-export const BOOK = 'Chess Opening Theory';
+import { BOOK } from '../../src/wikibooks/book.ts';
 
 /** A step of a title: `1. e4` for White's move, `1...e5` for Black's. */
 const STEP = /^(\d+)(\.\.\.|\.)\s*(\S+)$/;
@@ -34,27 +32,18 @@ const POSITION_TEMPLATE = /\{\{\s*Chess Opening\s+Theory\/Position\s*(?=\||\}\})
 
 /** The parameters of the template that starts at `start`, split at the pipes that are its own. */
 function parametersFrom(wikitext: string, start: number): string[] {
-  const parameters: string[] = [];
-  let current = '';
+  // What comes before the first pipe is the template's own name.
+  const parts = [''];
   let depth = 0;
-  for (let at = start; at < wikitext.length; at++) {
-    const pair = wikitext.slice(at, at + 2);
-    if (pair === '{{' || pair === '[[') depth++;
-    if (pair === '}}' || pair === ']]') depth--;
+  for (const [token] of wikitext.slice(start).matchAll(/\{\{|\[\[|\}\}|\]\]|./gs)) {
+    if (token === '{{' || token === '[[') depth++;
+    if (token === '}}' || token === ']]') depth--;
     if (depth === 0) break;
 
-    if (pair === '{{' || pair === '[[' || pair === '}}' || pair === ']]') {
-      current += pair;
-      at++;
-    } else if (wikitext[at] === '|' && depth === 1) {
-      parameters.push(current);
-      current = '';
-    } else {
-      current += wikitext[at];
-    }
+    if (token === '|' && depth === 1) parts.push('');
+    else parts[parts.length - 1] += token;
   }
-  // What came before the first pipe is the template's own name.
-  return [...parameters, current].slice(1);
+  return parts.slice(1);
 }
 
 const tidy = (text: string) => text.replace(/\s+/g, ' ').trim();

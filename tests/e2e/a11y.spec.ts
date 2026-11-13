@@ -1,7 +1,9 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 import {
+  arriveAt,
   catalogOn,
+  collectionTabOn,
   ITALIAN_GAME,
   PHONE,
   pieceFrom,
@@ -45,7 +47,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     }) => {
       await startWithDelay(page, 5000);
       await page.goto('/');
-      await tabsOn(page, 'Collections').filter({ hasText: 'Wikibooks' }).click();
+      await collectionTabOn(page, 'Wikibooks').click();
       await expect(tabsOn(page, 'First moves')).toHaveCount(3);
       expect(await violations(page)).toEqual([]);
 
@@ -126,7 +128,7 @@ test('nothing moves on the board for someone who has asked for reduced motion', 
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await startWithDelay(page, 5000);
-  await page.goto(ITALIAN_GAME);
+  await arriveAt(page, ITALIAN_GAME);
   await page.keyboard.press('Space');
 
   await page.keyboard.press('ArrowRight');

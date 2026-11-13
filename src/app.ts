@@ -3,7 +3,7 @@ import './app.css';
 import { createSoundEffects } from './audio/sound-effects.ts';
 import { APPEARANCES, type Appearances, appearanceById } from './board/appearance.ts';
 import { createBoardView } from './board/board-view.ts';
-import { type Arrangement, buildCatalog } from './catalog/catalog.ts';
+import { type Arrangement, buildCatalog, fullName } from './catalog/catalog.ts';
 import { featuredOpenings } from './catalog/featured.ts';
 import { buildTimeline } from './chess/timeline.ts';
 import { loadOpenings } from './data/load.ts';
@@ -161,13 +161,14 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
     const showFromAddress = () => {
       const place = catalog.locate(openingIdFromHash(location.hash) ?? '') ?? null;
       const opening = place?.opening;
+      const name = place && fullName(place);
       header.show(place);
       catalogView.show(opening ?? null);
-      document.title = opening ? `${opening.name} (${opening.eco}) — Chess Openings` : siteTitle;
+      document.title = opening ? `${name} (${opening.eco}) — Chess Openings` : siteTitle;
       player.load(buildTimeline(opening ?? NO_LINE));
-      if (!opening) return;
+      if (!opening || !name) return;
 
-      announcer.introduce(opening);
+      announcer.introduce({ name, san: opening.san });
       player.play();
     };
 

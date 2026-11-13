@@ -3,6 +3,7 @@ import type { Opening, OpeningsDataset } from '../../src/data/opening.ts';
 import {
   box,
   catalogOn,
+  collectionTabOn,
   linkTo,
   movesOn,
   openingNameOn,
@@ -24,7 +25,7 @@ async function bookLine(page: Page, moves: string): Promise<Opening> {
   return line;
 }
 
-const wikibooksTab = (page: Page) => tabsOn(page, 'Collections').filter({ hasText: 'Wikibooks' });
+const wikibooksTab = (page: Page) => collectionTabOn(page, 'Wikibooks');
 
 test.beforeEach(async ({ page }) => {
   await startWithDelay(page, 400);
@@ -107,8 +108,9 @@ test('the lines of one of its families can be stepped through', async ({ page })
 
   await lines.getByRole('button', { name: /^Next line: 3… / }).click();
 
-  await expect(openingNameOn(page)).toHaveAccessibleName('C60 Ruy López / Spanish game');
+  await expect(openingNameOn(page)).toHaveAccessibleName(/^C60 Ruy López \/ Spanish game: 3… \S+$/);
   await expect(page.locator('.opening__variation')).toHaveText(/^3… /);
+  await expect(page).toHaveTitle(/^Ruy López \/ Spanish game: 3… \S+ \(C60\) — Chess Openings$/);
   await expect(lines).toContainText(/^2 of \d+$/);
   await expect(page).not.toHaveURL(new RegExp(`${line.id}$`));
 });
