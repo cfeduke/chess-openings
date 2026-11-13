@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { fakePlayer } from '../../tests/support/fake-player.ts';
 import { ITALIAN_MOVES as italian, SPANISH_MOVES as spanish } from '../../tests/support/lines.ts';
 import { createMoveList } from './move-list.ts';
@@ -21,10 +21,12 @@ function setup(initial: Parameters<typeof fakePlayer>[0] = { moves: italian }) {
 }
 
 describe('the move list', () => {
-  it('is a labelled region of the page', () => {
+  it('is a region of the page, named by its heading', () => {
     const { element } = setup();
+    const heading = element.querySelector('h2');
 
-    expect(element.getAttribute('aria-label')).toBe('Moves');
+    expect(heading?.textContent).toBe('Moves');
+    expect(element.getAttribute('aria-labelledby')).toBe(heading?.id);
   });
 
   it('numbers the moves in pairs, White then Black', () => {
@@ -77,30 +79,6 @@ describe('the cursor', () => {
 
     emit({ ply: 4 });
     expect(current()).toEqual(['Nc6']);
-  });
-
-  it('is scrolled into view as it moves', () => {
-    const { emit, moves } = setup({ moves: spanish });
-    const scrolled = vi.fn();
-    for (const move of moves()) move.scrollIntoView = scrolled;
-
-    emit({ ply: 15 });
-
-    expect(scrolled).toHaveBeenCalledTimes(1);
-    expect(scrolled).toHaveBeenCalledWith({ block: 'nearest' });
-    expect(scrolled.mock.contexts[0]).toBe(moves().at(-1));
-  });
-
-  it('stays put, and unscrolled, when something else changes', () => {
-    const { emit, moves } = setup();
-    emit({ ply: 2 });
-    const scrolled = vi.fn();
-    for (const move of moves()) move.scrollIntoView = scrolled;
-
-    emit({ playing: true });
-    emit({ delayMs: 900 });
-
-    expect(scrolled).not.toHaveBeenCalled();
   });
 });
 

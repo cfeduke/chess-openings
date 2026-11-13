@@ -152,6 +152,47 @@ test('the openings are fetched once, alongside the page rather than after it', a
   );
 });
 
+test('a first-time visitor can start from a well-known opening', async ({ page }) => {
+  await page.goto('/');
+  const classics = page.getByRole('list', { name: 'Well-known openings' });
+  await expect(classics.getByRole('button')).toHaveText([
+    'Italian Game',
+    'Ruy Lopez',
+    'Sicilian Defense: Najdorf Variation',
+    'French Defense',
+    'Caro-Kann Defense',
+    "Queen's Gambit",
+    "King's Indian Defense",
+    'London System',
+  ]);
+
+  await classics.getByRole('button', { name: 'Ruy Lopez' }).click();
+
+  await expect(openingNameOn(page)).toHaveAccessibleName('C60 Ruy Lopez');
+  await expect(page).toHaveTitle('Ruy Lopez (C60) — Chess Openings');
+  await expect(pieceFrom(page, 'f1')).toHaveAttribute('data-square', 'b5');
+});
+
+test('the lines of a family can be stepped through, one after another', async ({ page }) => {
+  await page.goto(NAJDORF);
+  const lines = page.getByRole('group', { name: 'Lines of Sicilian Defense' });
+  await expect(lines).toContainText(/^1 of \d+$/);
+  await expect(lines.getByRole('button', { name: /^Previous line/ })).toBeDisabled();
+
+  await lines.getByRole('button', { name: /^Next line/ }).click();
+
+  await expect(openingNameOn(page)).toHaveAccessibleName(
+    /^B90 Sicilian Defense: Najdorf Variation, /,
+  );
+  await expect(lines).toContainText(/^2 of \d+$/);
+  await expect(page).not.toHaveURL(/sicilian-defense-najdorf-variation$/);
+  await expect(catalogOn(page).locator('.line[aria-current="true"]')).toBeInViewport();
+
+  await lines.getByRole('button', { name: /^Previous line/ }).click();
+
+  await expect(openingNameOn(page)).toHaveAccessibleName('B90 Sicilian Defense: Najdorf Variation');
+});
+
 test('the page credits its sources', async ({ page }) => {
   await page.goto('/');
 

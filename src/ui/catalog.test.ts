@@ -228,17 +228,6 @@ describe('show', () => {
     expect(all('.line[aria-current]')).toHaveLength(1);
   });
 
-  it('brings the line into view', () => {
-    const scrolled = vi.spyOn(HTMLElement.prototype, 'scrollIntoView').mockImplementation(() => {});
-    const { catalog, line } = setup();
-
-    catalog.show(NAJDORF);
-
-    expect(scrolled).toHaveBeenCalledWith({ block: 'nearest' });
-    expect(scrolled.mock.contexts.at(-1)).toBe(line(NAJDORF.id));
-    scrolled.mockRestore();
-  });
-
   it('moves the mark when another opening is shown, and removes it for none', () => {
     const { catalog, line, all } = setup();
     catalog.show(NAJDORF);

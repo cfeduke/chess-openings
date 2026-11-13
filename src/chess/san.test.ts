@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { foldSan, formatMoveText, givesCheck, looksLikeSan, parseMoveText } from './san.ts';
+import {
+  foldSan,
+  formatMoveText,
+  givesCheck,
+  looksLikeSan,
+  numberedMove,
+  parseMoveText,
+} from './san.ts';
 
 describe('parseMoveText', () => {
   it('drops move numbers and keeps the moves in order', () => {
@@ -75,5 +82,14 @@ describe('givesCheck', () => {
 
   it.each(['e4', 'Nxe5', 'O-O-O', 'e8=Q'])('is false for %j', (san) => {
     expect(givesCheck(san)).toBe(false);
+  });
+});
+
+describe('numberedMove', () => {
+  it('numbers White’s moves with a full stop and Black’s with an ellipsis', () => {
+    expect(numberedMove('e4', 0)).toBe('1. e4');
+    expect(numberedMove('e5', 1)).toBe('1… e5');
+    expect(numberedMove('O-O', 8)).toBe('5. O-O');
+    expect(numberedMove('Qxf7#', 13)).toBe('7… Qxf7#');
   });
 });
