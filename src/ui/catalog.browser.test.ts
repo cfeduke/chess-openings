@@ -141,6 +141,22 @@ describe('the panel in a real browser', () => {
     opening('C50', `Italian Game: Line ${index + 1}`, 'e4 e5 Nf3 Nc6 Bc4'),
   );
 
+  it('starts a section at its top, however far down the last one was left', () => {
+    const sicilians = Array.from({ length: 60 }, (_, index) =>
+      opening('B20', `Sicilian Defense: Line ${index + 1}`, 'e4 c5'),
+    );
+    const { view, element, tab } = mount([encyclopaedia([...longFamily, ...sicilians])]);
+    const panel = element.querySelector('#section-panel') as HTMLElement;
+    view.show(sicilians[0] as (typeof sicilians)[number]);
+    view.show(longFamily[0] as (typeof longFamily)[number]);
+    panel.scrollTop = 500;
+    expect(panel.scrollTop).toBe(500);
+
+    tab('B').click();
+
+    expect(panel.scrollTop).toBe(0);
+  });
+
   it('stays where it was scrolled to when another line already in view is shown', () => {
     const { view, element } = mount([encyclopaedia(longFamily)]);
     const panel = element.querySelector('#section-panel') as HTMLElement;

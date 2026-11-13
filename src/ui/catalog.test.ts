@@ -8,7 +8,7 @@ import {
   TWO_ARRANGEMENTS,
   TWO_COLLECTIONS,
 } from '../../tests/support/pamphlet.ts';
-import { realOpenings } from '../../tests/support/real-openings.ts';
+import { realDataset, realOpenings } from '../../tests/support/real-openings.ts';
 import { buildCatalog } from '../catalog/catalog.ts';
 import type { OpeningCollection } from '../data/opening.ts';
 import { createCatalog } from './catalog.ts';
@@ -724,5 +724,27 @@ describe('with one collection', () => {
     expect(element.querySelector('[role="status"]')?.textContent).toBe(
       'No openings match “gambit”.',
     );
+  });
+});
+
+describe('searching a collection in which many lines share a name', () => {
+  it('tells the matches apart by the moves that follow, as its groups do', () => {
+    const { tab, type, text } = setup(realDataset.collections);
+    tab('Wikibooks')?.click();
+
+    type('ruy lopez spanish');
+
+    expect(text('.catalog__results .line__name').slice(0, 2)).toEqual([
+      'Ruy López / Spanish game',
+      'Ruy López / Spanish game: 3… Be7',
+    ]);
+  });
+
+  it('leaves alone the names of a collection whose names say it all', () => {
+    const { type, text } = setup(realDataset.collections);
+
+    type('kings indian attack with');
+
+    expect(text('.catalog__results .line__name')).toContain("King's Indian Attack, with Bf5");
   });
 });
