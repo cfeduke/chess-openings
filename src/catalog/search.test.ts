@@ -90,6 +90,21 @@ describe('searching by moves', () => {
     expect(names('b4')[0]).toBe('Polish Opening');
   });
 
+  it('narrows by ECO code and by name as well', () => {
+    const najdorfByMoves = realOpenings.filter(
+      (opening) => opening.eco === 'B90' && opening.uci[1] === 'c7c5',
+    );
+    expect(search('b90 e4 c5').total).toBe(najdorfByMoves.length);
+
+    const named = names('e4 c5 naj');
+    expect(named[0]).toBe('Sicilian Defense: Najdorf Variation');
+    expect(named.every((name) => name.includes('Najdorf'))).toBe(true);
+  });
+
+  it('finds nothing in a query that is only a move number', () => {
+    expect(search('1.')).toEqual({ matches: [], total: 0 });
+  });
+
   it('finds nothing for a move order no line uses', () => {
     expect(search('a4 a5 h4 h5 Ra3 Ra6')).toEqual({ matches: [], total: 0 });
   });

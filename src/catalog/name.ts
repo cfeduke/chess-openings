@@ -10,6 +10,7 @@ export interface OpeningName {
  * like `King's Indian Attack, with Bf5`, which belong with the rest of their family.
  */
 export function parseOpeningName(name: string): OpeningName {
-  const [, family = name, variation = ''] = name.match(/^([^:,]+)[:,]\s*(.*)$/) ?? [];
-  return { family, variation };
+  const separator = name.search(/[:,]/);
+  if (separator === -1) return { family: name, variation: '' };
+  return { family: name.slice(0, separator), variation: name.slice(separator + 1).trimStart() };
 }

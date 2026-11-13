@@ -4,6 +4,8 @@
  * complex. This table is that structure: the map the catalog is drawn from.
  */
 
+import { parseMoveText } from '../chess/san.ts';
+
 /** A run of consecutive ECO codes that covers one opening complex. */
 export interface EcoGroup {
   /** First code of the run, e.g. `B90`. Unique, so it doubles as the group's key. */
@@ -11,8 +13,8 @@ export interface EcoGroup {
   /** Last code of the run, e.g. `B99`. Equal to `from` for a single-code group. */
   to: string;
   title: string;
-  /** The moves both sides have played once a game belongs here, e.g. `1. e4 c5`. May be empty. */
-  moves: string;
+  /** The moves both sides have played once a game belongs here, in SAN. Empty if there are none. */
+  moves: string[];
 }
 
 /** One of the five volumes of the encyclopaedia. */
@@ -28,7 +30,7 @@ type GroupRow = [codes: string, title: string, moves: string];
 function volume(letter: string, title: string, summary: string, rows: GroupRow[]): EcoVolume {
   const groups = rows.map(([codes, groupTitle, moves]) => {
     const [from = '', to = from] = codes.split('-').map((number) => `${letter}${number}`);
-    return { from, to, title: groupTitle, moves };
+    return { from, to, title: groupTitle, moves: parseMoveText(moves) };
   });
   return { letter, title, summary, groups };
 }
@@ -196,13 +198,12 @@ export function isEcoCode(text: string): boolean {
   return /^[A-E][0-9]{2}$/.test(text);
 }
 
+const ALL_GROUPS = ECO_VOLUMES.flatMap((volume) => volume.groups);
+
 /** The group an ECO code such as `B90` belongs to. */
 export function ecoGroupOf(eco: string): EcoGroup {
-  const group = isEcoCode(eco)
-    ? ECO_VOLUMES.find((candidate) => candidate.letter === eco[0])?.groups.find(
-        (candidate) => candidate.from <= eco && eco <= candidate.to,
-      )
-    : undefined;
+  const group =
+    isEcoCode(eco) && ALL_GROUPS.find((candidate) => candidate.from <= eco && eco <= candidate.to);
   if (!group) throw new Error(`${JSON.stringify(eco)} is not an ECO code`);
   return group;
 }

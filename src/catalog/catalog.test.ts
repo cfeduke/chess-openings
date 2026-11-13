@@ -40,7 +40,9 @@ describe('buildCatalog', () => {
         families: [
           {
             name: 'Sicilian Defense',
-            lines: [{ opening: najdorf, variation: 'Najdorf Variation' }],
+            lines: [
+              { opening: najdorf, family: 'Sicilian Defense', variation: 'Najdorf Variation' },
+            ],
           },
         ],
       },

@@ -2,10 +2,10 @@ import { cpSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { realDataset } from '../../tests/support/real-openings.ts';
 import { LICHESS_DATA_DIR, loadDataset, SOURCE_FILE, VOLUME_FILES } from './dataset.ts';
 
-// The whole real dataset, built once: the same code path `npm run build` uses.
-const { source, openings } = loadDataset(LICHESS_DATA_DIR);
+const { source, openings } = realDataset;
 
 describe('the lichess dataset', () => {
   it('contains every upstream row', () => {

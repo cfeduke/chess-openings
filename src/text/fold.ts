@@ -12,3 +12,14 @@ export function foldText(text: string): string {
       .replace(/ø/g, 'o')
   );
 }
+
+/**
+ * The words of `text`, folded: `King's Gambit: Bishop's Gambit` → `kings gambit bishops gambit`.
+ * This is what ids are built from and what a search matches against.
+ */
+export function foldWords(text: string): string[] {
+  return foldText(text)
+    .replace(/'/g, '')
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+}

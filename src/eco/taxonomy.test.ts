@@ -1,7 +1,7 @@
 import { Chess } from 'chess.js';
 import { describe, expect, it } from 'vitest';
 import { realOpenings } from '../../tests/support/real-openings.ts';
-import { parseMoveText } from '../chess/san.ts';
+import { formatMoveText } from '../chess/san.ts';
 import { ECO_VOLUMES, ecoGroupOf, ecoRangeLabel } from './taxonomy.ts';
 
 const ALL_CODES = [...'ABCDE'].flatMap((letter) =>
@@ -80,16 +80,24 @@ describe('ECO groups', () => {
 
 describe('defining moves', () => {
   it('exist for every group except the irregular first moves', () => {
-    expect(ALL_GROUPS.filter((group) => !group.moves).map((group) => group.from)).toEqual(['A00']);
+    const without = ALL_GROUPS.filter((group) => group.moves.length === 0);
+
+    expect(without.map((group) => group.from)).toEqual(['A00']);
   });
 
-  it.each(ALL_GROUPS.filter((group) => group.moves))(
-    'of $from ($title) are a legal line: $moves',
+  it('are move lists, like the lines they describe', () => {
+    expect(ecoGroupOf('C65').moves).toEqual(['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'Nf6']);
+    expect(formatMoveText(ecoGroupOf('B90').moves)).toBe(
+      '1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6',
+    );
+  });
+
+  it.each(ALL_GROUPS.map((group) => ({ ...group, line: formatMoveText(group.moves) })))(
+    'of $from ($title) are a legal line: $line',
     ({ moves }) => {
       const game = new Chess();
 
-      for (const san of parseMoveText(moves)) game.move(san, { strict: true });
-      expect(game.history().length).toBeGreaterThan(0);
+      for (const san of moves) game.move(san, { strict: true });
     },
   );
 });
@@ -106,18 +114,17 @@ describe('the real dataset', () => {
     );
 
   it('has openings in every group', () => {
-    expect(ALL_GROUPS.filter((group) => !byGroup.has(group)).map((group) => group.from)).toEqual(
-      [],
-    );
+    const empty = ALL_GROUPS.filter((group) => !byGroup.has(group));
+
+    expect(empty.map((group) => group.from)).toEqual([]);
   });
 
-  it.each(ALL_GROUPS.filter((group) => group.moves))(
+  it.each(ALL_GROUPS)(
     'has the defining moves of $from ($title) in at least 90% of its lines',
     (group) => {
       const lines = byGroup.get(group) ?? [];
-      const defining = parseMoveText(group.moves);
 
-      const matching = lines.filter((opening) => playsAll(opening.san, defining));
+      const matching = lines.filter((opening) => playsAll(opening.san, group.moves));
 
       expect(matching.length / lines.length).toBeGreaterThanOrEqual(0.9);
     },

@@ -1,12 +1,10 @@
 import type { Opening } from '../data/opening.ts';
 import { ECO_VOLUMES, type EcoGroup, type EcoVolume, ecoGroupOf } from '../eco/taxonomy.ts';
-import { parseOpeningName } from './name.ts';
+import { type OpeningName, parseOpeningName } from './name.ts';
 
-/** One opening, labelled by what distinguishes it within its family. */
-export interface CatalogLine {
+/** One opening, with its name split into its family and what distinguishes it within it. */
+export interface CatalogLine extends OpeningName {
   opening: Opening;
-  /** Empty for the family's main line. */
-  variation: string;
 }
 
 /** The lines of one opening family that fall inside one ECO group. */
@@ -46,17 +44,13 @@ export function buildCatalog(openings: Opening[]): CatalogVolume[] {
 
   return ECO_VOLUMES.map((volume) => {
     const groups = volume.groups.flatMap((group): CatalogGroup[] => {
-      const lines = (byGroup.get(group) ?? []).map((opening) => ({
-        opening,
-        ...parseOpeningName(opening.name),
-      }));
+      const lines = (byGroup.get(group) ?? []).map(
+        (opening): CatalogLine => ({ opening, ...parseOpeningName(opening.name) }),
+      );
       if (lines.length === 0) return [];
 
       const families = [...Map.groupBy(lines, (line) => line.family)]
-        .map(([name, familyLines]) => ({
-          name,
-          lines: familyLines.map(({ opening, variation }) => ({ opening, variation })),
-        }))
+        .map(([name, familyLines]) => ({ name, lines: familyLines }))
         .sort((a, b) => b.lines.length - a.lines.length);
       return [{ group, families, count: lines.length }];
     });
