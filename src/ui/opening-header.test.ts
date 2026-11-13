@@ -1,7 +1,12 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from 'vitest';
 import { ITALIAN, NAJDORF, SMALL_BOOK } from '../../tests/support/openings.ts';
-import { BUDAPEST, TWO_ARRANGEMENTS, TWO_COLLECTIONS } from '../../tests/support/pamphlet.ts';
+import {
+  BUDAPEST,
+  DANISH,
+  TWO_ARRANGEMENTS,
+  TWO_COLLECTIONS,
+} from '../../tests/support/pamphlet.ts';
 import { buildCatalog, type CatalogPlace } from '../catalog/catalog.ts';
 import type { Opening } from '../data/opening.ts';
 import { createOpeningHeader } from './opening-header.ts';
@@ -88,6 +93,38 @@ describe('with an opening on the board', () => {
     expect(text('.opening__place')).toBe(
       'Chapter 1. d4 · Queen’s Pawn Gambits › Gambits after 1. d4',
     );
+  });
+
+  it('links to where the opening can be read about, when its collection has such a place', () => {
+    const { header, element } = setup();
+
+    header.show(placeOf(DANISH));
+
+    const link = element.querySelector<HTMLAnchorElement>('.opening__more a');
+    expect(link?.textContent).toBe('Read page 12 of the pamphlet');
+    expect(link?.href).toBe('https://example.org/pamphlet/12');
+  });
+
+  it('has no such link for an opening with nowhere to read about it', () => {
+    const { header, element } = setup();
+
+    header.show(placeOf(BUDAPEST));
+    expect(element.querySelector('.opening__more')).toBeNull();
+
+    header.show(placeOf(NAJDORF));
+    expect(element.querySelector('.opening__more')).toBeNull();
+  });
+
+  it('takes the link away again when the next opening has none, or there is no opening', () => {
+    const { header, element } = setup();
+    header.show(placeOf(DANISH));
+
+    header.show(placeOf(NAJDORF));
+    expect(element.querySelector('.opening__more')).toBeNull();
+
+    header.show(placeOf(DANISH));
+    header.show(null);
+    expect(element.querySelector('.opening__more')).toBeNull();
   });
 
   it('shows a family’s main line without an empty variation', () => {

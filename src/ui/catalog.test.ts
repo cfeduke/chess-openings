@@ -8,9 +8,8 @@ import {
   TWO_ARRANGEMENTS,
   TWO_COLLECTIONS,
 } from '../../tests/support/pamphlet.ts';
-import { realOpenings } from '../../tests/support/real-openings.ts';
+import { realDataset, realOpenings } from '../../tests/support/real-openings.ts';
 import { buildCatalog } from '../catalog/catalog.ts';
-import { createSearch } from '../catalog/search.ts';
 import type { OpeningCollection } from '../data/opening.ts';
 import { createCatalog } from './catalog.ts';
 
@@ -19,7 +18,6 @@ function setup(collections: OpeningCollection[] = [encyclopaedia(SMALL_BOOK)]) {
   const onSelect = vi.fn();
   const catalog = createCatalog({
     catalog: buildCatalog(collections, TWO_ARRANGEMENTS),
-    search: createSearch(collections.flatMap((collection) => collection.openings)),
     onSelect,
   });
   const { element } = catalog;
@@ -603,20 +601,110 @@ describe('with more than one collection', () => {
     expect(onSelect).toHaveBeenCalledWith(DANISH);
   });
 
-  it('searches every collection, and says which one a line outside the first is from', () => {
-    const { type, line, text } = two();
+  describe('searching', () => {
+    /** The tab of the collection called `name`, which while searching says more than its name. */
+    const collectionTab = (tabList: (label: string) => HTMLElement | null, name: string) =>
+      [...(tabList('Collections')?.querySelectorAll<HTMLElement>('[role="tab"]') ?? [])].find(
+        (found) => found.textContent?.startsWith(name),
+      );
 
-    type('gambit');
+    it('looks through the collection on show, and keeps the collection tabs in view', () => {
+      const { element, type, text, tabList } = two();
 
-    expect(text('.catalog__results .line__name')).toHaveLength(4);
-    expect(line(DANISH.id)?.querySelector('.line__source')?.textContent).toBe('Pamphlet');
-    expect(line(DANISH.id)?.querySelector('.line__name')?.textContent).toBe('Danish Gambit');
-    expect(line(DANISH.id)?.textContent).toBe('C21Danish GambitPamphlet1. e4 e5 2. d4 exd4 3. c3');
+      type('ital');
 
-    type('ital');
+      expect(text('.catalog__results .line__name')).toEqual([
+        'Italian Game',
+        'Italian Game: Giuoco Pianissimo',
+        'Four Knights Game: Italian Variation',
+      ]);
+      expect(element.querySelector<HTMLElement>('.catalog__browse')?.hidden).toBe(true);
+      expect(tabList('Collections')?.closest('[hidden]')).toBeNull();
+      expect(tabList('ECO volumes')?.closest('[hidden]')).not.toBeNull();
+    });
 
-    expect(text('.catalog__results .line__name')).toHaveLength(3);
-    expect(text('.catalog__results .line__source')).toEqual([]);
+    it('says on each collection’s tab how many of its lines match', () => {
+      const { type, tabList } = two();
+
+      type('gambit');
+
+      expect(collectionTab(tabList, 'ECO')?.textContent).toBe('ECO 0 matches');
+      expect(collectionTab(tabList, 'Pamphlet')?.textContent).toBe('Pamphlet 4 matches');
+      expect(
+        collectionTab(tabList, 'Pamphlet')?.querySelector('.tab-count')?.firstChild?.textContent,
+      ).toBe('4');
+
+      type('danish');
+
+      expect(collectionTab(tabList, 'Pamphlet')?.textContent).toBe('Pamphlet 1 match');
+    });
+
+    it('says which collection has nothing, when the one on show has no match', () => {
+      const { element, type, all } = two();
+
+      type('gambit');
+
+      expect(element.querySelector('[role="status"]')?.textContent).toBe(
+        'No openings match “gambit” in ECO.',
+      );
+      expect(all('.catalog__results .line')).toEqual([]);
+    });
+
+    it('shows another collection’s matches when its tab is chosen', () => {
+      const { element, type, text, tabList, line } = two();
+      type('gambit');
+
+      collectionTab(tabList, 'Pamphlet')?.click();
+
+      expect(collectionTab(tabList, 'Pamphlet')?.getAttribute('aria-selected')).toBe('true');
+      expect(element.querySelector('[role="status"]')?.textContent).toBe('4 openings');
+      expect(text('.catalog__results .line__name')).toHaveLength(4);
+      expect(line(DANISH.id)?.textContent).toBe('C21Danish Gambit1. e4 e5 2. d4 exd4 3. c3');
+      expect(element.querySelector<HTMLElement>('.catalog__browse')?.hidden).toBe(true);
+    });
+
+    it('holds the matches in the panel of the collection’s tab', () => {
+      const { element, type, tab } = two();
+      const shelf = element.querySelector(`#${tab('ECO')?.getAttribute('aria-controls')}`);
+
+      type('ital');
+
+      expect(shelf?.contains(element.querySelector('.catalog__results .line'))).toBe(true);
+    });
+
+    it('chooses the best match of the collection on show on Enter', () => {
+      const { type, press, searchBox, tabList, onSelect } = two();
+      type('gambit');
+      press(searchBox, 'Enter');
+      expect(onSelect).not.toHaveBeenCalled();
+
+      collectionTab(tabList, 'Pamphlet')?.click();
+      press(searchBox, 'Enter');
+
+      expect(onSelect).toHaveBeenCalledTimes(1);
+      expect(onSelect.mock.calls[0]?.[0].name).toMatch(/Gambit$/);
+    });
+
+    it('takes the numbers off the tabs, and goes back to browsing, when the box is emptied', () => {
+      const { element, type, tabsOf } = two();
+      type('gambit');
+
+      type('');
+
+      expect(tabsOf('Collections')).toEqual(['ECO', 'Pamphlet']);
+      expect(element.querySelector<HTMLElement>('.catalog__browse')?.hidden).toBe(false);
+      expect(element.querySelector<HTMLElement>('.catalog__results')?.hidden).toBe(true);
+    });
+
+    it('follows the opening on the board into its collection, matches and all', () => {
+      const { catalog, element, type, line } = two();
+      type('gambit');
+
+      catalog.show(DANISH);
+
+      expect(element.querySelector('[role="status"]')?.textContent).toBe('4 openings');
+      expect(line(DANISH.id)?.getAttribute('aria-current')).toBe('true');
+    });
   });
 });
 
@@ -626,5 +714,37 @@ describe('with one collection', () => {
 
     expect(tabList('Collections')).toBeNull();
     expect(element.querySelectorAll('[role="tabpanel"]')).toHaveLength(1);
+  });
+
+  it('says that nothing matches without saying where', () => {
+    const { element, type } = setup();
+
+    type('gambit');
+
+    expect(element.querySelector('[role="status"]')?.textContent).toBe(
+      'No openings match “gambit”.',
+    );
+  });
+});
+
+describe('searching a collection in which many lines share a name', () => {
+  it('tells the matches apart by the moves that follow, as its groups do', () => {
+    const { tab, type, text } = setup(realDataset.collections);
+    tab('Wikibooks')?.click();
+
+    type('ruy lopez spanish');
+
+    expect(text('.catalog__results .line__name').slice(0, 2)).toEqual([
+      'Ruy López / Spanish game',
+      'Ruy López / Spanish game: 3… Be7',
+    ]);
+  });
+
+  it('leaves alone the names of a collection whose names say it all', () => {
+    const { type, text } = setup(realDataset.collections);
+
+    type('kings indian attack with');
+
+    expect(text('.catalog__results .line__name')).toContain("King's Indian Attack, with Bf5");
   });
 });

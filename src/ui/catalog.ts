@@ -4,16 +4,15 @@ import {
   type CatalogCollection,
   type CatalogGroup,
   type CatalogSection,
+  fullName,
   lineLabel,
 } from '../catalog/catalog.ts';
-import type { SearchResult } from '../catalog/search.ts';
 import { formatMoveText } from '../chess/san.ts';
 import type { Opening } from '../data/opening.ts';
 import { el, exclusiveAttribute, revealWithin } from '../dom.ts';
 
 interface CatalogOptions {
   catalog: Catalog;
-  search(query: string): SearchResult;
   onSelect(opening: Opening): void;
 }
 
@@ -74,19 +73,22 @@ function tabRow<T>({
     );
     if (name) tab.setAttribute('aria-label', name);
     tab.addEventListener('click', () => onChoose(item));
-    return tab;
+    return { item, tab, text };
   });
-  const element = el('div', { class: className, role: 'tablist', 'aria-label': label }, ...tabs);
+  const element = el(
+    'div',
+    { class: className, role: 'tablist', 'aria-label': label },
+    ...tabs.map(({ tab }) => tab),
+  );
 
   element.addEventListener('keydown', (event) => {
-    const from = tabs.indexOf(event.target as HTMLButtonElement);
-    const to = TAB_KEYS[event.key]?.(from, tabs.length - 1);
-    const item = to === undefined ? undefined : items[to];
-    if (to === undefined || item === undefined) return;
+    const from = tabs.findIndex(({ tab }) => tab === event.target);
+    const to = tabs[TAB_KEYS[event.key]?.(from, tabs.length - 1) ?? -1];
+    if (!to) return;
 
     event.preventDefault();
-    onChoose(item);
-    tabs[to]?.focus();
+    onChoose(to.item);
+    to.tab.focus();
   });
 
   return {
@@ -94,26 +96,40 @@ function tabRow<T>({
     /** Makes the tab of `chosen` the chosen one, and returns its id. */
     mark(chosen: T | undefined): string {
       let id = '';
-      tabs.forEach((tab, index) => {
-        const isChosen = items[index] === chosen;
+      for (const { item, tab } of tabs) {
+        const isChosen = item === chosen;
         tab.setAttribute('aria-selected', String(isChosen));
         tab.setAttribute('tabindex', isChosen ? '0' : '-1');
         if (isChosen) id = tab.id;
-      });
+      }
       return id;
+    },
+    /** Says on each tab how many matches its item has — or, told nothing, takes the numbers off. */
+    tally(matchesOf?: (item: T) => number) {
+      for (const { item, tab, text } of tabs) {
+        tab.replaceChildren(text, ...(matchesOf ? [' ', matchCount(matchesOf(item))] : []));
+      }
     },
   };
 }
+
+/** A number of matches, to go on a tab: the number to look at, and the word to go with it. */
+const matchCount = (matches: number) =>
+  el(
+    'span',
+    { class: 'tab-count' },
+    matches.toLocaleString('en'),
+    el('span', { class: 'visually-hidden' }, matches === 1 ? ' match' : ' matches'),
+  );
 
 const count = (openings: number) =>
   `${openings.toLocaleString('en')} ${openings === 1 ? 'opening' : 'openings'}`;
 
 /**
  * A list item with a button for one opening. `label` is what tells it from its neighbours;
- * `unseen` is read out before it, for when the list it is in already shows that part; `source`
- * says which collection it is from, for when that is not the one a visitor would take it for.
+ * `unseen` is read out before it, for when the list it is in already shows that part.
  */
-function lineItem(opening: Opening, label: string, { unseen = '', source = '' } = {}): HTMLElement {
+function lineItem(opening: Opening, label: string, unseen = ''): HTMLElement {
   const moves = formatMoveText(opening.san);
   const name = el('span', { class: 'line__name' }, label);
   if (unseen) name.prepend(el('span', { class: 'visually-hidden' }, unseen));
@@ -123,15 +139,15 @@ function lineItem(opening: Opening, label: string, { unseen = '', source = '' } 
     { type: 'button', class: 'line', 'data-opening': opening.id, title: moves },
     el('span', { class: 'line__eco eco-badge' }, opening.eco),
     name,
-    ...(source ? [el('span', { class: 'line__source' }, source)] : []),
     el('span', { class: 'line__moves' }, moves),
   );
   return el('li', {}, button);
 }
 
-export function createCatalog({ catalog, search, onSelect }: CatalogOptions): CatalogView {
+export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogView {
   const { collections } = catalog;
-  const [mainCollection] = collections;
+  /** The collection on show: the one being browsed, and the one a search looks in. */
+  let [onShow] = collections;
   let selected: Opening | null = null;
   const holdMark = exclusiveAttribute('aria-current', 'true');
 
@@ -149,8 +165,8 @@ export function createCatalog({ catalog, search, onSelect }: CatalogOptions): Ca
     id: 'section-panel',
     tabindex: 0,
   });
-  /** What there is of the collection on show: the tabs of its sections, and the panel. */
-  const shelf = el('div', { class: 'catalog__shelf', id: 'collection-panel' });
+  /** The collection on show to browse: the tabs of its sections, and the panel. */
+  const browse = el('div', { class: 'catalog__browse' });
 
   /** The two halves of each group: the header that opens it, and where its lines go. */
   const groups = new Map<CatalogGroup, { toggle: HTMLElement; body: HTMLElement }>();
@@ -167,7 +183,7 @@ export function createCatalog({ catalog, search, onSelect }: CatalogOptions): Ca
             'ul',
             { class: 'lines' },
             ...family.lines.map((line) =>
-              lineItem(line.opening, lineLabel(line), { unseen: `${family.name}: ` }),
+              lineItem(line.opening, lineLabel(line), `${family.name}: `),
             ),
           ),
         );
@@ -244,39 +260,6 @@ export function createCatalog({ catalog, search, onSelect }: CatalogOptions): Ca
     }),
   );
 
-  /** Shown only when there is a choice to make. */
-  const collectionTabs =
-    collections.length > 1
-      ? tabRow({
-          label: 'Collections',
-          class: 'catalog__collections',
-          controls: shelf.id,
-          items: collections,
-          about: ({ id, name, title }) => ({ id: `collection-tab-${id}`, text: name, title }),
-          onChoose: (collection) => turnTo(collection),
-        })
-      : null;
-  if (collectionTabs) shelf.setAttribute('role', 'tabpanel');
-
-  /** Turns to a collection, and to one of its sections: the one it was left at, unless told. */
-  const turnTo = (collection: CatalogCollection, section?: CatalogSection) => {
-    const kept = shelves.get(collection);
-    if (!kept) return;
-    kept.current = section ?? kept.current;
-
-    const collectionTab = collectionTabs?.mark(collection);
-    if (collectionTab) shelf.setAttribute('aria-labelledby', collectionTab);
-    panel.setAttribute('aria-labelledby', kept.sectionTabs.mark(kept.current));
-
-    // Only what has changed is put in place: taking the panel or its page out of the document,
-    // even to put it straight back, would lose how far the panel had been scrolled.
-    const page = (kept.current && kept.pages.get(kept.current)) ?? null;
-    if (kept.sectionTabs.element.parentNode !== shelf) {
-      shelf.replaceChildren(kept.sectionTabs.element, panel);
-    }
-    if (panel.firstChild !== page) panel.replaceChildren(page ?? '');
-  };
-
   // Search --------------------------------------------------------------------------------
 
   const searchBox = el('input', {
@@ -295,27 +278,51 @@ export function createCatalog({ catalog, search, onSelect }: CatalogOptions): Ca
     status,
     matches,
   );
-  const browse = el(
-    'div',
-    { class: 'catalog__browse' },
-    ...(collectionTabs ? [collectionTabs.element] : []),
-    shelf,
-  );
 
+  /** What there is of the collection on show: its sections to browse or, in a search, its matches. */
+  const shelf = el('div', { class: 'catalog__shelf', id: 'collection-panel' }, browse, results);
+
+  /** Shown only when there is a choice to make. */
+  const collectionTabs =
+    collections.length > 1
+      ? tabRow({
+          label: 'Collections',
+          class: 'catalog__collections',
+          controls: shelf.id,
+          items: collections,
+          about: ({ id, name, title }) => ({ id: `collection-tab-${id}`, text: name, title }),
+          onChoose: (collection) => turnTo(collection),
+        })
+      : null;
+  if (collectionTabs) shelf.setAttribute('role', 'tabpanel');
+
+  /**
+   * Looks for what is in the search box in the collection on show, and lists what it finds in
+   * place of the sections — or goes back to the sections when the box is empty. While there is a
+   * search, each collection's tab says how many matches that collection has.
+   */
   const runSearch = () => {
     const query = searchBox.value.trim();
-    const found = query ? search(query) : { matches: [], total: 0 };
     results.hidden = !query;
     browse.hidden = !results.hidden;
+    if (!query || !onShow) {
+      collectionTabs?.tally();
+      matches.replaceChildren();
+      return;
+    }
 
-    if (found.total === 0) status.textContent = `No openings match “${query}”.`;
+    const all = new Map(collections.map((collection) => [collection, collection.search(query)]));
+    collectionTabs?.tally((collection) => all.get(collection)?.total ?? 0);
+
+    const found = all.get(onShow) ?? { matches: [], total: 0 };
+    const where = collectionTabs ? ` in ${onShow.name}` : '';
+    if (found.total === 0) status.textContent = `No openings match “${query}”${where}.`;
     else if (found.total === found.matches.length) status.textContent = count(found.total);
     else status.textContent = `Showing the first ${found.matches.length} of ${count(found.total)}`;
     matches.replaceChildren(
       ...found.matches.map((opening) => {
-        const from = catalog.locate(opening.id)?.collection;
-        const source = from && from !== mainCollection ? from.name : '';
-        return lineItem(opening, opening.name, { source });
+        const place = catalog.locate(opening.id);
+        return lineItem(opening, place ? fullName(place) : opening.name);
       }),
     );
     markSelected();
@@ -332,12 +339,40 @@ export function createCatalog({ catalog, search, onSelect }: CatalogOptions): Ca
     }
   });
 
+  /** Turns to a collection, and to one of its sections: the one it was left at, unless told. */
+  const turnTo = (collection: CatalogCollection, section?: CatalogSection) => {
+    const kept = shelves.get(collection);
+    if (!kept) return;
+    kept.current = section ?? kept.current;
+
+    const collectionTab = collectionTabs?.mark(collection);
+    if (collectionTab) shelf.setAttribute('aria-labelledby', collectionTab);
+    panel.setAttribute('aria-labelledby', kept.sectionTabs.mark(kept.current));
+
+    // Only what has changed is put in place: taking the panel or its page out of the document,
+    // even to put it straight back, would lose how far the panel had been scrolled.
+    const page = (kept.current && kept.pages.get(kept.current)) ?? null;
+    if (kept.sectionTabs.element.parentNode !== browse) {
+      browse.replaceChildren(kept.sectionTabs.element, panel);
+    }
+    if (panel.firstChild !== page) {
+      panel.replaceChildren(page ?? '');
+      panel.scrollTop = 0;
+    }
+
+    // A search is of the collection on show: when that changes, so does what it finds.
+    if (collection !== onShow) {
+      onShow = collection;
+      runSearch();
+    }
+  };
+
   const element = el(
     'nav',
     { class: 'catalog', 'aria-label': 'Openings' },
     searchBox,
-    browse,
-    results,
+    ...(collectionTabs ? [collectionTabs.element] : []),
+    shelf,
   );
 
   // Lines come and go, so one listener on the catalog answers for all of them.
@@ -347,7 +382,7 @@ export function createCatalog({ catalog, search, onSelect }: CatalogOptions): Ca
     if (chosen) onSelect(chosen.opening);
   });
 
-  if (mainCollection) turnTo(mainCollection);
+  if (onShow) turnTo(onShow);
 
   return {
     element,

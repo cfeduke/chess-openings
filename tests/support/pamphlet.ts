@@ -10,13 +10,14 @@ const gambit = (eco: string, name: string, san: string, uci = ''): Opening => ({
   id: `pamphlet-${slugify(name)}`,
 });
 
-/** The Danish Gambit can be played through; the rest are there to be browsed. */
-export const DANISH = gambit(
-  'C21',
-  'Danish Gambit',
-  'e4 e5 d4 exd4 c3',
-  'e2e4 e7e5 d2d4 e5d4 c2c3',
-);
+/**
+ * The Danish Gambit can be played through, and is on page 12 of the pamphlet; the rest are there
+ * to be browsed.
+ */
+export const DANISH: Opening = {
+  ...gambit('C21', 'Danish Gambit', 'e4 e5 d4 exd4 c3', 'e2e4 e7e5 d2d4 e5d4 c2c3'),
+  page: 12,
+};
 export const BUDAPEST = gambit('A51', 'Budapest Gambit', 'd4 Nf6 c4 e5');
 
 /**
@@ -47,12 +48,21 @@ const CHAPTERS = [
 
 /**
  * How the pamphlet is laid out: a chapter for each pawn White opens with, holding one group that
- * has no codes, in which every gambit is a family of its own.
+ * has no codes, in which every gambit is a family of its own. A gambit can be read about on its
+ * page, if it has one.
  */
 export const PAMPHLET_ARRANGEMENT: Arrangement = {
   name: 'Pamphlet',
   title: 'A Pamphlet of Gambits',
   sectionsLabel: 'Pamphlet chapters',
+  namesNest: false,
+  readMore: ({ page }) =>
+    page === undefined
+      ? undefined
+      : {
+          label: `Read page ${page} of the pamphlet`,
+          href: `https://example.org/pamphlet/${page}`,
+        },
   arrange: (openings) =>
     CHAPTERS.map(({ first, title }) => {
       const gambits = openings.filter((opening) => opening.san[0] === first);

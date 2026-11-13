@@ -22,10 +22,17 @@ export function numberedMove(san: string, index: number): string {
   return `${moveNumber(index)}${index % 2 === 0 ? '.' : '…'} ${san}`;
 }
 
-/** Numbered move text for a list of moves: `['e4', 'c5', 'Nf3']` → `1. e4 c5 2. Nf3`. */
-export function formatMoveText(san: string[]): string {
+/**
+ * Numbered move text for a list of moves: `['e4', 'c5', 'Nf3']` → `1. e4 c5 2. Nf3`. Moves from
+ * the middle of a game are numbered from where they are, given how many half-moves came `before`
+ * them: `['c5', 'Nf3']` after one is `1… c5 2. Nf3`.
+ */
+export function formatMoveText(san: string[], before = 0): string {
   return san
-    .map((move, index) => (index % 2 === 0 ? `${moveNumber(index)}. ${move}` : move))
+    .map((move, index) => {
+      const ply = before + index;
+      return index === 0 || ply % 2 === 0 ? numberedMove(move, ply) : move;
+    })
     .join(' ');
 }
 

@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import {
+  arriveAt,
   boardOn,
   box,
   catalogOn,
@@ -95,7 +96,7 @@ test.describe('on a phone', () => {
   test('the board comes before the catalog for the keyboard and for screen readers too', async ({
     page,
   }) => {
-    await page.goto(ITALIAN_GAME);
+    await arriveAt(page, ITALIAN_GAME);
 
     const boardFirst = await page.evaluate(() => {
       const board = document.querySelector('[aria-label="Chess board"]');

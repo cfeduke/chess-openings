@@ -9,21 +9,29 @@ piece that is about to move is **highlighted**, an **arrow** is drawn to where i
 then it **moves** — while a cursor follows along in the list of moves beside the board.
 
 All 3,865 named lines of [lichess-org/chess-openings](https://github.com/lichess-org/chess-openings)
-are there.
+are there, and so are the 2,600-odd positions that Wikibooks'
+[Chess Opening Theory](https://en.wikibooks.org/wiki/Chess_Opening_Theory) has a page for.
 
 ## Using it
 
-- **Browse** — the catalog has the five ECO volumes as tabs (A Flank, B Semi-Open, C Open and
-  French, D Closed and Semi-Closed, E Indian). Each volume is divided into groups of codes, such as
+- **Browse** — the catalog holds two collections, chosen at its top. **ECO** has the five volumes
+  of the encyclopaedia as tabs (A Flank, B Semi-Open, C Open and French, D Closed and Semi-Closed,
+  E Indian). Each volume is divided into groups of codes, such as
   `B90–B99 Sicilian Defense: Najdorf`, shown with the moves that define them. Open a group to see
-  its opening families and their lines.
+  its opening families and their lines. **Wikibooks** is laid out as the book is, by moves: a tab
+  for 1. e4, one for 1. d4 and one for every other first move, each divided into the parts of the
+  book that follow from one position, such as `Ruy López / Spanish game — 1. e4 e5 2. Nf3 Nc6
+  3. Bb5`.
 - **Search** — by name (`grunfeld exchange`; accents and case do not matter), by ECO code (`C89`),
-  or by moves (`1. e4 c5 2. Nf3 d6`, or just `e4 c5 nf3 d6`). Terms combine: `e4 c5 naj`.
+  or by moves (`1. e4 c5 2. Nf3 d6`, or just `e4 c5 nf3 d6`). Terms combine: `e4 c5 naj`. A
+  search looks in the collection on show; while there is one, each collection's tab says how
+  many of its lines match, and choosing the other shows those.
 - **Watch** — choosing a line plays it. The bar along the bottom has restart, step back,
   play/pause, step forward and jump to end; a slider for the **delay between moves** (0.3–5 s,
   1.5 s to begin with); and buttons to flip the board and switch the sound off.
 - **Step through a family** — the arrows beside an opening's name go to the previous and next
   line of its family.
+- **Read on** — a line of the Wikibook links to its page there, which is where the theory is.
 - **Share** — the address names the opening on the board, so links, bookmarks and the back button
   all work.
 
@@ -55,19 +63,20 @@ the opening data is prepared at build time and fetched by the page as one JSON f
 
 TypeScript, built with Vite, with no UI framework and no runtime dependencies.
 
-| Where           | What                                                                                           |
-| --------------- | ---------------------------------------------------------------------------------------------- |
-| `data/lichess/` | The upstream TSV files, pinned to a commit                                                     |
-| `scripts/`      | Build-time: parse the TSVs, replay every line with chess.js, write `public/openings.json`      |
-| `src/eco/`      | The ECO taxonomy: five volumes, 86 hand-curated groups of codes with their defining moves      |
-| `src/catalog/`  | Collection → section → group → family → line tree, search, the openings offered to a newcomer  |
-| `src/chess/`    | A small board model: enough to play a known-legal line and say what each move did              |
-| `src/board/`    | The board on screen: pieces, highlight, arrow, slides — and its piece sets and board themes    |
-| `src/playback/` | The player: the schedule of a move's three beats and the play/pause/step/seek state            |
-| `src/audio/`    | Sound effects, synthesised with the Web Audio API — there are no audio files                   |
-| `src/ui/`       | Catalog, opening header, move list, transport bar, keyboard shortcuts, screen-reader announcer |
-| `src/app.ts`    | Wires it all together; the address (`#/<opening id>`) is the source of truth for what is shown |
-| `tests/e2e/`    | Playwright specs that drive the built site                                                     |
+| Where            | What                                                                                           |
+| ---------------- | ---------------------------------------------------------------------------------------------- |
+| `data/`          | The vendored opening data, a directory to a source: `lichess/` and `wikibooks/`                |
+| `scripts/`       | Build-time: parse the data, replay every line with chess.js, write `public/openings.json`      |
+| `src/eco/`       | The ECO taxonomy: five volumes, 86 hand-curated groups of codes with their defining moves      |
+| `src/wikibooks/` | How the Wikibook's lines are laid out: by first move, then by the tree of the book's pages     |
+| `src/catalog/`   | Collection → section → group → family → line tree, search, the openings offered to a newcomer  |
+| `src/chess/`     | A small board model: enough to play a known-legal line and say what each move did              |
+| `src/board/`     | The board on screen: pieces, highlight, arrow, slides — and its piece sets and board themes    |
+| `src/playback/`  | The player: the schedule of a move's three beats and the play/pause/step/seek state            |
+| `src/audio/`     | Sound effects, synthesised with the Web Audio API — there are no audio files                   |
+| `src/ui/`        | Catalog, opening header, move list, transport bar, keyboard shortcuts, screen-reader announcer |
+| `src/app.ts`     | Wires it all together; the address (`#/<opening id>`) is the source of truth for what is shown |
+| `tests/e2e/`     | Playwright specs that drive the built site                                                     |
 
 ## Development workflow
 
@@ -183,25 +192,55 @@ appearance is declared that way.
 
 ## Opening data
 
-The openings are the five TSV files from
-[lichess-org/chess-openings](https://github.com/lichess-org/chess-openings), vendored under
-`data/lichess/` and pinned to the upstream commit recorded in `data/lichess/SOURCE.json`.
-
-`npm run data` (run automatically before `dev` and `build`) replays every line with
+The openings come from two sources, each vendored in a directory of `data/`.
+`npm run data` (run automatically before `dev` and `build`) replays every line of both with
 [chess.js](https://github.com/jhlywa/chess.js) and writes `public/openings.json`. Each opening gets
 its ECO code, its name, its moves in both SAN and UCI (so the browser can animate a line without a
-rules engine), and a unique id. Upstream repeats a name once per transposition: the shortest line
-keeps the plain slug of the name and the others add a fingerprint of their own moves, so ids — and
-links to them — survive data updates. The build fails if a row is malformed or a move is illegal.
+rules engine), and a unique id. The build fails if a row is malformed or a move is illegal.
+
+### The encyclopaedia, from lichess
+
+The five TSV files of
+[lichess-org/chess-openings](https://github.com/lichess-org/chess-openings) are under
+`data/lichess/`, pinned to the upstream commit recorded in `data/lichess/SOURCE.json`.
+
+Upstream repeats a name once per transposition: the shortest line keeps the plain slug of the name
+as its id and the others add a fingerprint of their own moves, so ids — and links to them — survive
+data updates.
 
 To pick up new upstream data: `npm run data:update` (optionally with a branch, tag or commit),
 then `npm run verify`.
 
+### Chess Opening Theory, from Wikibooks
+
+[Chess Opening Theory](https://en.wikibooks.org/wiki/Chess_Opening_Theory) has a page for each
+position it discusses, titled by the moves that reach it — `Chess Opening Theory/1. e4/1...e5` —
+and most pages say which opening the position belongs to. `data/wikibooks/pages.tsv` has a row for
+each: the page's id on the wiki, the revision that was read, that name, and the moves.
+`data/wikibooks/SOURCE.json` records the day the book was read, and
+[`data/wikibooks/LICENSE.md`](data/wikibooks/LICENSE.md) the terms the data is under. None of the
+book's prose is vendored; a line links to its page instead.
+
+To read the book again: `npm run data:update:wikibooks`, then `npm run verify`. It asks the
+MediaWiki API for every page, some fifty at a time and no faster than one request a second, and
+takes a few minutes. It lists the pages it leaves out: the book's indexes and manuals, which are
+not lines, and any page whose title is not a legal game. Being a wiki, the book changes under
+you: read the diff of `pages.tsv` before committing it.
+
+What the build makes of a row:
+
+- **Its id** is `wikibooks-<page id>`. A page keeps its id when it is renamed, so links survive.
+- **Its name** is the page's own or, if the page gives none, that of the nearest page above it in
+  the book that does: a page says which opening its position belongs to, so many lines share a
+  name and are told apart by their moves.
+- **Its ECO code** is not the book's: it is the code of the last position on the line that lichess
+  has a name for, however the line reached it — which is how a game is given its opening.
+
 ### Collections
 
 `openings.json` is a list of **collections**: bodies of openings from one source each, laid out
-each in its own way. So far there is one — the encyclopaedia, `eco`, which is the lichess lines
-filed under the five ECO volumes.
+each in its own way. There are two: the encyclopaedia, `eco`, which is the lichess lines filed
+under the five ECO volumes, and `wikibooks`, which is the Wikibook's lines filed by their moves.
 
 A collection is declared in two places, under one id:
 
@@ -209,21 +248,38 @@ A collection is declared in two places, under one id:
   [`scripts/openings/dataset.ts`](scripts/openings/dataset.ts), that gives it its openings and
   its source: what the source is called, where it is, which revision was used and the SPDX
   identifier of its licence. The credits under the catalog are written from that. The
-  encyclopaedia's loader is [`scripts/openings/lichess.ts`](scripts/openings/lichess.ts).
+  encyclopaedia's loader is [`scripts/openings/lichess.ts`](scripts/openings/lichess.ts) and the
+  Wikibook's is [`scripts/openings/wikibooks.ts`](scripts/openings/wikibooks.ts).
 - **The site** ([`src/catalog/arrangements.ts`](src/catalog/arrangements.ts)) gives it an
   _arrangement_: what its tab says, what its sections are called, and a function that files
   every opening under section → group → family → line. The encyclopaedia's sections are the
-  volumes and its groups are runs of ECO codes; another collection can have chapters and no
-  codes at all.
+  volumes and its groups are runs of ECO codes. The Wikibook's
+  ([`src/wikibooks/arrangement.ts`](src/wikibooks/arrangement.ts)) has no codes: its sections are
+  first moves and its groups are pieces of the book's tree of pages — a page and what follows
+  from it, cut wherever a piece would hold more than 120 lines. An arrangement can also say where
+  a line can be read about, which puts a link above the board.
 
 The catalog lists the collections in the order the dataset has them and opens on the first. As
-soon as there is more than one, a row of tabs above the section tabs chooses between them, search
-covers them all, and a search result from any but the first says which collection it is from.
+soon as there is more than one, a row of tabs above the section tabs chooses between them.
+
+Each collection is searched on its own, because what makes one line more general than another
+depends on how the collection names its lines, and the arrangement says which way it is
+(`namesNest`). A lichess name grows with the line — `Family: Variation, Subvariation` — so the
+shortest name comes first. The book gives one name to every position of an opening, so there
+the shortest line comes first, and matches that share a name have the moves that tell them
+apart added to it.
 
 ## Credits
 
 - **Opening names and lines** — [lichess-org/chess-openings](https://github.com/lichess-org/chess-openings),
   released into the public domain (CC0).
+- **The Wikibooks collection** — names and lines from
+  [Chess Opening Theory](https://en.wikibooks.org/wiki/Chess_Opening_Theory) by Wikibooks
+  contributors, used under the
+  [Creative Commons Attribution-ShareAlike 4.0 License](https://creativecommons.org/licenses/by-sa/4.0/).
+  What was taken and what was changed is set out in
+  [`data/wikibooks/LICENSE.md`](data/wikibooks/LICENSE.md); the data derived from the book,
+  `data/wikibooks/pages.tsv`, is offered under the same licence.
 - **Chess pieces** — drawn by Colin M.L. Burnett, from Wikimedia Commons, used under the BSD
   3-Clause License; see [`src/board/pieces/cburnett/LICENSE.md`](src/board/pieces/cburnett/LICENSE.md).
   This is the Classic appearance.

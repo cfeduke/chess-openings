@@ -1,5 +1,33 @@
 import { isEcoCode } from '../../src/eco/taxonomy.ts';
 
+/** One line of a TSV file under its header: its cells, and how to object to them. */
+interface TsvRow {
+  cells: string[];
+  /** Throws an error that names the file and the 1-based line. */
+  fail(problem: string): never;
+}
+
+/** Splits a TSV file with the header `columns` into rows of that many cells. */
+export function parseTsv(text: string, fileName: string, columns: string[]): TsvRow[] {
+  const failAt = (line: number) => (problem: string) => {
+    throw new Error(`${fileName}:${line}: ${problem}`);
+  };
+
+  // Only the final newline is insignificant: a trailing tab is an empty last column.
+  const [header, ...lines] = text.replace(/\n$/, '').split('\n');
+  const expected = columns.join('\t');
+  if (header !== expected) failAt(1)(`expected header ${JSON.stringify(expected)}`);
+
+  return lines.map((line, index) => {
+    const fail = failAt(index + 2);
+    const cells = line.split('\t');
+    if (cells.length !== columns.length) {
+      fail(`expected ${columns.length} columns, found ${cells.length}`);
+    }
+    return { cells, fail };
+  });
+}
+
 /** One row of an upstream `a.tsv`–`e.tsv` file, as written. */
 export interface OpeningRow {
   eco: string;
@@ -7,27 +35,13 @@ export interface OpeningRow {
   pgn: string;
 }
 
-const HEADER = 'eco\tname\tpgn';
-
 /** Parses one upstream TSV file. Errors name `fileName` and the 1-based line. */
 export function parseOpeningsTsv(text: string, fileName: string): OpeningRow[] {
-  const fail = (line: number, problem: string): never => {
-    throw new Error(`${fileName}:${line}: ${problem}`);
-  };
-
-  // Only the final newline is insignificant: a trailing tab is an empty last column.
-  const [header, ...lines] = text.replace(/\n$/, '').split('\n');
-  if (header !== HEADER) fail(1, `expected header ${JSON.stringify(HEADER)}`);
-
-  return lines.map((line, index) => {
-    const lineNumber = index + 2;
-    const columns = line.split('\t');
-    if (columns.length !== 3) fail(lineNumber, `expected 3 columns, found ${columns.length}`);
-
-    const [eco = '', name = '', pgn = ''] = columns;
-    if (!isEcoCode(eco)) fail(lineNumber, `invalid ECO code ${JSON.stringify(eco)}`);
-    if (!name) fail(lineNumber, 'empty name');
-    if (!pgn) fail(lineNumber, 'empty pgn');
+  return parseTsv(text, fileName, ['eco', 'name', 'pgn']).map(({ cells, fail }) => {
+    const [eco = '', name = '', pgn = ''] = cells;
+    if (!isEcoCode(eco)) fail(`invalid ECO code ${JSON.stringify(eco)}`);
+    if (!name) fail('empty name');
+    if (!pgn) fail('empty pgn');
     return { eco, name, pgn };
   });
 }

@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { encyclopaedia, opening, SMALL_BOOK } from '../../tests/support/openings.ts';
 import { TWO_ARRANGEMENTS, TWO_COLLECTIONS } from '../../tests/support/pamphlet.ts';
 import { buildCatalog } from '../catalog/catalog.ts';
-import { createSearch } from '../catalog/search.ts';
 import type { OpeningCollection } from '../data/opening.ts';
 import { el } from '../dom.ts';
 import { createCatalog } from './catalog.ts';
@@ -15,7 +14,6 @@ const NARROWEST = 260;
 function mount(collections: OpeningCollection[] = TWO_COLLECTIONS.collections) {
   const view = createCatalog({
     catalog: buildCatalog(collections, TWO_ARRANGEMENTS),
-    search: createSearch(collections.flatMap((collection) => collection.openings)),
     onSelect: () => {},
   });
   const { element } = view;
@@ -64,6 +62,20 @@ describe('the collection tabs in a real browser', () => {
 
     expect(tabs('Collections').filter((found) => !fits(found))).toEqual([]);
     expect(tabs('ECO volumes').filter((found) => !fits(found))).toEqual([]);
+  });
+
+  it('still fit when a search has put a number on each of them', () => {
+    const { element, tabs, fits } = mount();
+    const search = element.querySelector('input[type="search"]') as HTMLInputElement;
+
+    search.value = 'gambit';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+
+    expect(tabs('Collections').map((found) => found.textContent)).toEqual([
+      'ECO 0 matches',
+      'Pamphlet 4 matches',
+    ]);
+    expect(tabs('Collections').filter((found) => !fits(found))).toEqual([]);
   });
 
   it('show which collection is on show', () => {
@@ -128,6 +140,22 @@ describe('the panel in a real browser', () => {
   const longFamily = Array.from({ length: 60 }, (_, index) =>
     opening('C50', `Italian Game: Line ${index + 1}`, 'e4 e5 Nf3 Nc6 Bc4'),
   );
+
+  it('starts a section at its top, however far down the last one was left', () => {
+    const sicilians = Array.from({ length: 60 }, (_, index) =>
+      opening('B20', `Sicilian Defense: Line ${index + 1}`, 'e4 c5'),
+    );
+    const { view, element, tab } = mount([encyclopaedia([...longFamily, ...sicilians])]);
+    const panel = element.querySelector('#section-panel') as HTMLElement;
+    view.show(sicilians[0] as (typeof sicilians)[number]);
+    view.show(longFamily[0] as (typeof longFamily)[number]);
+    panel.scrollTop = 500;
+    expect(panel.scrollTop).toBe(500);
+
+    tab('B').click();
+
+    expect(panel.scrollTop).toBe(0);
+  });
 
   it('stays where it was scrolled to when another line already in view is shown', () => {
     const { view, element } = mount([encyclopaedia(longFamily)]);

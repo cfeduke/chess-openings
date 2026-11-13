@@ -82,6 +82,13 @@
   color: var(--ink);
 }
 
+/* During a search: how many of a collection's lines match. */
+.tab-count {
+  font-size: 0.78em;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
 /* Sections -------------------------------------------------------------------------------- */
 
 /* However many there are, they share the width between them. */
@@ -237,7 +244,7 @@
 
 .line {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: baseline;
   gap: 1px 8px;
   width: 100%;
@@ -261,24 +268,7 @@
 }
 
 .line__name {
-  grid-column: 2 / -1;
   line-height: 1.25;
-}
-
-/* Which collection a line is from, beside its name. */
-.line:has(.line__source) .line__name {
-  grid-column: 2;
-}
-
-.line__source {
-  align-self: start;
-  padding: 2px 6px;
-  border: 1px solid var(--rule);
-  border-radius: 999px;
-  color: var(--ink-soft);
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
 }
 
 .group__moves {
@@ -286,7 +276,7 @@
 }
 
 .line__moves {
-  grid-column: 2 / -1;
+  grid-column: 2;
 }
 
 /* The opening on the board. */
@@ -302,9 +292,4 @@
 
 .line[aria-current="true"] .line__eco {
   border-color: transparent;
-}
-
-.line[aria-current="true"] .line__source {
-  border-color: currentcolor;
-  color: inherit;
 }

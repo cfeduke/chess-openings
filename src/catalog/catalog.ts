@@ -1,5 +1,6 @@
 import type { Opening, OpeningCollection } from '../data/opening.ts';
 import { ARRANGEMENTS } from './arrangements.ts';
+import { createSearch, type SearchResult } from './search.ts';
 
 /** One opening, as a line of its family. */
 export interface CatalogLine {
@@ -58,8 +59,19 @@ export interface Arrangement {
   title: string;
   /** What its sections are, all together: `ECO volumes`. */
   sectionsLabel: string;
+  /**
+   * Whether a line's name says which line it is, a longer name meaning a more specific line, as
+   * lichess's names do. Where it does not, many lines share a name: a search puts the shortest
+   * of them first, and what tells one from another has to be added to say which is meant.
+   */
+  namesNest: boolean;
   /** Lays the openings out, each exactly once. Sections may be empty; groups may not. */
   arrange(openings: Opening[]): SectionPlan[];
+  /**
+   * Where a line can be read about, for a collection that has such a place: what to call the
+   * link, and where it leads.
+   */
+  readMore?(opening: Opening): { label: string; href: string } | undefined;
 }
 
 /** A body of openings from one source, laid out by its arrangement. */
@@ -68,6 +80,8 @@ export interface CatalogCollection extends Omit<Arrangement, 'arrange'> {
   sections: CatalogSection[];
   /** Number of lines in the collection. */
   count: number;
+  /** Finds its lines by name, ECO code or moves: the best `limit` of them, and how many in all. */
+  search(query: string, limit?: number): SearchResult;
 }
 
 /** Where one opening is filed. */
@@ -96,6 +110,15 @@ export function lineLabel({ variation }: Pick<CatalogLine, 'variation'>): string
   return variation || 'Main line';
 }
 
+/**
+ * What the opening at a place is called, in full. Where many lines share a name, that is the
+ * name and what tells the line from the rest of its family, written as lichess would write it.
+ */
+export function fullName({ opening, collection, family, index }: CatalogPlace): string {
+  const variation = family.lines[index]?.variation;
+  return collection.namesNest || !variation ? opening.name : `${opening.name}: ${variation}`;
+}
+
 const total = (counted: { count: number }[]) => counted.reduce((sum, { count }) => sum + count, 0);
 
 /**
@@ -122,7 +145,19 @@ export function buildCatalog(
       );
       return { ...plan, groups, count: total(groups) };
     });
-    const collection = { ...about, id, sections, count: total(sections) };
+    // Getting a collection ready to be searched takes a moment, and the page is waiting to be
+    // drawn: it is left until someone searches.
+    let search: ReturnType<typeof createSearch> | undefined;
+    const collection: CatalogCollection = {
+      ...about,
+      id,
+      sections,
+      count: total(sections),
+      search(query, limit) {
+        search ??= createSearch(openings, about);
+        return search(query, limit);
+      },
+    };
 
     for (const section of sections) {
       for (const group of section.groups) {

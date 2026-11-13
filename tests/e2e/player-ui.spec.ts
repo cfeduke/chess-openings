@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import {
+  arriveAt,
   beatsOn,
   boardOn,
   box,
@@ -128,7 +129,7 @@ test.describe('the buttons and keys', () => {
 
   test('the keyboard does the same', async ({ page }) => {
     await startWithDelay(page, 5000);
-    await page.goto(ITALIAN_GAME);
+    await arriveAt(page, ITALIAN_GAME);
     const controls = page.getByRole('group', { name: 'Playback' });
     const pawn = pieceFrom(page, 'e2');
 

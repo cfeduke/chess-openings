@@ -59,6 +59,18 @@
   display: none;
 }
 
+/* Where the opening can be read about: under its name, the full width. */
+.opening__more {
+  grid-column: 1 / -1;
+  margin: 0 0 2px;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+.opening__more a {
+  color: inherit;
+}
+
 /* The well-known openings offered before anything is chosen. */
 .opening__offers {
   grid-column: 1 / -1;
