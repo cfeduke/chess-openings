@@ -63,6 +63,13 @@ test.describe('on a phone', () => {
       expect(Math.min(button.width, button.height), name).toBeGreaterThanOrEqual(40);
     }
     await expect(page.getByRole('slider', { name: 'Delay between moves' })).toBeInViewport();
+
+    // The appearance dropdown is the last thing in the bar, and as easy to hit as a button.
+    const dropdown = await box(controlsOn(page).getByRole('combobox', { name: 'Appearance' }));
+    const sound = await box(controlsOn(page).getByRole('button', { name: 'Sound' }));
+    expect(dropdown.x).toBeGreaterThanOrEqual(sound.x + sound.width);
+    expect(dropdown.x + dropdown.width).toBeLessThanOrEqual(viewport.width);
+    expect(Math.min(dropdown.width, dropdown.height)).toBeGreaterThanOrEqual(40);
   });
 
   test('the page holds still while the cursor travels through the moves', async ({ page }) => {

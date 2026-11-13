@@ -1,10 +1,11 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { STUDY, TWO_APPEARANCES } from '../tests/support/appearances.ts';
 import { ITALIAN, NAJDORF, SMALL_DATASET } from '../tests/support/openings.ts';
 import { mountApp } from './app.ts';
 import type { OpeningsDataset } from './data/opening.ts';
 import { hashForOpening } from './routing.ts';
-import { delaySetting } from './settings.ts';
+import { appearanceSetting, delaySetting } from './settings.ts';
 
 let unmount = new AbortController();
 
@@ -13,7 +14,7 @@ function mount(hash = '', load: () => Promise<OpeningsDataset> = async () => SMA
   history.replaceState(null, '', `/${hash}`);
   const root = document.createElement('div');
   document.body.append(root);
-  const ready = mountApp(root, { load, signal: unmount.signal });
+  const ready = mountApp(root, { load, signal: unmount.signal, appearances: TWO_APPEARANCES });
   const $ = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector);
   return {
     root,
@@ -331,5 +332,64 @@ describe('the credits', () => {
     expect($<HTMLAnchorElement>('.credits a')?.href).toBe(
       'https://github.com/lichess-org/chess-openings/tree/abc1234def',
     );
+  });
+});
+
+describe('the appearance of the board', () => {
+  /** Picks an appearance from the dropdown, as a visitor would. */
+  const choose = (dropdown: HTMLSelectElement | null, id: string) => {
+    if (!dropdown) throw new Error('there is no appearance dropdown');
+    dropdown.value = id;
+    dropdown.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  const DROPDOWN = '[aria-label="Player controls"] select[aria-label="Appearance"]';
+
+  it('is the default one for a first-time visitor, and the dropdown says so', async () => {
+    const { ready, $ } = mount();
+    await ready;
+
+    expect($<HTMLSelectElement>(DROPDOWN)?.value).toBe('classic');
+    expect($('.board')?.dataset.pieces).toBe('cburnett');
+    expect($('.board')?.dataset.theme).toBe('brown');
+  });
+
+  it('changes as soon as another is chosen, and is remembered', async () => {
+    const { ready, $ } = mount(hashForOpening(ITALIAN.id));
+    await ready;
+
+    choose($(DROPDOWN), 'study');
+
+    expect($('.board')?.dataset.pieces).toBe(STUDY.pieces.id);
+    expect($('.board')?.dataset.theme).toBe(STUDY.board.id);
+    expect(appearanceSetting.read()).toBe('study');
+  });
+
+  it('is the one the visitor chose last time', async () => {
+    appearanceSetting.write('study');
+    const { ready, $ } = mount();
+    await ready;
+
+    expect($<HTMLSelectElement>(DROPDOWN)?.value).toBe('study');
+    expect($('.board')?.dataset.pieces).toBe(STUDY.pieces.id);
+  });
+
+  it('is the default one when the one chosen last time is no longer offered', async () => {
+    appearanceSetting.write('retired');
+    const { ready, $ } = mount();
+    await ready;
+
+    expect($<HTMLSelectElement>(DROPDOWN)?.value).toBe('classic');
+    expect($('.board')?.dataset.pieces).toBe('cburnett');
+  });
+
+  it('is credited to whoever drew the pieces in use', async () => {
+    const { ready, $, text } = mount();
+    await ready;
+    expect(text('.credits')).toContain('Chess pieces by Colin M.L. Burnett.');
+
+    choose($(DROPDOWN), 'study');
+
+    expect(text('.credits')).toContain('Chess pieces by A. Tester.');
+    expect(text('.credits')).not.toContain('Burnett');
   });
 });

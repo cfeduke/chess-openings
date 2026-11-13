@@ -163,6 +163,26 @@ test.describe('the buttons and keys', () => {
     await expect(sound).toHaveAttribute('aria-pressed', 'false');
   });
 
+  test('the appearance dropdown ends the controls, at the bottom right', async ({ page }) => {
+    await page.goto(ITALIAN_GAME);
+    const controls = controlsOn(page);
+    const dropdown = controls.getByRole('combobox', { name: 'Appearance' });
+
+    await expect(dropdown).toHaveValue('classic');
+    await expect(dropdown.getByRole('option')).toHaveText(['Classic']);
+    await expect(boardOn(page)).toHaveAttribute('data-pieces', 'cburnett');
+    await expect(boardOn(page)).toHaveAttribute('data-theme', 'brown');
+
+    const bar = await box(controls);
+    const place = await box(dropdown);
+    const sound = await box(controls.getByRole('button', { name: 'Sound' }));
+    // Past the last of the buttons, against the right-hand edge of the bar, and within it.
+    expect(place.x).toBeGreaterThanOrEqual(sound.x + sound.width);
+    expect(bar.x + bar.width - (place.x + place.width)).toBeLessThanOrEqual(24);
+    expect(place.y).toBeGreaterThanOrEqual(bar.y);
+    expect(place.y + place.height).toBeLessThanOrEqual(bar.y + bar.height);
+  });
+
   test('the board can be turned around', async ({ page }) => {
     await page.goto(ITALIAN_GAME);
     const board = boardOn(page);
