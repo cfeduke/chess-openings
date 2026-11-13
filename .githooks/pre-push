@@ -1,0 +1,24 @@
+#!/bin/sh
+# Local replacement for hosted CI: nothing is pushed unless the full verification
+# (lint, typecheck, unit tests, production build, integration tests) passes.
+# Bypass in an emergency with `git push --no-verify`.
+set -e
+
+# Git lists the refs being pushed on stdin: <local ref> <local sha> <remote ref> <remote sha>.
+# Deletions carry an all-zero local sha; they and no-op pushes send no code to verify.
+pushes_code=false
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+  case "$local_sha" in
+    *[!0]*) pushes_code=true ;;
+  esac
+done
+[ "$pushes_code" = true ] || exit 0
+
+# Verification runs on the working tree, so the tree must match the commits being pushed.
+if [ -n "$(git status --porcelain)" ]; then
+  echo "pre-push: commit or stash your changes first, so what is verified is what is pushed." >&2
+  exit 1
+fi
+
+echo "pre-push: running npm run verify"
+npm run verify
