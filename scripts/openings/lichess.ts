@@ -4,6 +4,7 @@ import type { DataSource, OpeningCollection } from '../../src/data/opening.ts';
 import { ECO_COLLECTION } from '../../src/eco/arrangement.ts';
 import { buildOpenings } from './build.ts';
 import { parseOpeningsTsv } from './parse-tsv.ts';
+import type { Replay } from './replay.ts';
 
 /** Where lichess's data is kept within the data directory. */
 export const LICHESS_DIR = 'lichess';
@@ -41,10 +42,10 @@ function readSource(lichessDir: string): DataSource {
 }
 
 /** The encyclopaedia: the named lines in `lichessDir`, each with its ECO code. */
-export function loadEncyclopaedia(lichessDir: string): OpeningCollection {
+export function loadEncyclopaedia(lichessDir: string, replay?: Replay): OpeningCollection {
   const source = readSource(lichessDir);
   const rows = VOLUME_FILES.flatMap((file) =>
     parseOpeningsTsv(readFileSync(join(lichessDir, file), 'utf8'), file),
   );
-  return { id: ECO_COLLECTION, source, openings: buildOpenings(rows) };
+  return { id: ECO_COLLECTION, source, openings: buildOpenings(rows, replay) };
 }

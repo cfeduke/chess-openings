@@ -15,8 +15,18 @@ function mostGeneralFirst(a: Opening, b: Opening): number {
   return a.name.length - b.name.length || a.san.length - b.san.length;
 }
 
+/** General lines before specific ones, where a name says nothing of that: shorter lines first. */
 function shortestLineFirst(a: Opening, b: Opening): number {
-  return a.san.length - b.san.length;
+  return a.san.length - b.san.length || a.name.length - b.name.length;
+}
+
+interface SearchOptions {
+  /**
+   * Whether a longer name means a more specific line, as with lichess's `Family: Variation,
+   * Subvariation`. Where names do not nest — a book gives one name to every position of an
+   * opening — a line is as specific as it is long, and that is what the matches are ordered by.
+   */
+  namesNest?: boolean;
 }
 
 /**
@@ -27,7 +37,10 @@ function shortestLineFirst(a: Opening, b: Opening): number {
  * - moves — `1. e4 c5 2. Nf3`, or just `e4 c5 nf3` — keep the lines that start with them;
  * - anything else — `sicil naj` — must begin a word of the name, ignoring accents and case.
  */
-export function createSearch(openings: Opening[]): (query: string, limit?: number) => SearchResult {
+export function createSearch(
+  openings: Opening[],
+  { namesNest = true }: SearchOptions = {},
+): (query: string, limit?: number) => SearchResult {
   const entries = openings.map((opening) => ({
     opening,
     words: foldWords(opening.name),
@@ -53,7 +66,7 @@ export function createSearch(openings: Opening[]): (query: string, limit?: numbe
           words.every((word) => entry.words.some((candidate) => candidate.startsWith(word))),
       )
       .map((entry) => entry.opening)
-      .sort(moves.length > 0 ? shortestLineFirst : mostGeneralFirst);
+      .sort(moves.length > 0 || !namesNest ? shortestLineFirst : mostGeneralFirst);
     return { matches: found.slice(0, limit), total: found.length };
   };
 }

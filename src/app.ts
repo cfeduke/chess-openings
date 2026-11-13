@@ -5,7 +5,6 @@ import { APPEARANCES, type Appearances, appearanceById } from './board/appearanc
 import { createBoardView } from './board/board-view.ts';
 import { type Arrangement, buildCatalog } from './catalog/catalog.ts';
 import { featuredOpenings } from './catalog/featured.ts';
-import { createSearch } from './catalog/search.ts';
 import { buildTimeline } from './chess/timeline.ts';
 import { loadOpenings } from './data/load.ts';
 import type { DataSource, Opening, OpeningsDataset } from './data/opening.ts';
@@ -34,9 +33,16 @@ interface AppOptions {
 /** The board with nothing chosen: the starting position, and no moves to play. */
 const NO_LINE = { san: [], uci: [] };
 
-/** How the credits put a licence, by its SPDX identifier. One not listed is named as it is. */
-const LICENCES: Record<string, string> = {
-  'CC0-1.0': 'in the public domain',
+/**
+ * How the credits put a licence, by its SPDX identifier: in words, and with a link where the
+ * licence asks to be pointed to. One not listed is named as it is.
+ */
+const LICENCES: Record<string, () => (Node | string)[]> = {
+  'CC0-1.0': () => ['in the public domain'],
+  'CC-BY-SA-4.0': () => [
+    'under ',
+    el('a', { href: 'https://creativecommons.org/licenses/by-sa/4.0/' }, 'CC BY-SA 4.0'),
+  ],
 };
 
 /**
@@ -44,10 +50,11 @@ const LICENCES: Record<string, string> = {
  * keeps up to date — where the pieces do.
  */
 function credits(sources: DataSource[], pieceCredit: HTMLElement): HTMLElement {
-  const openings = sources.flatMap(({ title, url, revision, license }, index) => [
+  const openings = sources.flatMap(({ title, url, author, revision, license }, index) => [
     index === 0 ? 'Openings from ' : '; from ',
     el('a', { href: url }, title),
-    ` @ ${revision}, ${LICENCES[license] ?? `under ${license}`}`,
+    `${author ? ` by ${author}` : ''} @ ${revision}, `,
+    ...(LICENCES[license]?.() ?? [`under ${license}`]),
   ]);
   return el('p', { class: 'credits' }, ...openings, '. Chess pieces ', pieceCredit, '.');
 }
@@ -171,11 +178,7 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
       stage.scrollIntoView({ block: 'nearest' });
     };
 
-    const catalogView = createCatalog({
-      catalog,
-      search: createSearch(dataset.collections.flatMap((collection) => collection.openings)),
-      onSelect: open,
-    });
+    const catalogView = createCatalog({ catalog, onSelect: open });
     catalogPanel.replaceChildren(
       catalogView.element,
       credits(

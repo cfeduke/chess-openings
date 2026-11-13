@@ -55,6 +55,7 @@ export const PAMPHLET_ARRANGEMENT: Arrangement = {
   name: 'Pamphlet',
   title: 'A Pamphlet of Gambits',
   sectionsLabel: 'Pamphlet chapters',
+  namesNest: false,
   readMore: ({ page }) =>
     page === undefined
       ? undefined

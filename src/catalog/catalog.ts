@@ -1,5 +1,6 @@
 import type { Opening, OpeningCollection } from '../data/opening.ts';
 import { ARRANGEMENTS } from './arrangements.ts';
+import { createSearch, type SearchResult } from './search.ts';
 
 /** One opening, as a line of its family. */
 export interface CatalogLine {
@@ -58,8 +59,18 @@ export interface Arrangement {
   title: string;
   /** What its sections are, all together: `ECO volumes`. */
   sectionsLabel: string;
+  /**
+   * Whether a longer name means a more specific line, as lichess's names do. Where it does not,
+   * many lines may share a name, and a search puts the shortest of them first.
+   */
+  namesNest: boolean;
   /** Lays the openings out, each exactly once. Sections may be empty; groups may not. */
   arrange(openings: Opening[]): SectionPlan[];
+  /**
+   * Where a line can be read about, for a collection that has such a place: what to call the
+   * link, and where it leads.
+   */
+  readMore?(opening: Opening): { label: string; href: string } | undefined;
 }
 
 /** A body of openings from one source, laid out by its arrangement. */
@@ -68,6 +79,8 @@ export interface CatalogCollection extends Omit<Arrangement, 'arrange'> {
   sections: CatalogSection[];
   /** Number of lines in the collection. */
   count: number;
+  /** Finds its lines by name, ECO code or moves: the best `limit` of them, and how many in all. */
+  search(query: string, limit?: number): SearchResult;
 }
 
 /** Where one opening is filed. */
@@ -122,7 +135,8 @@ export function buildCatalog(
       );
       return { ...plan, groups, count: total(groups) };
     });
-    const collection = { ...about, id, sections, count: total(sections) };
+    const search = createSearch(openings, about);
+    const collection = { ...about, id, sections, count: total(sections), search };
 
     for (const section of sections) {
       for (const group of section.groups) {

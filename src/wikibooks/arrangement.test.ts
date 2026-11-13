@@ -32,8 +32,8 @@ describe('the Wikibook’s arrangement', () => {
       name: 'Wikibooks',
       title: 'Chess Opening Theory, a Wikibook',
       sectionsLabel: 'First moves',
+      namesNest: false,
     });
-    expect(WIKIBOOKS_ARRANGEMENT.namesNest).toBeFalsy();
   });
 
   it('has a section for 1. e4, one for 1. d4 and one for every other first move', () => {

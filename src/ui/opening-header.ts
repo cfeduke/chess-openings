@@ -20,6 +20,8 @@ export function createOpeningHeader({ onSelect }: { onSelect(opening: Opening): 
   const title = el('div', { class: 'opening__title' });
   /** The well-known openings, while a choice is invited. */
   const offers = el('div', { class: 'opening__offers' });
+  /** The link to where the opening can be read about, while it has such a place. */
+  let more: HTMLElement | null = null;
 
   // The steps to the neighbouring lines of the family. Unlike the rest these stay in place from
   // one line to the next, so that a keyboard on "next" can keep pressing it.
@@ -42,6 +44,9 @@ export function createOpeningHeader({ onSelect }: { onSelect(opening: Opening): 
   const element = el('header', { class: 'opening' }, title, lines, offers);
 
   const render = () => {
+    more?.remove();
+    more = null;
+
     if (!shown) {
       title.replaceChildren(
         el('h2', { class: 'opening__name' }, 'Choose an opening'),
@@ -52,7 +57,7 @@ export function createOpeningHeader({ onSelect }: { onSelect(opening: Opening): 
         ),
       );
     } else {
-      const { opening, section, group, family, index } = shown;
+      const { opening, collection, section, group, family, index } = shown;
       const variation = family.lines[index]?.variation;
       const name = el(
         'h2',
@@ -68,6 +73,12 @@ export function createOpeningHeader({ onSelect }: { onSelect(opening: Opening): 
 
       lines.setAttribute('aria-label', `Lines of ${family.name}`);
       position.textContent = `${index + 1} of ${family.lines.length}`;
+
+      const reading = collection.readMore?.(opening);
+      if (reading) {
+        more = el('p', { class: 'opening__more' }, el('a', { href: reading.href }, reading.label));
+        lines.after(more);
+      }
     }
 
     // A button that has just been disabled cannot hold the focus: pass it to the other one.

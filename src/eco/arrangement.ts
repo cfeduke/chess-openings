@@ -19,6 +19,7 @@ export const ECO_ARRANGEMENT: Arrangement = {
   name: 'ECO',
   title: 'Encyclopaedia of Chess Openings',
   sectionsLabel: 'ECO volumes',
+  namesNest: true,
 
   arrange(openings) {
     const byGroup = Map.groupBy(openings.toSorted(byEcoThenNameThenLength), (opening) =>
