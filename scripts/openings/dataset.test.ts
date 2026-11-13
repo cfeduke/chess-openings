@@ -10,7 +10,8 @@ const openings = decodeOpenings(payload);
 describe('the lichess dataset', () => {
   it('contains every upstream row', () => {
     const upstreamRows = VOLUME_FILES.map(
-      (file) => readFileSync(`${LICHESS_DATA_DIR}/${file}`, 'utf8').trimEnd().split('\n').length - 1,
+      (file) =>
+        readFileSync(`${LICHESS_DATA_DIR}/${file}`, 'utf8').trimEnd().split('\n').length - 1,
     ).reduce((sum, rows) => sum + rows, 0);
 
     expect(openings).toHaveLength(upstreamRows);
@@ -37,13 +38,15 @@ describe('the lichess dataset', () => {
   });
 
   it('knows the Najdorf', () => {
-    expect(openings.find((opening) => opening.id === 'sicilian-defense-najdorf-variation')).toEqual({
-      id: 'sicilian-defense-najdorf-variation',
-      eco: 'B90',
-      name: 'Sicilian Defense: Najdorf Variation',
-      san: ['e4', 'c5', 'Nf3', 'd6', 'd4', 'cxd4', 'Nxd4', 'Nf6', 'Nc3', 'a6'],
-      uci: ['e2e4', 'c7c5', 'g1f3', 'd7d6', 'd2d4', 'c5d4', 'f3d4', 'g8f6', 'b1c3', 'a7a6'],
-    });
+    expect(openings.find((opening) => opening.id === 'sicilian-defense-najdorf-variation')).toEqual(
+      {
+        id: 'sicilian-defense-najdorf-variation',
+        eco: 'B90',
+        name: 'Sicilian Defense: Najdorf Variation',
+        san: ['e4', 'c5', 'Nf3', 'd6', 'd4', 'cxd4', 'Nxd4', 'Nf6', 'Nc3', 'a6'],
+        uci: ['e2e4', 'c7c5', 'g1f3', 'd7d6', 'd2d4', 'c5d4', 'f3d4', 'g8f6', 'b1c3', 'a7a6'],
+      },
+    );
   });
 
   it('records where the data came from', () => {

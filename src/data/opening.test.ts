@@ -28,7 +28,13 @@ describe('openings wire format', () => {
   });
 
   it('round-trips through JSON', () => {
-    const amar: Opening = { id: 'amar-opening', eco: 'A00', name: 'Amar Opening', san: ['Nh3'], uci: ['g1h3'] };
+    const amar: Opening = {
+      id: 'amar-opening',
+      eco: 'A00',
+      name: 'Amar Opening',
+      san: ['Nh3'],
+      uci: ['g1h3'],
+    };
 
     const wire = JSON.parse(JSON.stringify(encodeOpenings(source, [italian, amar])));
 

@@ -32,7 +32,8 @@ describe('updateLichessData', () => {
     expect(upstream.requested).toEqual([
       'https://api.github.com/repos/lichess-org/chess-openings/commits/master',
       ...['a', 'b', 'c', 'd', 'e'].map(
-        (volume) => `https://raw.githubusercontent.com/lichess-org/chess-openings/${SHA}/${volume}.tsv`,
+        (volume) =>
+          `https://raw.githubusercontent.com/lichess-org/chess-openings/${SHA}/${volume}.tsv`,
       ),
     ]);
     expect(upstream.written.get('data/lichess/c.tsv')).toContain(`${SHA}/c.tsv`);

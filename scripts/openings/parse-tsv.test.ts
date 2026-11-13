@@ -14,9 +14,9 @@ describe('parseOpeningsTsv', () => {
   });
 
   it('rejects a file without the expected header', () => {
-    expect(() => parseOpeningsTsv('code\ttitle\tmoves\nA00\tAmar Opening\t1. Nh3\n', 'a.tsv')).toThrow(
-      /a\.tsv:1: expected header "eco\\tname\\tpgn"/,
-    );
+    expect(() =>
+      parseOpeningsTsv('code\ttitle\tmoves\nA00\tAmar Opening\t1. Nh3\n', 'a.tsv'),
+    ).toThrow(/a\.tsv:1: expected header "eco\\tname\\tpgn"/);
   });
 
   it('reports the file and line of a row with the wrong number of columns', () => {
@@ -32,7 +32,11 @@ describe('parseOpeningsTsv', () => {
   });
 
   it('rejects rows with an empty name or move list', () => {
-    expect(() => parseOpeningsTsv(`${HEADER}A00\t\t1. Nh3\n`, 'a.tsv')).toThrow(/a\.tsv:2: empty name/);
-    expect(() => parseOpeningsTsv(`${HEADER}A00\tAmar Opening\t\n`, 'a.tsv')).toThrow(/a\.tsv:2: empty pgn/);
+    expect(() => parseOpeningsTsv(`${HEADER}A00\t\t1. Nh3\n`, 'a.tsv')).toThrow(
+      /a\.tsv:2: empty name/,
+    );
+    expect(() => parseOpeningsTsv(`${HEADER}A00\tAmar Opening\t\n`, 'a.tsv')).toThrow(
+      /a\.tsv:2: empty pgn/,
+    );
   });
 });

@@ -3,7 +3,9 @@ import { buildOpenings } from './build.ts';
 
 describe('buildOpenings', () => {
   it('replays the PGN into SAN and UCI move lists', () => {
-    const [italian] = buildOpenings([{ eco: 'C50', name: 'Italian Game', pgn: '1. e4 e5 2. Nf3 Nc6 3. Bc4' }]);
+    const [italian] = buildOpenings([
+      { eco: 'C50', name: 'Italian Game', pgn: '1. e4 e5 2. Nf3 Nc6 3. Bc4' },
+    ]);
 
     expect(italian).toEqual({
       id: 'italian-game',
@@ -24,9 +26,9 @@ describe('buildOpenings', () => {
   });
 
   it('fails loudly on an illegal move, naming the opening and the move', () => {
-    expect(() => buildOpenings([{ eco: 'C20', name: 'Bongcloud Gone Wrong', pgn: '1. e4 e5 2. Ke3' }])).toThrow(
-      /Bongcloud Gone Wrong.*move 3 \(Ke3\)/,
-    );
+    expect(() =>
+      buildOpenings([{ eco: 'C20', name: 'Bongcloud Gone Wrong', pgn: '1. e4 e5 2. Ke3' }]),
+    ).toThrow(/Bongcloud Gone Wrong.*move 3 \(Ke3\)/);
   });
 
   it('rejects SAN that is not in canonical form', () => {
@@ -49,7 +51,11 @@ describe('buildOpenings', () => {
       const ids = buildOpenings([
         { eco: 'A06', name: 'Nimzo-Larsen Attack: Classical Variation', pgn: '1. Nf3 d5 2. b3' },
         { eco: 'A01', name: 'Nimzo-Larsen Attack: Classical Variation', pgn: '1. b3 d5' },
-        { eco: 'A01', name: 'Nimzo-Larsen Attack: Classical Variation', pgn: '1. b3 d5 2. Bb2 c5 3. e3' },
+        {
+          eco: 'A01',
+          name: 'Nimzo-Larsen Attack: Classical Variation',
+          pgn: '1. b3 d5 2. Bb2 c5 3. e3',
+        },
       ]).map((opening) => opening.id);
 
       expect(ids).toEqual([

@@ -9,7 +9,10 @@ describe('slugify', () => {
     ],
     ["King's Indian Attack, with Bf5", 'kings-indian-attack-with-bf5'],
     ["Queen's Indian Defense, with e3, Bb4+ Line", 'queens-indian-defense-with-e3-bb4-line'],
-    ['English Opening: Fianchetto Line, with .. d6, Be7', 'english-opening-fianchetto-line-with-d6-be7'],
+    [
+      'English Opening: Fianchetto Line, with .. d6, Be7',
+      'english-opening-fianchetto-line-with-d6-be7',
+    ],
     ['Grünfeld Defense', 'grunfeld-defense'],
     ['Réti Opening', 'reti-opening'],
     ['Kádas Opening', 'kadas-opening'],

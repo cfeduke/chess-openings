@@ -8,7 +8,11 @@
     "node": ">=22.18"
   },
   "scripts": {
+    "data": "node scripts/build-openings.ts",
+    "data:update": "node scripts/update-lichess-data.ts",
+    "predev": "npm run data",
     "dev": "vite",
+    "prebuild": "npm run data",
     "build": "vite build",
     "preview": "vite preview",
     "start": "npm run build && npm run preview -- --open",
