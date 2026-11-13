@@ -14,7 +14,7 @@ test('a move is demonstrated in order: highlight the piece, draw the arrow, move
 }) => {
   await recordBeats(page);
   await startWithDelay(page, 500);
-  await page.goto('/');
+  await page.goto('/#/italian-game');
 
   // Let White's first move and Black's reply play.
   await expect(pieceFrom(page, 'e7')).toHaveAttribute('data-square', 'e5');
@@ -40,7 +40,7 @@ test('a move is demonstrated in order: highlight the piece, draw the arrow, move
 
 test('the piece about to move is lifted where it stands', async ({ page }) => {
   await startWithDelay(page, 900);
-  await page.goto('/');
+  await page.goto('/#/italian-game');
 
   // Measured inside the page a quarter of a second after the highlight appears: by then the
   // piece has finished rising, and the move itself is still a while off.

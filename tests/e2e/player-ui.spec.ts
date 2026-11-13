@@ -14,7 +14,7 @@ test.describe('layout', () => {
   test('the moves are listed to the right of the board, and the controls run along the bottom', async ({
     page,
   }) => {
-    await page.goto('/');
+    await page.goto('/#/italian-game');
     const board = await box(boardOn(page));
     const moves = await box(movesOn(page));
     const transport = await box(page.getByRole('group', { name: 'Player controls' }));
@@ -32,7 +32,7 @@ test.describe('the move list', () => {
   test('its cursor follows the pieces', async ({ page }) => {
     await recordBeats(page);
     await startWithDelay(page, 500);
-    await page.goto('/');
+    await page.goto('/#/italian-game');
     const current = movesOn(page).locator('[aria-current="step"]');
 
     await expect(pieceFrom(page, 'e7')).toHaveAttribute('data-square', 'e5');
@@ -58,7 +58,7 @@ test.describe('the move list', () => {
 
   test('clicking a move jumps the board to the position after it', async ({ page }) => {
     await startWithDelay(page, 5000);
-    await page.goto('/');
+    await page.goto('/#/italian-game');
     const moves = movesOn(page);
 
     await moves.getByRole('button', { name: '2… Nc6' }).click();
@@ -76,7 +76,7 @@ test.describe('the move list', () => {
 
 test.describe('the delay slider', () => {
   test('starts at a second and a half, sets the pace, and is remembered', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/#/italian-game');
     const slider = page.getByRole('slider', { name: 'Delay between moves' });
     const readout = page.locator('output');
     await expect(slider).toHaveValue('1500');
@@ -100,7 +100,7 @@ test.describe('the delay slider', () => {
 test.describe('the buttons and keys', () => {
   test('pause, step, jump and play again', async ({ page }) => {
     await startWithDelay(page, 5000);
-    await page.goto('/');
+    await page.goto('/#/italian-game');
     const controls = page.getByRole('group', { name: 'Playback' });
     const pawn = pieceFrom(page, 'e2');
     const bishop = pieceFrom(page, 'f1');
@@ -126,7 +126,7 @@ test.describe('the buttons and keys', () => {
 
   test('the keyboard does the same', async ({ page }) => {
     await startWithDelay(page, 5000);
-    await page.goto('/');
+    await page.goto('/#/italian-game');
     const controls = page.getByRole('group', { name: 'Playback' });
     const pawn = pieceFrom(page, 'e2');
 
@@ -150,7 +150,7 @@ test.describe('the buttons and keys', () => {
   });
 
   test('sound can be switched off, and stays off', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/#/italian-game');
     const sound = page.getByRole('button', { name: 'Sound' });
     await expect(sound).toHaveAttribute('aria-pressed', 'true');
 
@@ -162,7 +162,7 @@ test.describe('the buttons and keys', () => {
   });
 
   test('the board can be turned around', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/#/italian-game');
     const board = boardOn(page);
 
     await page.getByRole('button', { name: 'Flip board' }).click();
