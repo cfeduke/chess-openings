@@ -29,6 +29,11 @@ export const ICONS = {
   flip: stroked('M8 20V5', 'M4.8 8.2 8 5l3.2 3.2', 'M16 4v15', 'M12.8 15.8 16 19l3.2-3.2'),
   soundOn: speaker('M15.2 9.3a4 4 0 0 1 0 5.4', 'M17.8 6.8a7.6 7.6 0 0 1 0 10.4'),
   soundOff: speaker('M15.5 9.5l5 5', 'M20.5 9.5l-5 5'),
+  /** A little chequered board. */
+  appearance: svg(
+    'fill="currentColor"',
+    `${path('M4 4h8v8H4zM12 12h8v8h-8z')}<rect x="4" y="4" width="16" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/>`,
+  ),
 } as const;
 
 export type IconName = keyof typeof ICONS;

@@ -62,7 +62,7 @@ TypeScript, built with Vite, with no UI framework and no runtime dependencies.
 | `src/eco/`      | The ECO taxonomy: five volumes, 86 hand-curated groups of codes with their defining moves      |
 | `src/catalog/`  | Volume → group → family → line tree, search, and the openings offered to a first-time visitor  |
 | `src/chess/`    | A small board model: enough to play a known-legal line and say what each move did              |
-| `src/board/`    | The board on screen: pieces, highlight, arrow, slides                                          |
+| `src/board/`    | The board on screen: pieces, highlight, arrow, slides — and its piece sets and board themes    |
 | `src/playback/` | The player: the schedule of a move's three beats and the play/pause/step/seek state            |
 | `src/audio/`    | Sound effects, synthesised with the Web Audio API — there are no audio files                   |
 | `src/ui/`       | Catalog, opening header, move list, transport bar, keyboard shortcuts, screen-reader announcer |
@@ -111,6 +111,30 @@ The browser tests need Chromium once: `npx playwright install chromium`.
 - **`tests/e2e/*.spec.ts`** drive the production build with Playwright: whole journeys, layouts at
   phone, tablet and desktop sizes, and automated accessibility checks (axe).
 
+## Appearances
+
+The dropdown at the right-hand end of the control bar chooses the board's **appearance**: a piece
+set paired with a board theme. The stylesheet names no artwork and no colour; the board view hands
+it whichever appearance is in use, and the choice is remembered between visits.
+
+**To add a piece set**, make a directory `src/board/pieces/<set-id>/` holding
+
+- twelve SVGs named by colour then piece — `wk wq wr wb wn wp` and `bk bq br bb bn bp` (`n` is the
+  knight) — each on a square canvas with a `viewBox`, since an image is stretched to fill its
+  square; and
+- a `LICENSE.md` saying where the artwork comes from and under what terms it is used,
+
+then declare it in [`src/board/piece-sets.ts`](src/board/piece-sets.ts) with its name and artist.
+The files are found by that naming; the tests fail for a set with a piece missing and for a
+directory nobody declared.
+
+**To add a board theme**, declare its five colours in
+[`src/board/board-themes.ts`](src/board/board-themes.ts): the light and dark squares, the
+translucent tints for the last move and for the piece about to move, and the arrow.
+
+**To offer either to visitors**, pair a piece set with a board theme in
+[`src/board/appearance.ts`](src/board/appearance.ts). The first appearance listed is the default.
+
 ## Opening data
 
 The openings are the five TSV files from
@@ -132,4 +156,4 @@ then `npm run verify`.
 - **Opening names and lines** — [lichess-org/chess-openings](https://github.com/lichess-org/chess-openings),
   released into the public domain (CC0).
 - **Chess pieces** — drawn by Colin M.L. Burnett, from Wikimedia Commons, used under the BSD
-  3-Clause License; see [`src/board/pieces/LICENSE.md`](src/board/pieces/LICENSE.md).
+  3-Clause License; see [`src/board/pieces/cburnett/LICENSE.md`](src/board/pieces/cburnett/LICENSE.md).

@@ -1,12 +1,14 @@
 import './board.css';
 import { FILES, type Move, type Piece, type Position, RANKS, type Square } from '../chess/board.ts';
 import { el, exclusiveClass, setAttributes } from '../dom.ts';
+import { type Appearance, DEFAULT_APPEARANCE } from './appearance.ts';
 import { arrowGeometry, type Cell, type Orientation, squareCell } from './geometry.ts';
 
 /** The chess board on screen. */
 export interface BoardView {
   readonly element: HTMLElement;
   readonly orientation: Orientation;
+  readonly appearance: Appearance;
   /**
    * Shows `position`, tinting the squares of `lastMove`, the move that led to it. Pieces that
    * were already on the board slide to their new squares over `durationMs` and pieces that are
@@ -25,6 +27,8 @@ export interface BoardView {
   /** Removes the highlight and the arrow. */
   clearAnnotations(): void;
   setOrientation(orientation: Orientation): void;
+  /** Changes the pieces' artwork and the board's colours. What is on the board stays as it is. */
+  setAppearance(appearance: Appearance): void;
 }
 
 function svg(name: string, attributes: Record<string, string | number> = {}): SVGElement {
@@ -38,8 +42,11 @@ const div = (className: string) => el('div', { class: className });
 /** Board units with float noise rounded away, for SVG attributes. */
 const unit = (value: number) => Number(value.toFixed(3));
 
-export function createBoardView(options: { orientation?: Orientation } = {}): BoardView {
+export function createBoardView(
+  options: { orientation?: Orientation; appearance?: Appearance } = {},
+): BoardView {
   let orientation = options.orientation ?? 'white';
+  let appearance = options.appearance ?? DEFAULT_APPEARANCE;
 
   const element = div('board');
   setAttributes(element, { role: 'img', 'aria-label': 'Chess board' });
@@ -126,13 +133,34 @@ export function createBoardView(options: { orientation?: Orientation } = {}): Bo
     arrowsLayer.replaceChildren();
   };
 
+  /**
+   * Hands the stylesheet the look to draw: `--piece-wk` and the rest for the artwork,
+   * `--board-light` and the rest for the colours. It names no file and no colour of its own.
+   */
+  const dress = () => {
+    const { pieces, board } = appearance;
+    element.dataset.pieces = pieces.id;
+    element.dataset.theme = board.id;
+    for (const [kind, image] of Object.entries(pieces.artwork)) {
+      element.style.setProperty(`--piece-${kind}`, `url(${JSON.stringify(image)})`);
+    }
+    for (const [name, color] of Object.entries(board.colors)) {
+      element.style.setProperty(`--board-${name}`, color);
+    }
+  };
+
   layOut();
+  dress();
 
   return {
     element,
 
     get orientation() {
       return orientation;
+    },
+
+    get appearance() {
+      return appearance;
     },
 
     setPosition(position, { lastMove, durationMs = 0 } = {}) {
@@ -204,6 +232,11 @@ export function createBoardView(options: { orientation?: Orientation } = {}): Bo
       settle();
       element.style.setProperty('--move-ms', '0ms');
       layOut();
+    },
+
+    setAppearance(next) {
+      appearance = next;
+      dress();
     },
   };
 }

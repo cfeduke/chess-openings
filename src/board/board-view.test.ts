@@ -363,7 +363,7 @@ describe('the board’s appearance', () => {
     expect(element.style.getPropertyValue('--board-dark')).toBe(STUDY.board.colors.dark);
     expect(piece('e2')).toBe(pawn);
     expect(pawn?.dataset.square).toBe('e4');
-    expect(element.querySelector('.square--highlight')?.dataset.square).toBe('e7');
+    expect(element.querySelector<HTMLElement>('.square--highlight')?.dataset.square).toBe('e7');
     expect(element.querySelector('.arrow')).not.toBeNull();
   });
 });

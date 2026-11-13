@@ -10,6 +10,13 @@ interface TransportOptions {
   player: Player;
   sounds: Pick<SoundEffects, 'muted' | 'setMuted'>;
   onFlip(): void;
+  appearance: {
+    /** The looks the board can be given, in the order to list them. */
+    choices: readonly { id: string; name: string }[];
+    /** The id of the one it has now. */
+    chosen: string;
+    onChoose(id: string): void;
+  };
 }
 
 /** `1.5` for a delay of 1500 ms. */
@@ -17,14 +24,14 @@ const seconds = (delayMs: number) => (delayMs / 1000).toFixed(1);
 
 /**
  * The controls along the bottom of the interface: playback buttons, the slider for the delay
- * between moves, and the sound and board-orientation toggles.
+ * between moves, the sound and board-orientation toggles, and the choice of appearance.
  */
 export function createTransport(options: TransportOptions): {
   element: HTMLElement;
   /** Moves the keyboard focus to the play button. */
   focus(): void;
 } {
-  const { player, sounds, onFlip } = options;
+  const { player, sounds, onFlip, appearance } = options;
 
   const restart = iconButton('Restart', 'restart', player.restart);
   const back = iconButton('Step back', 'back', player.stepBack);
@@ -76,7 +83,24 @@ export function createTransport(options: TransportOptions): {
     sound.setAttribute('aria-pressed', String(!sounds.muted));
     sound.innerHTML = sounds.muted ? ICONS.soundOff : ICONS.soundOn;
   };
-  const toggles = el('div', { class: 'transport__toggles' }, flip, sound);
+
+  const dropdown = el(
+    'select',
+    { class: 'appearance__select', 'aria-label': 'Appearance', title: 'Appearance' },
+    ...appearance.choices.map(({ id, name }) => el('option', { value: id }, name)),
+  );
+  dropdown.value = appearance.chosen;
+  dropdown.addEventListener('change', () => appearance.onChoose(dropdown.value));
+  const icon = el('span', { class: 'appearance__icon', 'aria-hidden': 'true' });
+  icon.innerHTML = ICONS.appearance;
+
+  const toggles = el(
+    'div',
+    { class: 'transport__toggles' },
+    flip,
+    sound,
+    el('div', { class: 'appearance' }, icon, dropdown),
+  );
 
   const element = el(
     'footer',

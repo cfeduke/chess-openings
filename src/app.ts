@@ -1,6 +1,7 @@
 import './styles/theme.css';
 import './app.css';
 import { createSoundEffects } from './audio/sound-effects.ts';
+import { APPEARANCES, type Appearances, appearanceById } from './board/appearance.ts';
 import { createBoardView } from './board/board-view.ts';
 import { buildCatalog } from './catalog/catalog.ts';
 import { featuredOpenings } from './catalog/featured.ts';
@@ -11,7 +12,7 @@ import type { DataSource, Opening, OpeningsDataset } from './data/opening.ts';
 import { el } from './dom.ts';
 import { createPlayer } from './playback/player.ts';
 import { hashForOpening, openingIdFromHash } from './routing.ts';
-import { delaySetting, mutedSetting } from './settings.ts';
+import { appearanceSetting, delaySetting, mutedSetting } from './settings.ts';
 import { createAnnouncer } from './ui/announcer.ts';
 import { createCatalog } from './ui/catalog.ts';
 import { createMoveList } from './ui/move-list.ts';
@@ -24,19 +25,27 @@ interface AppOptions {
   load?: () => Promise<OpeningsDataset>;
   /** Aborting it removes the listeners the app has put on the page. */
   signal?: AbortSignal;
+  /** The looks the board can be given, the default first. */
+  appearances?: Appearances;
 }
 
 /** The board with nothing chosen: the starting position, and no moves to play. */
 const NO_LINE = { san: [], uci: [] };
 
-function credits({ repository, commit }: DataSource): HTMLElement {
+/**
+ * Says where the openings come from and, in `artist` — which the caller keeps up to date — who
+ * drew the pieces.
+ */
+function credits({ repository, commit }: DataSource, artist: HTMLElement): HTMLElement {
   const source = el('a', { href: `https://github.com/${repository}/tree/${commit}` }, repository);
   return el(
     'p',
     { class: 'credits' },
     'Openings from ',
     source,
-    ` @ ${commit.slice(0, 7)}, in the public domain. Chess pieces by Colin M.L. Burnett.`,
+    ` @ ${commit.slice(0, 7)}, in the public domain. Chess pieces by `,
+    artist,
+    '.',
   );
 }
 
@@ -45,11 +54,14 @@ function credits({ repository, commit }: DataSource): HTMLElement {
  * when the openings have been fetched, which is when the returned promise settles.
  */
 export async function mountApp(root: HTMLElement, options: AppOptions = {}): Promise<void> {
-  const { load = loadOpenings, signal } = options;
+  const { load = loadOpenings, signal, appearances = APPEARANCES } = options;
   /** The page's title before an opening adds its name to it. */
   const siteTitle = document.title;
 
-  const board = createBoardView();
+  const appearance = appearanceById(appearanceSetting.read(), appearances);
+  const board = createBoardView({ appearance });
+  /** Who drew the pieces on the board, for the credits. */
+  const artist = el('span', {}, appearance.pieces.credit);
   const sounds = createSoundEffects({ muted: mutedSetting });
   const player = createPlayer({ board, sound: sounds.play, delay: delaySetting });
   const announcer = createAnnouncer(player);
@@ -58,6 +70,16 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
     player,
     sounds,
     onFlip: () => board.setOrientation(board.orientation === 'white' ? 'black' : 'white'),
+    appearance: {
+      choices: appearances,
+      chosen: appearance.id,
+      onChoose(id) {
+        const chosen = appearanceById(id, appearances);
+        board.setAppearance(chosen);
+        artist.textContent = chosen.pieces.credit;
+        appearanceSetting.write(chosen.id);
+      },
+    },
   });
 
   /** Puts `opening` on the board, by way of the address. Nothing can be opened until the catalog is. */
@@ -152,7 +174,7 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
       search: createSearch(dataset.openings),
       onSelect: open,
     });
-    catalogPanel.replaceChildren(catalogView.element, credits(dataset.source));
+    catalogPanel.replaceChildren(catalogView.element, credits(dataset.source, artist));
     header.suggest(featuredOpenings(catalog));
 
     window.addEventListener('hashchange', showFromAddress, { signal });
