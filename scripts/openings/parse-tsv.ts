@@ -1,3 +1,5 @@
+import { isEcoCode } from '../../src/eco/taxonomy.ts';
+
 /** One row of an upstream `a.tsv`–`e.tsv` file, as written. */
 export interface OpeningRow {
   eco: string;
@@ -6,7 +8,6 @@ export interface OpeningRow {
 }
 
 const HEADER = 'eco\tname\tpgn';
-const ECO_CODE = /^[A-E][0-9]{2}$/;
 
 /** Parses one upstream TSV file. Errors name `fileName` and the 1-based line. */
 export function parseOpeningsTsv(text: string, fileName: string): OpeningRow[] {
@@ -24,7 +25,7 @@ export function parseOpeningsTsv(text: string, fileName: string): OpeningRow[] {
     if (columns.length !== 3) fail(lineNumber, `expected 3 columns, found ${columns.length}`);
 
     const [eco = '', name = '', pgn = ''] = columns;
-    if (!ECO_CODE.test(eco)) fail(lineNumber, `invalid ECO code ${JSON.stringify(eco)}`);
+    if (!isEcoCode(eco)) fail(lineNumber, `invalid ECO code ${JSON.stringify(eco)}`);
     if (!name) fail(lineNumber, 'empty name');
     if (!pgn) fail(lineNumber, 'empty pgn');
     return { eco, name, pgn };
