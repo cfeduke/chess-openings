@@ -1,10 +1,9 @@
 import { createHash } from 'node:crypto';
 import { Chess } from 'chess.js';
+import { parseMoveText } from '../../src/chess/san.ts';
 import type { Opening } from '../../src/data/opening.ts';
 import { slugify } from '../../src/text/slug.ts';
 import type { OpeningRow } from './parse-tsv.ts';
-
-const MOVE_NUMBER = /^\d+\.+$/;
 
 /** One move, and the position (as FEN) it leads to. */
 interface Ply {
@@ -26,8 +25,7 @@ function replay(name: string, pgn: string, played: Map<string, Ply>): Pick<Openi
   let sequence = '';
   let fen: string | undefined;
   let game: Chess | undefined;
-  for (const token of pgn.split(' ')) {
-    if (MOVE_NUMBER.test(token)) continue;
+  for (const token of parseMoveText(pgn)) {
     sequence += ` ${token}`;
     let ply = played.get(sequence);
     if (!ply) {

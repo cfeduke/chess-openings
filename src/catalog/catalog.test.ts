@@ -62,7 +62,6 @@ describe('buildCatalog', () => {
     ]);
 
     expect(volumeA?.groups[0]?.families).toEqual([
-      { name: 'Zukertort Opening', lines: [expect.objectContaining({ variation: '' })] },
       {
         name: "King's Indian Attack",
         lines: [
@@ -71,6 +70,22 @@ describe('buildCatalog', () => {
           expect.objectContaining({ variation: 'French Variation' }),
         ],
       },
+      { name: 'Zukertort Opening', lines: [expect.objectContaining({ variation: '' })] },
+    ]);
+  });
+
+  it('leads each group with its biggest family, and breaks ties by ECO order', () => {
+    const [volumeA] = buildCatalog([
+      opening('A04', 'Colle System: Rhamphorhynchus Variation', 'Nf3 g6'),
+      opening('A04', 'Zukertort Opening', 'Nf3'),
+      opening('A06', 'Zukertort Opening: Tennison Gambit', 'Nf3 d5 e4'),
+      opening('A09', 'Réti Opening', 'Nf3 d5 c4'),
+    ]);
+
+    expect(volumeA?.groups[0]?.families.map((family) => family.name)).toEqual([
+      'Zukertort Opening',
+      'Colle System',
+      'Réti Opening',
     ]);
   });
 
