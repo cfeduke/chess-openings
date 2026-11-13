@@ -1,14 +1,49 @@
-:root {
-  color-scheme: light dark;
-  font-family: system-ui, sans-serif;
-}
-
-body {
-  margin: 0;
-}
-
 .app {
-  max-width: 560px;
-  margin: 0 auto;
-  padding: 16px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100dvh;
+}
+
+.app__header {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.app__header h1 {
+  margin: 0;
+  font: 600 1.4rem / 1 var(--font-display);
+  letter-spacing: 0.01em;
+}
+
+.app__tagline {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+/*
+ * The board is as large as the window allows once the header and the controls have their
+ * share, and everything beside it is exactly as tall.
+ */
+.app__main {
+  --board-size: clamp(280px, calc(100dvh - 190px), 720px);
+
+  display: grid;
+  grid-template-columns: minmax(0, var(--board-size)) minmax(220px, 300px);
+  grid-template-rows: minmax(0, var(--board-size));
+  justify-content: center;
+  gap: 24px;
+  padding: 24px;
+}
+
+.stage {
+  min-width: 0;
+}
+
+.stage .board {
+  border-radius: 6px;
+  box-shadow: var(--shadow);
 }

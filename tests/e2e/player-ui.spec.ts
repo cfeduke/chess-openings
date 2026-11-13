@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { boardOn, box, startWithDelay } from './support.ts';
+import { beatsOn, boardOn, box, recordBeats, startWithDelay } from './support.ts';
 
 test.describe('layout', () => {
   test('the moves are listed to the right of the board, and the controls run along the bottom', async ({
@@ -21,29 +21,31 @@ test.describe('layout', () => {
 
 test.describe('the move list', () => {
   test('its cursor follows the pieces', async ({ page }) => {
-    await startWithDelay(page, 900);
+    await recordBeats(page);
+    await startWithDelay(page, 500);
     await page.goto('/');
     const board = boardOn(page);
-    const moves = page.getByRole('region', { name: 'Moves' });
-    const current = moves.locator('[aria-current="step"]');
-
-    // Before anything has moved the cursor is on the start.
-    await expect(current).toHaveText('Start');
-
-    // While the board points the first move out, the list marks it as coming — not as made.
-    await expect(board.locator('.square--highlight[data-square="e2"]')).toBeVisible();
-    await expect(moves.locator('.move--pending')).toHaveText('e4');
-    await expect(current).toHaveText('Start');
-
-    // The piece moves, and the cursor with it.
-    await expect(board.locator('.piece[data-piece="e2"]')).toHaveAttribute('data-square', 'e4');
-    await expect(current).toHaveText('e4');
-    await expect(current).toHaveAccessibleName('1. e4');
-    const pointer = await current.evaluate((move) => getComputedStyle(move, '::before').content);
-    expect(pointer).not.toBe('none');
+    const current = page.getByRole('region', { name: 'Moves' }).locator('[aria-current="step"]');
 
     await expect(board.locator('.piece[data-piece="e7"]')).toHaveAttribute('data-square', 'e5');
-    await expect(current).toHaveText('e5');
+
+    // While the board points a move out the list marks it as coming, not as made; the cursor
+    // moves when the piece does.
+    const beats = (await beatsOn(page)).slice(0, 6);
+    expect(beats.map(({ what, cursor, pending }) => ({ what, cursor, pending }))).toEqual([
+      { what: 'highlight e2', cursor: 'Start', pending: 'e4' },
+      { what: 'arrow e2e4', cursor: 'Start', pending: 'e4' },
+      { what: 'move e2e4', cursor: 'e4', pending: null },
+      { what: 'highlight e7', cursor: 'e4', pending: 'e5' },
+      { what: 'arrow e7e5', cursor: 'e4', pending: 'e5' },
+      { what: 'move e7e5', cursor: 'e5', pending: null },
+    ]);
+
+    // The cursor is a visible pointer, and says where it is to a screen reader.
+    await page.getByRole('button', { name: 'Pause' }).click();
+    await expect(current).toHaveAccessibleName(/^\d(\.|…) /);
+    const pointer = await current.evaluate((move) => getComputedStyle(move, '::before').content);
+    expect(pointer).not.toBe('none');
   });
 
   test('clicking a move jumps the board to the position after it', async ({ page }) => {

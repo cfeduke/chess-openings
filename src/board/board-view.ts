@@ -1,5 +1,6 @@
 import './board.css';
 import { FILES, type Move, type Piece, type Position, RANKS, type Square } from '../chess/board.ts';
+import { el, exclusiveClass } from '../dom.ts';
 import { arrowGeometry, type Cell, type Orientation, squareCell } from './geometry.ts';
 
 /** The chess board on screen. */
@@ -36,24 +37,7 @@ function setAttributes(element: Element, attributes: Record<string, string | num
   for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, String(value));
 }
 
-function div(className: string): HTMLElement {
-  const element = document.createElement('div');
-  element.className = className;
-  return element;
-}
-
-/**
- * A CSS class held by a changing set of elements. The returned function hands the class to
- * `holders` and takes it away from whoever held it before.
- */
-function exclusiveClass(className: string): (holders: (Element | undefined)[]) => void {
-  let current: Element[] = [];
-  return (holders) => {
-    for (const holder of current) holder.classList.remove(className);
-    current = holders.filter((holder) => holder !== undefined);
-    for (const holder of current) holder.classList.add(className);
-  };
-}
+const div = (className: string) => el('div', { class: className });
 
 /** Board units with float noise rounded away, for SVG attributes. */
 const unit = (value: number) => Number(value.toFixed(3));
