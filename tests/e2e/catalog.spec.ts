@@ -1,10 +1,10 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { boardOn, box, movesOn, pieceFrom, startWithDelay } from './support.ts';
 
-const catalogOn = (page: import('@playwright/test').Page) =>
-  page.getByRole('navigation', { name: 'Openings' });
-const openingNameOn = (page: import('@playwright/test').Page) =>
-  page.getByRole('heading', { level: 2 }).first();
+const catalogOn = (page: Page) => page.getByRole('navigation', { name: 'Openings' });
+/** The name of the opening on the board, above the board. */
+const openingNameOn = (page: Page) =>
+  page.getByRole('region', { name: 'Board' }).getByRole('heading', { level: 2 });
 
 test.beforeEach(async ({ page }) => {
   await startWithDelay(page, 400);

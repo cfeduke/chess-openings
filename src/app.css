@@ -25,37 +25,79 @@
   font-size: 0.9rem;
 }
 
-/*
- * The working area is a size container, so what is in it can be sized from the room there
- * actually is (`cqw`, `cqh`) rather than from guesses at how tall the header and controls are.
- */
+/* Three columns: the catalog to choose from, the board to watch, the moves to follow. */
 .app__main {
-  --gap: 24px;
-  --moves-width: 280px;
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr) minmax(220px, 280px);
+  gap: 24px;
+  justify-self: center;
+  width: 100%;
+  max-width: 1500px;
+  padding: 24px;
+}
 
+.app__main > * {
+  min-width: 0;
+  min-height: 0;
+}
+
+.catalog-panel {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.catalog-panel__notice {
+  margin: 20px;
+  color: var(--ink-soft);
+}
+
+.catalog-panel__retry {
+  align-self: start;
+  margin: 0 20px;
+  padding: 8px 14px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--paper);
+  cursor: pointer;
+}
+
+.credits {
+  margin: 0;
+  padding: 8px 14px;
+  border-top: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+}
+
+.credits a {
+  color: inherit;
+}
+
+/*
+ * The board takes whatever room the opening's name leaves. Its frame is a size container, so
+ * the board can be the largest square that fits it (`cqw`, `cqh`) without anyone having to
+ * know how tall the header, the name or the controls happen to be.
+ */
+.stage {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 14px;
+}
+
+.stage__board {
   container-type: size;
   display: grid;
-  grid-template-columns: auto var(--moves-width);
-  justify-content: center;
-  align-content: start;
-  gap: var(--gap);
-  padding: var(--gap);
+  justify-items: center;
+  align-items: start;
 }
 
-/* The board is the largest square that fits beside the move list, and the list is as tall. */
-.app__main > * {
-  --board-size: max(240px, min(100cqh, 100cqw - var(--moves-width) - var(--gap)));
-}
-
-.stage {
-  width: var(--board-size);
-}
-
-.stage .board {
+.stage__board .board {
+  width: min(100cqw, 100cqh);
   border-radius: 6px;
   box-shadow: var(--shadow);
-}
-
-.app__main > .move-list {
-  max-height: var(--board-size);
 }

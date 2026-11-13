@@ -55,9 +55,11 @@ describe('on arrival', () => {
   });
 
   it('says it is fetching the openings, then lists them by volume', async () => {
-    const { root, ready, text } = await mount();
+    const fetching = Promise.withResolvers<OpeningsDataset>();
+    const { root, ready, text } = await mount('', () => fetching.promise);
     expect(text('.catalog-panel')).toContain('Loading the openings');
 
+    fetching.resolve(SMALL_DATASET);
     await ready;
 
     expect(root.querySelectorAll('[role="tab"]')).toHaveLength(5);
@@ -214,6 +216,21 @@ describe('the player', () => {
     await ready;
 
     expect($<HTMLInputElement>('input[type="range"]')?.value).toBe('300');
+  });
+});
+
+describe('mounted as the site mounts it, with no options', () => {
+  it('still answers to the keyboard', async () => {
+    vi.stubGlobal('fetch', async () => ({ ok: true, json: async () => SMALL_DATASET }));
+    history.replaceState(null, '', `/${hashForOpening(ITALIAN.id)}`);
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountApp(root);
+
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+
+    expect(root.querySelector('.move-list [aria-current="step"]')?.textContent).toBe('e4');
+    vi.unstubAllGlobals();
   });
 });
 
