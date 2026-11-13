@@ -37,15 +37,14 @@ Every change follows the same loop:
 
 There is no hosted CI (no GitHub Actions). `npm run verify` is the whole pipeline:
 
-| Step              | Command             | What it checks                                         |
-| ----------------- | ------------------- | ------------------------------------------------------ |
-| Lint + format     | `npm run lint`      | Biome                                                  |
-| Types             | `npm run typecheck` | `tsc --noEmit`, strict                                 |
-| Unit tests        | `npm test`          | Vitest (DOM tests run in happy-dom)                    |
-| Build             | `npm run build`     | Production bundle in `dist/`                           |
-| Integration tests | `npm run test:e2e`  | Playwright driving Chromium against the **built** site |
+| Step              | Command             | What it checks                                                   |
+| ----------------- | ------------------- | ---------------------------------------------------------------- |
+| Lint + format     | `npm run lint`      | Biome                                                            |
+| Types             | `npm run typecheck` | `tsc`, strict                                                    |
+| Unit tests        | `npm test`          | Vitest (`*.test.ts`; DOM tests opt into happy-dom)               |
+| Integration tests | `npm run test:e2e`  | Playwright builds the site, then drives Chromium against `dist/` |
 
-`npm install` points git at `.githooks/`, whose `pre-push` hook runs `npm run verify`, so nothing
-reaches the remote without passing the full pipeline.
+`npm install` points git at `.githooks/`, whose `pre-push` hook runs `npm run verify` on a clean
+working tree, so only commits that pass the full pipeline reach the remote.
 
 The first run of the integration tests needs a browser: `npx playwright install chromium`.

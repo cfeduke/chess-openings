@@ -1,22 +1,18 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = 4173;
+// Not Vite's default preview port, so a running `npm start` never collides with a test run.
+const baseURL = 'http://localhost:4319';
 
-// Integration tests exercise the production build, not the dev server:
-// `npm run verify` builds first, then Playwright serves `dist/` with `vite preview`.
+// Integration tests exercise the production build, never the dev server: the web server
+// command rebuilds `dist/` before serving it, however Playwright is invoked.
 export default defineConfig({
   testDir: 'tests/e2e',
   fullyParallel: true,
   forbidOnly: true,
-  reporter: [['list']],
-  use: {
-    baseURL: `http://localhost:${PORT}`,
-    trace: 'retain-on-failure',
-  },
+  use: { baseURL, trace: 'retain-on-failure' },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: `npm run preview -- --port ${PORT} --strictPort`,
-    url: `http://localhost:${PORT}`,
-    reuseExistingServer: false,
+    command: `npm run build && npm run preview -- --port ${new URL(baseURL).port} --strictPort`,
+    url: baseURL,
   },
 });
