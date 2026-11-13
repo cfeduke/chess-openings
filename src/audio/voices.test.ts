@@ -52,9 +52,9 @@ describe('what tells the cues apart', () => {
   const startTimes = (cue: SoundCue) =>
     [...new Set(schedule(cue).context.sources.map((source) => source.startedAt as number))].sort();
   const loudestKnock = (cue: SoundCue) => {
-    const { context } = schedule(cue);
-    const knocks = context.gains.filter((gain) =>
-      context.bufferSources.some((noise) => noise.reaches(gain)),
+    const { context, envelopes } = schedule(cue);
+    const knocks = envelopes.filter((envelope) =>
+      context.bufferSources.some((noise) => noise.reaches(envelope)),
     );
     return Math.max(...knocks.map((knock) => knock.gain.peak));
   };

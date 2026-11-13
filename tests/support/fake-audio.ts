@@ -26,9 +26,10 @@ export class FakeParam {
     return this;
   }
 
-  /** The largest value the parameter is ever given. */
+  /** The largest value the parameter takes: scheduled changes, once there are any, replace `value`. */
   get peak(): number {
-    return Math.max(this.value, ...this.events.map((event) => event.value));
+    if (this.events.length === 0) return this.value;
+    return Math.max(...this.events.map((event) => event.value));
   }
 }
 
