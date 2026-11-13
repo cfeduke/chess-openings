@@ -12,8 +12,6 @@ export interface BoardTheme {
   readonly colors: Readonly<Record<BoardColor, string>>;
 }
 
-// To add a board theme, declare it here and list it in BOARD_THEMES.
-
 export const BROWN: BoardTheme = {
   id: 'brown',
   colors: {
@@ -24,5 +22,3 @@ export const BROWN: BoardTheme = {
     arrow: 'rgb(21 120 27 / 0.85)',
   },
 };
-
-export const BOARD_THEMES: readonly BoardTheme[] = [BROWN];

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="45" height="45" viewBox="0 0 45 45" role="img" aria-label="Black king">
+  <title>Black King — Midnight &amp; Cyan</title>
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#070F17"/>
+      <stop offset="35%" stop-color="#343C46"/>
+      <stop offset="78%" stop-color="#151E29"/>
+      <stop offset="100%" stop-color="#070F17"/>
+    </linearGradient>
+    <linearGradient id="outline"><stop stop-color="#C6E7EF"/></linearGradient>
+    <linearGradient id="detail"><stop stop-color="#30E6F0"/></linearGradient>
+    <linearGradient id="gleam"><stop stop-color="#D7E3E4"/></linearGradient>
+  </defs>
+  <g stroke-width="1.65">
+  <path d="M18.2 28.7 H26.8 L31.2 35.1 H13.8 Z" fill="url(#body)" stroke="url(#outline)" stroke-width="1.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M11.0 18.7 C10.5 13.2 13.5 11.7 17.0 12.1 C19.8 12.3 21.1 14.1 22.5 16.3 C23.9 14.1 25.2 12.3 28.0 12.1 C31.5 11.7 34.5 13.2 34.0 18.7 C33.6 23.1 30.5 26.9 28.0 29.4 H17.0 C14.5 26.9 11.4 23.1 11.0 18.7 Z" fill="url(#body)" stroke="url(#outline)" stroke-width="1.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M20.85 3.4 H24.15 V6.8 H27.3 V9.8 H24.15 V13.1 H20.85 V9.8 H17.7 V6.8 H20.85 Z" fill="url(#body)" stroke="url(#outline)" stroke-width="1.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M16.9 28.1 Q22.5 29.6 28.1 28.1 L28.1 31.1 Q22.5 32.3 16.9 31.1 Z" fill="url(#body)" stroke="url(#outline)" stroke-width="1.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M14.9 16.1 Q13.3 21.1 17.5 26.2" fill="none" stroke="url(#gleam)" stroke-width="1.18" opacity="0.75" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M19.4 30 H25.6" fill="none" stroke="url(#detail)" stroke-width="0.68" opacity="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M22.5 20.1 L25 23.5 L22.5 26.9 L20 23.5 Z" fill="url(#detail)" stroke="none" stroke-width="0" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M13.2 35 H31.8 L33.4 38 H11.6 Z" fill="url(#body)" stroke="url(#outline)" stroke-width="1.55" stroke-linejoin="round" stroke-linecap="round"/><path d="M10.5 38 H34.5 L35.8 41 H9.2 Z" fill="url(#body)" stroke="url(#outline)" stroke-width="1.55" stroke-linejoin="round" stroke-linecap="round"/><path d="M10.3 39.9 H34.7" fill="none" stroke="url(#detail)" stroke-width="1.58" opacity="1" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.1 36.8 H30.9" fill="none" stroke="url(#detail)" stroke-width="0.95" opacity="1" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

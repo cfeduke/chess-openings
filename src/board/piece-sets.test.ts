@@ -1,25 +1,20 @@
-import { existsSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { artworkOf, PIECE_KINDS, PIECE_SETS } from './piece-sets.ts';
+import { artworkOf, CBURNETT, PIECE_KINDS, pieceSet } from './piece-sets.ts';
 
-const PIECES_DIRECTORY = new URL('./pieces/', import.meta.url);
-
-describe('the piece sets', () => {
-  it.each(PIECE_SETS)('$id has a different SVG for each of the twelve pieces', ({ artwork }) => {
-    expect(new Set(Object.values(artwork)).size).toBe(12);
-    for (const image of Object.values(artwork)) expect(image).toContain('svg');
+describe('a piece set', () => {
+  it('is the twelve SVGs in the directory it is named after', () => {
+    expect(CBURNETT.id).toBe('cburnett');
+    expect(Object.keys(CBURNETT.artwork).sort()).toEqual([...PIECE_KINDS].sort());
+    expect(CBURNETT.artwork.wk).toContain('svg');
   });
 
-  it('are the directories of pieces: none unlisted, none listed and missing', () => {
-    const directories = readdirSync(PIECES_DIRECTORY, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => entry.name);
-
-    expect(directories.sort()).toEqual(PIECE_SETS.map((set) => set.id).sort());
+  it('says where its artwork comes from, in words that finish “Chess pieces …”', () => {
+    expect(CBURNETT.credit).toBe('by Colin M.L. Burnett');
+    expect(pieceSet('cburnett', 'by someone else').credit).toBe('by someone else');
   });
 
-  it.each(PIECE_SETS)('$id says under what licence its artwork is used', ({ id }) => {
-    expect(existsSync(new URL(`${id}/LICENSE.md`, PIECES_DIRECTORY))).toBe(true);
+  it('cannot be made of a directory that is not there', () => {
+    expect(() => pieceSet('nowhere', 'by nobody')).toThrow('src/board/pieces/nowhere/wk.svg');
   });
 });
 

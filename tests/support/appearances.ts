@@ -10,7 +10,7 @@ const stencil = (kind: PieceKind) =>
 
 export const STENCIL: PieceSet = {
   id: 'stencil',
-  credit: 'A. Tester',
+  credit: 'by A. Tester',
   artwork: Object.fromEntries(PIECE_KINDS.map((kind) => [kind, stencil(kind)])) as Record<
     PieceKind,
     string

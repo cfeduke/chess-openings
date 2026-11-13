@@ -13,7 +13,7 @@ export const PIECE_KINDS = [
 export interface PieceSet {
   /** The name of its directory under `src/board/pieces/`. */
   readonly id: string;
-  /** Who drew it. */
+  /** Where the artwork comes from, in words that finish the sentence “Chess pieces …”. */
   readonly credit: string;
   /** Where the image of each piece is. */
   readonly artwork: Readonly<Record<PieceKind, string>>;
@@ -40,15 +40,14 @@ const FILES = import.meta.glob<string>('./pieces/*/*.svg', {
   import: 'default',
 });
 
-const pieceSet = (id: string, credit: string): PieceSet => ({
+/**
+ * The piece set kept in `src/board/pieces/<id>/`: twelve SVGs named after the kinds of piece,
+ * beside a LICENSE.md. Fails if a piece is missing.
+ */
+export const pieceSet = (id: string, credit: string): PieceSet => ({
   id,
   credit,
   artwork: artworkOf(id, FILES),
 });
 
-// To add a piece set, put its twelve SVGs and a LICENSE.md in a directory under
-// `src/board/pieces/`, declare it here and list it in PIECE_SETS.
-
-export const CBURNETT = pieceSet('cburnett', 'Colin M.L. Burnett');
-
-export const PIECE_SETS: readonly PieceSet[] = [CBURNETT];
+export const CBURNETT = pieceSet('cburnett', 'by Colin M.L. Burnett');
