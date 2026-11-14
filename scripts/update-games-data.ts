@@ -52,6 +52,8 @@ interface Settings {
   threads: number;
   /** How many parts of the file to ask for at a time. */
   connections: number;
+  /** How many parts to hold at a time, asked for or come but waiting their turn. */
+  partsHeld: number;
   /** How many bytes to a part. */
   partSize: number;
 }
@@ -82,12 +84,13 @@ async function fileOf(target: string | undefined, io: UpdateIo) {
 /**
  * The bytes of the file at `location`, in order, asked for a part at a time and several parts
  * at once: a connection that stalls or crawls then holds up one part, which is asked for again,
- * and not the whole file. `onBytes` is told how much of the file has been handed on.
+ * and not the whole file. While one part is waited for the parts after it go on being asked
+ * for, as many as may be held. `onBytes` is told how much of the file has been handed on.
  */
 async function* inParts(
   location: string,
   io: UpdateIo,
-  { connections, partSize }: Settings,
+  { connections, partsHeld, partSize }: Settings,
   onBytes: (read: number, size: number) => void,
 ): AsyncGenerator<Uint8Array> {
   const size = await io.size(location);
@@ -107,16 +110,29 @@ async function* inParts(
     }
   }
 
-  const coming: Promise<Uint8Array>[] = [];
-  for (let next = 0, read = 0; read < size; ) {
-    while (coming.length < connections && next < size) {
-      const bytes = part(next);
+  // The parts held, in the order of the file, and how many of them are still being asked for.
+  const held: Promise<Uint8Array>[] = [];
+  let asking = 0;
+  let next = 0;
+  const askForMore = () => {
+    while (asking < connections && held.length < partsHeld && next < size) {
+      asking++;
+      const bytes = part(next).finally(() => {
+        asking--;
+        askForMore();
+      });
       // A part that fails is heard of when its turn comes, and not before.
       bytes.catch(() => {});
-      coming.push(bytes);
+      held.push(bytes);
       next += partSize;
     }
-    const bytes = await (coming.shift() as Promise<Uint8Array>);
+  };
+
+  for (let read = 0; read < size; ) {
+    askForMore();
+    // The part being waited for is still held, until it has come.
+    const bytes = await (held[0] as Promise<Uint8Array>);
+    held.shift();
     read += bytes.length;
     onBytes(read, size);
     yield bytes;
@@ -245,7 +261,9 @@ if (import.meta.main) {
       // One thread is left to read the file and cut it up.
       threads: Math.max(1, availableParallelism() - 1),
       // The database turns away an address that asks for more than a handful of things at once.
-      connections: 3,
+      connections: 4,
+      // A quarter of a gigabyte, which lets three parts overtake one that is slow four times over.
+      partsHeld: 16,
       partSize: 16 << 20,
     },
   );
