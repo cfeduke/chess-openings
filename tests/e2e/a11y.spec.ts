@@ -39,8 +39,18 @@ for (const colorScheme of ['light', 'dark'] as const) {
       page,
     }) => {
       await page.goto('/');
-      await expect(volumeTabsOn(page)).toHaveCount(5);
+      // What they arrive at is the list of the most played, and the first of it offered above.
+      await expect(volumeTabsOn(page)).toHaveCount(6);
+      await expect(
+        catalogOn(page).getByRole('list', { name: 'Most played' }).getByRole('button'),
+      ).toHaveCount(20);
+      await expect(page.getByRole('list', { name: 'Most played openings' })).toBeVisible();
 
+      expect(await violations(page)).toEqual([]);
+
+      await catalogOn(page)
+        .getByRole('combobox', { name: 'Players' })
+        .selectOption({ label: '2400 and over' });
       expect(await violations(page)).toEqual([]);
     });
 

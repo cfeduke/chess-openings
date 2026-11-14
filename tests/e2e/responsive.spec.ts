@@ -52,6 +52,22 @@ test.describe('on a phone', () => {
     expect(await overflowsSideways(page)).toBe(false);
   });
 
+  test('the most played openings fit the screen, figures and all', async ({ page }) => {
+    await page.goto('/');
+    const viewport = page.viewportSize() ?? { width: 0, height: 0 };
+    const rows = catalogOn(page).getByRole('list', { name: 'Most played' }).getByRole('button');
+    await expect(rows).toHaveCount(20);
+
+    for (const row of [rows.first(), rows.last()]) {
+      await row.scrollIntoViewIfNeeded();
+      const score = await box(row.locator('.ranked__score'));
+      const name = await box(row.locator('.line__name'));
+      expect(score.x + score.width).toBeLessThanOrEqual(viewport.width);
+      expect(score.x).toBeGreaterThanOrEqual(name.x + name.width);
+    }
+    expect(await overflowsSideways(page)).toBe(false);
+  });
+
   test('the controls stay at the bottom of the screen, and all of them fit', async ({ page }) => {
     await page.goto(ITALIAN_GAME);
     const viewport = page.viewportSize() ?? { width: 0, height: 0 };

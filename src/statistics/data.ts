@@ -19,6 +19,27 @@ export interface GamesSource {
  */
 export type PositionCounts = [white: number, draws: number, black: number, expected: number];
 
+/** How the games that reached a position went: White's wins, the draws, Black's wins. */
+export type Outcomes = [white: number, draws: number, black: number];
+
+/** What it takes to rank the families of a collection by how often they are played. */
+export interface MostPlayedData {
+  /** The id of the collection whose families these are. */
+  collection: string;
+  /**
+   * The strengths the games are kept apart by: a game is in the highest band whose number the
+   * mean of its two players' ratings reaches.
+   */
+  bands: number[];
+  /** How all the games counted went, band by band. */
+  totals: Outcomes[];
+  /**
+   * The families that are ranked, the most played first: each as the id of its main line, with
+   * how the games that reached it went, band by band.
+   */
+  families: { opening: string; counts: Outcomes[] }[];
+}
+
 /** The shape of `statistics.json`: what the games say of each line, at a glance. */
 export interface StatisticsData {
   source: GamesSource;
@@ -34,4 +55,6 @@ export interface StatisticsData {
    * counted has none, which is written `-1`.
    */
   lines: Record<string, number[]>;
+  /** The families of the encyclopaedia to rank by how often they are played. */
+  mostPlayed?: MostPlayedData;
 }

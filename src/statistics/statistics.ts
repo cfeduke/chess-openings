@@ -1,5 +1,5 @@
 import type { Opening, OpeningCollection } from '../data/opening.ts';
-import type { GamesSource, PositionCounts, StatisticsData } from './data.ts';
+import type { GamesSource, MostPlayedData, PositionCounts, StatisticsData } from './data.ts';
 
 /** What the games that reached a position say of it. */
 export interface LineNumbers {
@@ -30,6 +30,8 @@ export interface Statistics {
   source: GamesSource;
   /** The numbers of all the games counted, which an opening's are to be held against. */
   total: LineNumbers;
+  /** What it takes to rank the families of one collection, if the statistics came with it. */
+  mostPlayed?: MostPlayedData;
   /**
    * The numbers of the games that reached the position `opening` ends in — or nothing, if it was
    * not in the catalog when the games were counted, which is not the same as no game reaching it.
@@ -50,6 +52,13 @@ function numbersOf([white, draws, black, expected]: PositionCounts, total: numbe
     edge: (points - expected) / games,
   };
 }
+
+/** Whether `ranking` has what a ranking takes: a collection, and its families band by band. */
+const isRanking = (ranking: MostPlayedData | undefined): ranking is MostPlayedData =>
+  typeof ranking?.collection === 'string' &&
+  Array.isArray(ranking.bands) &&
+  Array.isArray(ranking.totals) &&
+  Array.isArray(ranking.families);
 
 function refuse(why: string): never {
   throw new Error(`the statistics are unreadable: ${why}`);
@@ -84,6 +93,7 @@ export function readStatistics(data: StatisticsData, collections: OpeningCollect
   return {
     source,
     total: numbersOf(all, total),
+    ...(isRanking(data.mostPlayed) && { mostPlayed: data.mostPlayed }),
     of(opening) {
       const counts = positions[places.get(opening.id) ?? -1];
       return counts && numbersOf(counts, total);

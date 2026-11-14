@@ -71,7 +71,7 @@
   color: inherit;
 }
 
-/* The well-known openings offered before anything is chosen. */
+/* The most played openings, offered before anything is chosen. */
 .opening__offers {
   grid-column: 1 / -1;
 }

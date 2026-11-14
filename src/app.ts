@@ -4,7 +4,6 @@ import { createSoundEffects } from './audio/sound-effects.ts';
 import { APPEARANCES, type Appearances, appearanceById } from './board/appearance.ts';
 import { createBoardView } from './board/board-view.ts';
 import { type Arrangement, buildCatalog, fullName } from './catalog/catalog.ts';
-import { featuredOpenings } from './catalog/featured.ts';
 import { buildTimeline } from './chess/timeline.ts';
 import { loadOpenings, loadStatistics } from './data/load.ts';
 import type { DataSource, Opening, OpeningsDataset } from './data/opening.ts';
@@ -14,8 +13,10 @@ import { hashForOpening, openingIdFromHash } from './routing.ts';
 import { appearanceSetting, delaySetting, mutedSetting } from './settings.ts';
 import type { GamesSource, StatisticsData } from './statistics/data.ts';
 import { readStatistics } from './statistics/statistics.ts';
+import { monthInWords } from './text/month.ts';
 import { createAnnouncer } from './ui/announcer.ts';
 import { createCatalog } from './ui/catalog.ts';
+import { mostPlayedIn, mostPlayedPage } from './ui/most-played.ts';
 import { createMoveList } from './ui/move-list.ts';
 import { createOpeningHeader } from './ui/opening-header.ts';
 import { bindShortcuts } from './ui/shortcuts.ts';
@@ -33,6 +34,9 @@ interface AppOptions {
   /** How each collection of openings is laid out, by its id, if not the way the site does it. */
   arrangements?: Record<string, Arrangement>;
 }
+
+/** How many of the most played openings are offered above the board while nothing is chosen. */
+const OFFERED = 8;
 
 /** The board with nothing chosen: the starting position, and no moves to play. */
 const NO_LINE = { san: [], uci: [] };
@@ -77,16 +81,6 @@ function credits(
     pieceCredit,
     '.',
   );
-}
-
-/** A month given as `2026-10`, as it is said: `October 2026`. */
-function monthInWords(month: string): string {
-  const [year = 0, monthOfYear = 1] = month.split('-').map(Number);
-  return new Date(Date.UTC(year, monthOfYear - 1)).toLocaleDateString('en', {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
 }
 
 /** Says which games the numbers of how the openings are played were counted from. */
@@ -238,11 +232,15 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
         // The credit first: it takes room from the catalog, which then sees to what it shows.
         gamesCredit.replaceChildren(...gamesCredited(statistics.source));
         catalogView.count(statistics.of);
+
+        const { mostPlayed: ranking, source } = statistics;
+        if (!ranking) return;
+        catalogView.lead(ranking.collection, mostPlayedPage({ catalog, ranking, source }));
+        header.suggest(mostPlayedIn(catalog, ranking, OFFERED).map(({ place }) => place.opening));
       } catch {
         // Numbers that cannot be read are numbers that did not come.
       }
     });
-    header.suggest(featuredOpenings(catalog));
 
     window.addEventListener('hashchange', showFromAddress, { signal });
     showFromAddress();
