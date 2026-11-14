@@ -76,6 +76,19 @@ describe('a tally of games', () => {
     expect(SPEEDS.map(games)).toEqual([2, 1, 1, 1]);
   });
 
+  it('knows the speed of a game of a Swiss tournament, which is not called rated', () => {
+    const tally = tallyOf([
+      game('1. e4', { event: 'Blitz swiss https://lichess.org/swiss/x' }),
+      game('1. e4', { event: 'UltraBullet swiss https://lichess.org/swiss/y' }),
+      game('1. e4', { event: 'Classical swiss https://lichess.org/swiss/z' }),
+      game('1. e4', { event: 'Correspondence swiss https://lichess.org/swiss/w' }),
+    ]);
+    const games = (speed: (typeof SPEEDS)[number]) => countsOf(tally, 1, speed, 1200).white;
+
+    expect(SPEEDS.map(games)).toEqual([1, 1, 0, 1]);
+    expect(tally.leftOut).toMatchObject({ correspondence: 1, unreadable: 0 });
+  });
+
   it('keeps apart games of different strengths, going by the mean of the two ratings', () => {
     const tally = tallyOf([
       game('1. e4', { white: 800, black: 900 }),
