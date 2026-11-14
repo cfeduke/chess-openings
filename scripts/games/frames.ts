@@ -1,8 +1,8 @@
 /**
  * A file compressed with zstd is a run of frames, each of which can be decompressed by itself.
- * The files of the lichess database are made by pzstd, which starts a new frame every few
- * megabytes — so a file can be cut into its frames as it arrives and the frames handed out to be
- * decompressed side by side. The format is RFC 8878.
+ * The files of the lichess database are made by pzstd, which starts a new frame for every 32 MB
+ * it is given, four or five once compressed — so a file can be cut into its frames as it arrives
+ * and the frames handed out to be decompressed side by side. The format is RFC 8878.
  */
 
 /** What a frame of compressed data begins with. */

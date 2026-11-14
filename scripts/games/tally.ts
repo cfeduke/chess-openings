@@ -157,7 +157,10 @@ export function mergeTallies(into: Tally, from: Tally): void {
   }
 }
 
-/** The speed a game was played at, by the second word of its `Event`: `Rated Blitz game`. */
+/**
+ * The speed a game was played at, as its `Event` names it: `Rated Blitz game`, or for a game of
+ * a Swiss tournament, `Blitz swiss` and where the tournament is.
+ */
 const SPEED_OF: Partial<Record<string, number>> = {
   UltraBullet: SPEEDS.indexOf('bullet'),
   Bullet: SPEEDS.indexOf('bullet'),
@@ -198,8 +201,10 @@ export function createCounter(positions: readonly string[], depth: number): Coun
 
   /** Reads one game, and says why if it is to be left out. */
   function read(tags: Tags, moveText: string): Reason | undefined {
-    const event = tags.Event?.split(' ', 2)[1] ?? '';
+    const [first, second] = tags.Event?.split(' ', 2) ?? [];
+    const event = (first === 'Rated' ? second : first) ?? '';
     if (event === 'Correspondence') return 'correspondence';
+    if (tags.Termination === 'Abandoned') return 'abandoned';
     const outcome = OUTCOME_OF[tags.Result ?? ''];
     if (outcome === undefined) return 'unfinished';
     const white = Number(tags.WhiteElo);
@@ -208,7 +213,7 @@ export function createCounter(positions: readonly string[], depth: number): Coun
     if (tags.WhiteTitle === 'BOT' || tags.BlackTitle === 'BOT') return 'bot';
     // One move more than is played: the move made from a position reached by the last of them.
     const moves = movesOf(moveText, depth + 1);
-    if (tags.Termination === 'Abandoned' || moves.length === 0) return 'abandoned';
+    if (moves.length === 0) return 'abandoned';
     const speed = SPEED_OF[event];
     if (speed === undefined) return 'unreadable';
 

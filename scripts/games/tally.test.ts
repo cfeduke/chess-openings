@@ -184,6 +184,7 @@ describe('a tally of games', () => {
     ['unrated', game('1. e4', { white: '?' })],
     ['unrated', game('1. e4', { black: '?' })],
     ['abandoned', game('1. e4', { tags: { Termination: 'Abandoned' } })],
+    ['abandoned', game('1. e4', { result: '*', tags: { Termination: 'Abandoned' } })],
     ['abandoned', game('', { result: '0-1' })],
     ['bot', game('1. e4', { tags: { WhiteTitle: 'BOT' } })],
     ['bot', game('1. e4', { tags: { BlackTitle: 'BOT' } })],
