@@ -1,36 +1,34 @@
 import { describe, expect, it } from 'vitest';
-import type { Opening, OpeningsDataset } from '../../src/data/opening.ts';
+import type { OpeningsDataset } from '../../src/data/opening.ts';
+import { positionReachedBy, START } from '../../tests/support/games.ts';
+import { encyclopaedia, LICHESS, opening } from '../../tests/support/openings.ts';
 import { realDataset } from '../../tests/support/real-openings.ts';
-import { createReplayer } from '../openings/replay.ts';
 import { positionsOfInterest } from './interest.ts';
-import { createGame } from './play.ts';
-
-const replay = createReplayer();
-const positionAfter = (pgn: string) => replay('a line', pgn).positions.at(-1);
-
-const line = (id: string, ...san: string[]): Opening => ({
-  id,
-  eco: 'A00',
-  name: id,
-  san,
-  uci: [],
-});
-const source = { title: 'a source', url: 'https://example.org', revision: '1', license: 'CC0-1.0' };
 
 const DATASET: OpeningsDataset = {
   collections: [
-    { id: 'eco', source, openings: [line('kp', 'e4'), line('kn', 'e4', 'e5', 'Nf3')] },
-    { id: 'book', source, openings: [line('reti', 'Nf3', 'e5', 'e4'), line('qp', 'd4')] },
+    encyclopaedia([
+      opening('B00', "King's Pawn", 'e4'),
+      opening('C40', "King's Knight Opening", 'e4 e5 Nf3'),
+    ]),
+    {
+      id: 'book',
+      source: LICHESS,
+      openings: [
+        opening('A04', 'Zukertort Opening', 'Nf3 e5 e4'),
+        opening('A40', "Queen's Pawn", 'd4'),
+      ],
+    },
   ],
 };
 
 describe('positionsOfInterest', () => {
   it('are where every game begins, then where each line of each collection ends', () => {
     expect(positionsOfInterest(DATASET).positions).toEqual([
-      createGame().position(),
-      positionAfter('1. e4'),
-      positionAfter('1. e4 e5 2. Nf3'),
-      positionAfter('1. d4'),
+      START,
+      positionReachedBy('1. e4'),
+      positionReachedBy('1. e4 e5 2. Nf3'),
+      positionReachedBy('1. d4'),
     ]);
   });
 

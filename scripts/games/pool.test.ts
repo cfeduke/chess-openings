@@ -1,20 +1,17 @@
 import { zstdCompressSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
-import { createReplayer } from '../openings/replay.ts';
-import { createGame } from './play.ts';
+import { countGames, lichessGame, positionReachedBy, START } from '../../tests/support/games.ts';
 import { countFrames } from './pool.ts';
-import { createCounter } from './tally.ts';
 
-const replay = createReplayer();
-const positionAfter = (pgn: string) => replay('a line', pgn).positions.at(-1) as string;
-
-const POSITIONS = [
-  createGame().position(),
-  positionAfter('1. e4'),
-  positionAfter('1. e4 c5'),
-  positionAfter('1. d4 d5'),
-];
-const DEPTH = 12;
+const INTEREST = {
+  positions: [
+    START,
+    positionReachedBy('1. e4'),
+    positionReachedBy('1. e4 c5'),
+    positionReachedBy('1. d4 d5'),
+  ],
+  depth: 12,
+};
 
 const LINES = [
   '1. e4 c5 2. Nf3 d6',
@@ -23,26 +20,20 @@ const LINES = [
   '1. Nf3 d5 2. d4',
 ];
 const RESULTS = ['1-0', '0-1', '1/2-1/2'];
-const EVENTS = ['Bullet', 'Blitz', 'Rapid', 'Classical', 'Correspondence'];
+const SPEEDS = ['Bullet', 'Blitz', 'Rapid', 'Classical', 'Correspondence'];
 
 /** Fifty games, no two quite alike. */
-const PGN = Array.from({ length: 50 }, (_, i) => {
-  const result = RESULTS[i % 3];
-  const tags = [
-    `[Event "Rated ${EVENTS[i % 5]} game"]`,
-    `[Site "https://lichess.org/game/${i}"]`,
-    `[Result "${result}"]`,
-    `[WhiteElo "${900 + i * 37}"]`,
-    `[BlackElo "${2700 - i * 31}"]`,
-  ];
-  return `${tags.join('\n')}\n\n${LINES[i % 4]} { [%clk 0:01:00] } ${result}\n\n`;
-}).join('');
+const PGN = Array.from({ length: 50 }, (_, i) =>
+  lichessGame(`${LINES[i % 4]} { [%clk 0:01:00] }`, {
+    event: `Rated ${SPEEDS[i % 5]} game`,
+    result: RESULTS[i % 3],
+    white: 900 + i * 37,
+    black: 2700 - i * 31,
+    tags: { Site: `https://lichess.org/game/${i}` },
+  }),
+).join('');
 
-function counted(pgn = PGN) {
-  const counter = createCounter(POSITIONS, DEPTH);
-  counter.count(pgn);
-  return counter.tally;
-}
+const counted = (pgn = PGN) => countGames(pgn, INTEREST.positions, INTEREST.depth);
 
 /** `pgn` compressed in frames that begin at the bytes `cuts`, wherever in a game those fall. */
 async function* framesCutAt(cuts: number[], pgn = PGN): AsyncGenerator<Uint8Array> {
@@ -66,7 +57,7 @@ describe('countFrames', () => {
     ];
 
     for (const cuts of everywhere) {
-      const tally = await countFrames(framesCutAt(cuts), POSITIONS, DEPTH, { workers: 3 });
+      const tally = await countFrames(framesCutAt(cuts), INTEREST, { threads: 3 });
 
       expect(tally, `cut at ${cuts.join(', ')}`).toEqual(counted());
     }
@@ -74,7 +65,7 @@ describe('countFrames', () => {
   });
 
   it('counts a file with nothing in it as no games', async () => {
-    const tally = await countFrames(framesCutAt([], ''), POSITIONS, DEPTH, { workers: 2 });
+    const tally = await countFrames(framesCutAt([], ''), INTEREST, { threads: 2 });
 
     expect(tally).toEqual(counted(''));
   });
@@ -82,8 +73,8 @@ describe('countFrames', () => {
   it('says how far it has got as it goes', async () => {
     const progress: number[] = [];
 
-    await countFrames(framesCutAt([1000, 2000, 3000]), POSITIONS, DEPTH, {
-      workers: 2,
+    await countFrames(framesCutAt([1000, 2000, 3000]), INTEREST, {
+      threads: 2,
       onProgress: (frames) => progress.push(frames),
     });
 
@@ -97,7 +88,7 @@ describe('countFrames', () => {
       yield zstdCompressSync(Buffer.from(PGN));
     }
 
-    await expect(countFrames(spoiled(), POSITIONS, DEPTH, { workers: 2 })).rejects.toThrow();
+    await expect(countFrames(spoiled(), INTEREST, { threads: 2 })).rejects.toThrow();
   });
 
   it('fails when the file itself does', async () => {
@@ -106,7 +97,7 @@ describe('countFrames', () => {
       throw new Error('the connection was lost');
     }
 
-    await expect(countFrames(broken(), POSITIONS, DEPTH, { workers: 2 })).rejects.toThrow(
+    await expect(countFrames(broken(), INTEREST, { threads: 2 })).rejects.toThrow(
       /connection was lost/,
     );
   });

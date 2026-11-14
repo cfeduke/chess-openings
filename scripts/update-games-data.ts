@@ -7,7 +7,7 @@ import { setTimeout as pause } from 'node:timers/promises';
 import { zstdFrames } from './games/frames.ts';
 import { type Interest, positionsOfInterest } from './games/interest.ts';
 import { countFrames } from './games/pool.ts';
-import { countedGames, gamesReaching, type Reason } from './games/tally.ts';
+import { countedGames, gamesReaching } from './games/tally.ts';
 import {
   formatTallies,
   GAMES_DIR,
@@ -16,7 +16,7 @@ import {
   type VendoredGames,
 } from './games/vendored.ts';
 import { DATA_DIR, loadDataset } from './openings/dataset.ts';
-import { SOURCE_FILE } from './openings/source.ts';
+import { formatSourceFile, SOURCE_FILE, today, USER_AGENT } from './openings/source.ts';
 
 /** The rated games of standard chess, a month to a file. */
 const DATABASE = 'lichess_db_standard_rated';
@@ -58,11 +58,8 @@ interface Settings {
 
 /** What an update did. */
 interface UpdateReport {
-  month: string;
-  /** How many games the month held, how many were counted, and why the others were not. */
-  games: number;
-  counted: number;
-  leftOut: Record<Reason, number>;
+  /** What was written to the source file: which games were read, and how many were counted. */
+  source: VendoredGames;
   /** The positions of interest that no game reached. */
   unreached: string[];
 }
@@ -149,8 +146,8 @@ export async function updateGamesData(
   const bytes = inParts(location, io, settings, (read, size) => {
     portion = read / size;
   });
-  const tally = await countFrames(zstdFrames(bytes), interest.positions, interest.depth, {
-    workers: settings.threads,
+  const tally = await countFrames(zstdFrames(bytes), interest, {
+    threads: settings.threads,
     onProgress: (_frames, games) => {
       const now = io.now();
       if (now - lastSaid < 30_000) return;
@@ -167,7 +164,6 @@ export async function updateGamesData(
   await io.writeFile(join(gamesDir, POSITIONS_FILE), files.positions);
   await io.writeFile(join(gamesDir, TALLIES_FILE), files.tallies);
 
-  const counted = countedGames(tally);
   const source: VendoredGames = {
     database: DATABASE,
     month,
@@ -175,18 +171,15 @@ export async function updateGamesData(
     license: 'CC0-1.0',
     retrieved: io.today(),
     games: tally.games,
-    counted,
+    counted: countedGames(tally),
     leftOut: tally.leftOut,
     depth: interest.depth,
   };
-  await io.writeFile(join(gamesDir, SOURCE_FILE), `${JSON.stringify(source, null, 2)}\n`);
+  await io.writeFile(join(gamesDir, SOURCE_FILE), formatSourceFile(source));
 
   const unreached = interest.positions.filter((_, index) => gamesReaching(tally, index) === 0);
-  return { month, games: tally.games, counted, leftOut: tally.leftOut, unreached };
+  return { source, unreached };
 }
-
-/** Says who is asking. */
-const USER_AGENT = 'chess-openings (https://github.com/cfeduke/chess-openings)';
 
 /** How long a part of the file may take to arrive before it is given up and asked for again. */
 const TOO_LONG = 60_000;
@@ -243,7 +236,7 @@ if (import.meta.main) {
         }
       },
       writeFile,
-      today: () => new Date().toISOString().slice(0, 10),
+      today,
       pause,
       now: Date.now,
       log: console.log,
@@ -257,10 +250,11 @@ if (import.meta.main) {
     },
   );
 
-  const { month, games, counted, leftOut, unreached } = report;
+  const { month, games, counted, leftOut } = report.source;
   console.log(`${gamesDir}: ${counted} of the ${games} games of ${month} counted.`);
-  for (const [reason, left] of Object.entries(leftOut))
+  for (const [reason, left] of Object.entries(leftOut)) {
     console.log(`  left out ${left}: ${reason}`);
-  console.log(`  ${unreached.length} positions were reached by no game.`);
+  }
+  console.log(`  ${report.unreached.length} positions were reached by no game.`);
   console.log('Run "npm run verify" before committing.');
 }

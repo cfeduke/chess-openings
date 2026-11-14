@@ -3,7 +3,7 @@ import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { DATA_DIR } from './openings/dataset.ts';
 import { LICHESS_DIR, type VendoredSource, VOLUME_FILES } from './openings/lichess.ts';
-import { SOURCE_FILE } from './openings/source.ts';
+import { formatSourceFile, SOURCE_FILE, today } from './openings/source.ts';
 
 const REPOSITORY = 'lichess-org/chess-openings';
 
@@ -40,7 +40,7 @@ export async function updateLichessData(
     license: 'CC0-1.0',
     retrieved: io.today(),
   };
-  await io.writeFile(join(dataDir, SOURCE_FILE), `${JSON.stringify(source, null, 2)}\n`);
+  await io.writeFile(join(dataDir, SOURCE_FILE), formatSourceFile(source));
   return sha;
 }
 
@@ -53,7 +53,7 @@ if (import.meta.main) {
       return response.text();
     },
     writeFile,
-    today: () => new Date().toISOString().slice(0, 10),
+    today,
   });
   console.log(`${dataDir}: now at ${REPOSITORY}@${sha}. Run "npm run verify" before committing.`);
 }

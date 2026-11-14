@@ -47,7 +47,11 @@ export interface Counts {
   short: number;
 }
 
-const MEASURES = ['white', 'draws', 'black', 'expected', 'plies', 'short'] as const;
+/** What `Counts` holds, in the order it is kept and written in. */
+export const MEASURES = ['white', 'draws', 'black', 'expected', 'plies', 'short'] as const;
+const WHITE = MEASURES.indexOf('white');
+const DRAWS = MEASURES.indexOf('draws');
+const BLACK = MEASURES.indexOf('black');
 const EXPECTED = MEASURES.indexOf('expected');
 const PLIES = MEASURES.indexOf('plies');
 const SHORT = MEASURES.indexOf('short');
@@ -117,7 +121,7 @@ export function gamesReaching(tally: Tally, position: number): number {
     cell < (position + 1) * PER_POSITION;
     cell += MEASURES.length
   ) {
-    for (let outcome = 0; outcome < 3; outcome++) games += tally.counts[cell + outcome] as number;
+    for (const outcome of [WHITE, DRAWS, BLACK]) games += tally.counts[cell + outcome] as number;
   }
   return games;
 }
@@ -163,7 +167,11 @@ const SPEED_OF: Partial<Record<string, number>> = {
 };
 
 /** Which of `white`, `draws` and `black` a game with this `Result` adds to. */
-const OUTCOME_OF: Partial<Record<string, number>> = { '1-0': 0, '1/2-1/2': 1, '0-1': 2 };
+const OUTCOME_OF: Partial<Record<string, number>> = {
+  '1-0': WHITE,
+  '1/2-1/2': DRAWS,
+  '0-1': BLACK,
+};
 
 /** Counts games, a piece of PGN at a time, into a tally of its own. */
 export interface Counter {
@@ -236,8 +244,8 @@ export function createCounter(positions: readonly string[], depth: number): Coun
       }
       const move = thenPlayed[index];
       if (move !== undefined) {
-        const moves = tally.moves[position] as Map<string, number>;
-        moves.set(move, (moves.get(move) ?? 0) + 1);
+        const played = tally.moves[position] as Map<string, number>;
+        played.set(move, (played.get(move) ?? 0) + 1);
       }
     }
     return undefined;

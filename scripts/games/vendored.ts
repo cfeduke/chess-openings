@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { parseTsv } from '../openings/parse-tsv.ts';
+import { basename, join } from 'node:path';
+import { formatTsv, parseTsv } from '../openings/parse-tsv.ts';
 import { readSourceFile, SOURCE_FILE } from '../openings/source.ts';
 import {
   addCounts,
@@ -8,6 +8,7 @@ import {
   type Band,
   countsOf,
   createTally,
+  MEASURES,
   movesFrom,
   REASONS,
   type Reason,
@@ -19,23 +20,17 @@ import {
 /** Where the tallies of lichess's games are kept within the data directory. */
 export const GAMES_DIR = 'lichess-games';
 
-/** The positions games were counted for, one to a row, with the moves played from each. */
+/**
+ * The positions games were counted for, one to a row, with the moves played from each. The first
+ * is the one every game begins in, which every game that is counted counts for: its tallies are
+ * the totals, and what any other position's are a share of.
+ */
 export const POSITIONS_FILE = 'positions.tsv';
 const POSITION_COLUMNS = ['id', 'position', 'moves'];
 
 /** What was counted: a row for each position, speed and band that any game was counted in. */
 export const TALLIES_FILE = 'tallies.tsv';
-const TALLY_COLUMNS = [
-  'id',
-  'speed',
-  'band',
-  'white',
-  'draws',
-  'black',
-  'expected',
-  'plies',
-  'short',
-];
+const TALLY_COLUMNS = ['id', 'speed', 'band', ...MEASURES];
 
 /** How many of the moves played from a position are listed: the most played. */
 const MOVES_LISTED = 10;
@@ -64,7 +59,10 @@ export interface VendoredGames {
 /** The tallies of lichess's games, as vendored. */
 export interface GameTallies {
   source: VendoredGames;
-  /** The positions games were counted for; a position's place here is its place in `tally`. */
+  /**
+   * The positions games were counted for, the one every game begins in first; a position's
+   * place here is its place in `tally`.
+   */
   positions: string[];
   /** What was counted, with only the most played of the moves from each position. */
   tally: Tally;
@@ -83,36 +81,42 @@ export function formatTallies(
   const tallyRows = positions.flatMap((_, id) =>
     SPEEDS.flatMap((speed) =>
       BANDS.flatMap((band) => {
-        const { white, draws, black, expected, plies, short } = countsOf(tally, id, speed, band);
-        if (white + draws + black === 0) return [];
-        return [[id, speed, band, white, draws, black, expected.toFixed(2), plies, short]];
+        const counts = countsOf(tally, id, speed, band);
+        if (counts.white + counts.draws + counts.black === 0) return [];
+        const cells = MEASURES.map((measure) =>
+          measure === 'expected' ? counts.expected.toFixed(2) : counts[measure],
+        );
+        return [[id, speed, band, ...cells]];
       }),
     ),
   );
 
-  const table = (columns: string[], rows: (string | number)[][]) =>
-    `${[columns, ...rows].map((row) => row.join('\t')).join('\n')}\n`;
   return {
-    positions: table(POSITION_COLUMNS, positionRows),
-    tallies: table(TALLY_COLUMNS, tallyRows),
+    positions: formatTsv(POSITION_COLUMNS, positionRows),
+    tallies: formatTsv(TALLY_COLUMNS, tallyRows),
   };
 }
 
 const isCount = (text: string) => /^\d+$/.test(text);
+const isHundredths = (text: string) => /^\d+\.\d\d$/.test(text);
 
 function readSource(gamesDir: string): VendoredGames {
-  const source = readSourceFile(gamesDir, [
+  const { games, counted, depth, leftOut, ...said } = readSourceFile(gamesDir, [
     'database',
     'month',
     'url',
     'license',
     'retrieved',
-  ]) as unknown as VendoredGames;
-  const numbers = [source.games, source.counted, source.depth];
-  if (!numbers.every(Number.isInteger) || !REASONS.every((reason) => reason in source.leftOut)) {
-    throw new Error(`${GAMES_DIR}/${SOURCE_FILE}: does not say how many games were counted`);
+  ]);
+  const reasons =
+    leftOut && typeof leftOut === 'object' ? (leftOut as Record<string, unknown>) : {};
+  const numbers = [games, counted, depth, ...REASONS.map((reason) => reasons[reason])];
+  if (!numbers.every(Number.isInteger)) {
+    throw new Error(
+      `${basename(gamesDir)}/${SOURCE_FILE}: does not say how many games were counted`,
+    );
   }
-  return source;
+  return { ...said, games, counted, depth, leftOut } as VendoredGames;
 }
 
 /** Reads the tallies vendored in `gamesDir`. Errors name the file and the 1-based line. */
@@ -137,23 +141,18 @@ export function readGameTallies(gamesDir: string): GameTallies {
   });
 
   for (const { cells, fail } of parseTsv(read(TALLIES_FILE), TALLIES_FILE, TALLY_COLUMNS)) {
-    const [id = '', speed, band, white = '', draws = '', black = '', expected = '', ...rest] =
-      cells;
-    const [plies = '', short = ''] = rest;
+    const [id = '', speed, band, ...numbers] = cells;
     if (!isCount(id) || Number(id) >= positions.length) fail(`no position ${JSON.stringify(id)}`);
     if (!SPEEDS.includes(speed as Speed)) fail(`no speed ${JSON.stringify(speed)}`);
     if (!BANDS.includes(Number(band) as Band)) fail(`no band ${JSON.stringify(band)}`);
-    if (![white, draws, black, plies, short].every(isCount) || !/^\d+\.\d\d$/.test(expected)) {
-      fail('a count that is not a number');
-    }
-    addCounts(tally, Number(id), speed as Speed, Number(band) as Band, {
-      white: Number(white),
-      draws: Number(draws),
-      black: Number(black),
-      expected: Number(expected),
-      plies: Number(plies),
-      short: Number(short),
+    const counts = MEASURES.map((measure, index) => {
+      const number = numbers[index] ?? '';
+      if (!(measure === 'expected' ? isHundredths : isCount)(number)) {
+        fail(`invalid ${measure} ${JSON.stringify(number)}`);
+      }
+      return [measure, Number(number)];
     });
+    addCounts(tally, Number(id), speed as Speed, Number(band) as Band, Object.fromEntries(counts));
   }
 
   return { source, positions, tally };

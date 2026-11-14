@@ -8,38 +8,42 @@ export type Tags = Readonly<Record<string, string | undefined>>;
 
 /** Calls `visit` with the tags and the move text of each game in `pgn`, in order. */
 export function eachGame(pgn: string, visit: (tags: Tags, moveText: string) => void): void {
-  let tags: Record<string, string> | undefined;
-  let moveText = '';
-  /** Whether the blank line that ends the tags has been read. */
-  let tagsOver = false;
-
-  const finish = () => {
-    if (tags) visit(tags, moveText);
-    tags = undefined;
-    moveText = '';
-    tagsOver = false;
-  };
-
+  let tags: Record<string, string> = {};
   for (let at = 0; at < pgn.length; ) {
     let end = pgn.indexOf('\n', at);
     if (end === -1) end = pgn.length;
 
-    if (end === at) {
-      if (moveText) finish();
-      else tagsOver = tags !== undefined;
-    } else if (pgn.charCodeAt(at) === 91 /* [ */ && !moveText) {
-      // A tag where moves should be: the game before had none, and this is the next.
-      if (tagsOver) finish();
+    if (pgn.charCodeAt(at) === 91 /* [ */) {
       const space = pgn.indexOf(' ', at);
-      tags ??= {};
       tags[pgn.slice(at + 1, space)] = pgn.slice(space + 2, pgn.lastIndexOf('"', end));
-    } else {
-      const line = pgn.slice(at, end).trim();
-      moveText = moveText ? `${moveText} ${line}` : line;
+    } else if (end > at) {
+      // The one line that is neither a tag nor blank is the moves, and the last of the game.
+      visit(tags, pgn.slice(at, end));
+      tags = {};
     }
     at = end + 1;
   }
-  finish();
+}
+
+/** What comes between two games: the end of a line of moves, a blank line, and the first tag. */
+const BETWEEN_GAMES = '\n\n[Event ';
+
+/**
+ * Cuts a piece of a file of games, which may begin and end in the middle of one, into the games
+ * that are `whole` and what is left over at either end: the piece up to the first game that
+ * begins in it (the `head`, which is all of it if none does) and from the last that does (the
+ * `tail`). Pieces that follow one another are made whole again by joining each tail, or a head
+ * that had none, to the head that comes next.
+ */
+export function cutAtGames(pgn: string): { head: string; whole: string; tail?: string } {
+  const first = pgn.indexOf(BETWEEN_GAMES);
+  if (first === -1) return { head: pgn, whole: '' };
+  const last = pgn.lastIndexOf(BETWEEN_GAMES);
+  return {
+    head: pgn.slice(0, first + 2),
+    whole: pgn.slice(first + 2, last + 2),
+    tail: pgn.slice(last + 2),
+  };
 }
 
 const isDigit = (character: number) => character >= 48 && character <= 57;

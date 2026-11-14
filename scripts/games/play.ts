@@ -45,6 +45,7 @@ const WHITE_SHORT = 1;
 const WHITE_LONG = 2;
 const BLACK_SHORT = 4;
 const BLACK_LONG = 8;
+const EVERY_RIGHT = WHITE_SHORT | WHITE_LONG | BLACK_SHORT | BLACK_LONG;
 const RIGHTS_TEXT = Array.from(
   { length: 16 },
   (_, rights) => ['K', 'Q', 'k', 'q'].filter((_letter, bit) => rights & (1 << bit)).join('') || '-',
@@ -54,13 +55,13 @@ const RIGHTS_TEXT = Array.from(
  * The rights that outlast a move from or to each square. A king or rook that leaves its square
  * gives its rights up, and so does a rook that is captured on it, however the game goes on.
  */
-const RIGHTS_KEPT = new Uint8Array(64).fill(15);
-RIGHTS_KEPT[A1] = 15 & ~WHITE_LONG;
-RIGHTS_KEPT[E1] = 15 & ~(WHITE_SHORT | WHITE_LONG);
-RIGHTS_KEPT[H1] = 15 & ~WHITE_SHORT;
-RIGHTS_KEPT[A8] = 15 & ~BLACK_LONG;
-RIGHTS_KEPT[E8] = 15 & ~(BLACK_SHORT | BLACK_LONG);
-RIGHTS_KEPT[H8] = 15 & ~BLACK_SHORT;
+const RIGHTS_KEPT = new Uint8Array(64).fill(EVERY_RIGHT);
+RIGHTS_KEPT[A1] = EVERY_RIGHT & ~WHITE_LONG;
+RIGHTS_KEPT[E1] = EVERY_RIGHT & ~(WHITE_SHORT | WHITE_LONG);
+RIGHTS_KEPT[H1] = EVERY_RIGHT & ~WHITE_SHORT;
+RIGHTS_KEPT[A8] = EVERY_RIGHT & ~BLACK_LONG;
+RIGHTS_KEPT[E8] = EVERY_RIGHT & ~(BLACK_SHORT | BLACK_LONG);
+RIGHTS_KEPT[H8] = EVERY_RIGHT & ~BLACK_SHORT;
 
 // Steps across the board, as pairs of files and ranks: the rook's four, then the bishop's.
 const LINES = [1, 0, -1, 0, 0, 1, 0, -1, 1, 1, 1, -1, -1, 1, -1, -1];
@@ -75,7 +76,7 @@ const LETTERS = Array.from({ length: 128 }, (_, piece) => String.fromCharCode(pi
 export function createGame(): Game {
   const board = new Uint8Array(64);
   let whiteToMove = true;
-  let rights = 15;
+  let rights = EVERY_RIGHT;
   /** The squares the pieces that might be meant stand on, and how many of them there are. */
   const candidates = new Uint8Array(16);
   let found = 0;
@@ -83,7 +84,7 @@ export function createGame(): Game {
   function restart(): void {
     board.set(START);
     whiteToMove = true;
-    rights = 15;
+    rights = EVERY_RIGHT;
   }
 
   const refuse = (san: string): never => {

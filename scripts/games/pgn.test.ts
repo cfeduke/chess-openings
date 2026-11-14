@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { eachGame, movesOf, pliesOf, type Tags } from './pgn.ts';
+import { cutAtGames, eachGame, movesOf, pliesOf, type Tags } from './pgn.ts';
 
 /** Two games as lichess writes them: one with clocks, one without. */
 const TWO_GAMES = `[Event "Rated Blitz game"]
@@ -68,6 +68,62 @@ describe('eachGame', () => {
   it('finds no game in nothing', () => {
     expect(gamesOf('')).toEqual([]);
     expect(gamesOf('\n\n')).toEqual([]);
+  });
+});
+
+describe('cutAtGames', () => {
+  const game = (id: number) => `[Event "Rated Blitz game"]\n[Site "${id}"]\n\n1. e4 e5 1-0\n\n`;
+  const FOUR_GAMES = [1, 2, 3, 4].map(game).join('');
+
+  /** The games of a file that came in `pieces`, each cut up and joined to the next. */
+  function gamesOfPieces(pieces: string[]): string[] {
+    const sites: string[] = [];
+    const visit = (tags: Tags) => sites.push(tags.Site ?? '');
+    let unfinished = '';
+    for (const piece of pieces) {
+      const { head, whole, tail } = cutAtGames(piece);
+      eachGame(whole, visit);
+      unfinished += head;
+      if (tail !== undefined) {
+        eachGame(unfinished, visit);
+        unfinished = tail;
+      }
+    }
+    eachGame(unfinished, visit);
+    return sites.sort();
+  }
+
+  it('sets apart the games that are whole from the pieces of games at either end', () => {
+    const piece = `1. e4 e5 1-0\n\n${game(2)}${game(3)}[Event "Rated Blitz game"]\n[Si`;
+
+    expect(cutAtGames(piece)).toEqual({
+      head: '1. e4 e5 1-0\n\n',
+      whole: game(2) + game(3),
+      tail: '[Event "Rated Blitz game"]\n[Si',
+    });
+  });
+
+  it('takes a piece in which no game begins to be all of a piece with the one before', () => {
+    expect(cutAtGames('e4 e5 2. Nf3 Nc6')).toEqual({ head: 'e4 e5 2. Nf3 Nc6', whole: '' });
+    expect(cutAtGames('')).toEqual({ head: '', whole: '' });
+  });
+
+  it('loses no game and counts none twice, wherever a file is cut in two', () => {
+    for (let cut = 0; cut <= FOUR_GAMES.length; cut++) {
+      const pieces = [FOUR_GAMES.slice(0, cut), FOUR_GAMES.slice(cut)];
+
+      expect(gamesOfPieces(pieces), `cut at ${cut}`).toEqual(['1', '2', '3', '4']);
+    }
+  });
+
+  it('loses no game and counts none twice in a file that comes in many small pieces', () => {
+    for (const size of [1, 7, 40, 100]) {
+      const pieces = Array.from({ length: Math.ceil(FOUR_GAMES.length / size) }, (_, piece) =>
+        FOUR_GAMES.slice(piece * size, (piece + 1) * size),
+      );
+
+      expect(gamesOfPieces(pieces), `${size} at a time`).toEqual(['1', '2', '3', '4']);
+    }
   });
 });
 

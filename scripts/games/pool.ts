@@ -1,10 +1,11 @@
 import { Worker } from 'node:worker_threads';
+import type { Interest } from './interest.ts';
 import { createCounter, mergeTallies, type Tally } from './tally.ts';
 import type { Answer, FrameCounted, Task } from './worker.ts';
 
 interface CountOptions {
   /** How many threads to count on. */
-  workers: number;
+  threads: number;
   /** Told, each time a frame has been counted, how many have been and how many games were in them. */
   onProgress?(frames: number, games: number): void;
 }
@@ -16,18 +17,19 @@ interface CountOptions {
  */
 export async function countFrames(
   frames: AsyncIterable<Uint8Array>,
-  positions: readonly string[],
-  depth: number,
-  { workers: threads, onProgress }: CountOptions,
+  interest: Interest,
+  { threads, onProgress }: CountOptions,
 ): Promise<Tally> {
   const workers = Array.from(
     { length: threads },
-    () => new Worker(new URL('./worker.ts', import.meta.url), { workerData: { positions, depth } }),
+    () => new Worker(new URL('./worker.ts', import.meta.url), { workerData: interest }),
   );
   const idle = [...workers];
+  /** What each worker counted, once it has been told there is no more. */
+  const tallies: Tally[] = [];
 
   // The games that straddle two frames are counted here, from the pieces the workers send back.
-  const straddlers = createCounter(positions, depth);
+  const straddlers = createCounter(interest.positions, interest.depth);
   const counted = new Map<number, FrameCounted>();
   let unfinished = '';
   let joined = 0;
@@ -43,7 +45,9 @@ export async function countFrames(
 
   for (const worker of workers) {
     worker.on('message', (message: Answer) => {
-      if ('frame' in message) {
+      if ('tally' in message) {
+        tallies.push(message.tally);
+      } else {
         counted.set(message.frame, message);
         games += message.games;
         // The pieces are joined in the order of the frames, whatever order they come back in.
@@ -74,15 +78,10 @@ export async function countFrames(
     while (joined < sent) await answer();
     straddlers.count(unfinished);
 
-    const tally = straddlers.tally;
-    for (const worker of workers) {
-      const finished = new Promise<Tally>((resolve) => {
-        worker.once('message', (message: Answer) => 'tally' in message && resolve(message.tally));
-      });
-      worker.postMessage('finish' satisfies Task);
-      mergeTallies(tally, await Promise.race([finished, failed]));
-    }
-    return tally;
+    for (const worker of workers) worker.postMessage('finish' satisfies Task);
+    while (tallies.length < workers.length) await answer();
+    for (const tally of tallies) mergeTallies(straddlers.tally, tally);
+    return straddlers.tally;
   } finally {
     await Promise.all(workers.map((worker) => worker.terminate()));
   }

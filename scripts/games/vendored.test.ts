@@ -2,11 +2,15 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
+import {
+  countGames,
+  lichessGame as game,
+  positionReachedBy,
+  START,
+} from '../../tests/support/games.ts';
 import { DATA_DIR } from '../openings/dataset.ts';
-import { createReplayer } from '../openings/replay.ts';
 import { SOURCE_FILE } from '../openings/source.ts';
-import { createGame } from './play.ts';
-import { BANDS, countsOf, createCounter, gamesReaching, movesFrom, SPEEDS } from './tally.ts';
+import { BANDS, countsOf, gamesReaching, movesFrom, SPEEDS } from './tally.ts';
 import {
   formatTallies,
   GAMES_DIR,
@@ -17,32 +21,24 @@ import {
   type VendoredGames,
 } from './vendored.ts';
 
-const replay = createReplayer();
-const positionAfter = (pgn: string) => replay('a line', pgn).positions.at(-1) as string;
-
-const START = createGame().position();
 const POSITIONS = [
   START,
-  positionAfter('1. e4'),
-  positionAfter('1. e4 c5'),
-  positionAfter('1. b4'),
+  positionReachedBy('1. e4'),
+  positionReachedBy('1. e4 c5'),
+  positionReachedBy('1. b4'),
 ];
 
-const game = (moves: string, result: string, event: string, white: number, black: number) =>
-  `[Event "Rated ${event} game"]\n[Result "${result}"]\n[WhiteElo "${white}"]\n[BlackElo "${black}"]\n\n${moves} ${result}\n\n`;
-
-function exampleTally() {
-  const counter = createCounter(POSITIONS, 40);
-  counter.count(
+const exampleTally = () =>
+  countGames(
     [
-      game('1. e4 c5 2. Nf3', '1-0', 'Blitz', 1700, 1300),
-      game('1. e4 e5', '1/2-1/2', 'Blitz', 1500, 1500),
-      game('1. d4', '0-1', 'Bullet', 2450, 2450),
-      game('1. e4', '*', 'Blitz', 1500, 1500),
+      game('1. e4 c5 2. Nf3', { white: 1700, black: 1300 }),
+      game('1. e4 e5', { result: '1/2-1/2' }),
+      game('1. d4', { result: '0-1', event: 'Rated Bullet game', white: 2450, black: 2450 }),
+      game('1. e4', { result: '*' }),
     ].join(''),
+    POSITIONS,
+    40,
   );
-  return counter.tally;
-}
 
 const SOURCE: VendoredGames = {
   database: 'lichess_db_standard_rated',
@@ -101,16 +97,10 @@ describe('formatTallies', () => {
 
   it('lists no more than the ten moves most played from a position', () => {
     const firstMoves = ['a3', 'a4', 'b3', 'b4', 'c3', 'c4', 'd3', 'd4', 'e3', 'e4', 'f3', 'f4'];
-    const counter = createCounter(POSITIONS, 40);
-    counter.count(
-      firstMoves
-        .flatMap((move, index) =>
-          Array(index + 1).fill(game(`1. ${move}`, '1-0', 'Blitz', 1500, 1500)),
-        )
-        .join(''),
-    );
+    const games = firstMoves.flatMap((move, index) => Array(index + 1).fill(game(`1. ${move}`)));
+    const tally = countGames(games.join(''), POSITIONS, 40);
 
-    const [, start] = formatTallies(POSITIONS, counter.tally).positions.split('\n');
+    const [, start] = formatTallies(POSITIONS, tally).positions.split('\n');
 
     expect(start?.split('\t')[2]).toBe('f4:12 f3:11 e4:10 e3:9 d4:8 d3:7 c4:6 c3:5 b4:4 b3:3');
   });

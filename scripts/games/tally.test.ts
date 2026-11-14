@@ -1,66 +1,33 @@
 import { describe, expect, it } from 'vitest';
-import { createReplayer } from '../openings/replay.ts';
-import { createGame } from './play.ts';
+import {
+  countGames,
+  lichessGame as game,
+  positionReachedBy,
+  START,
+} from '../../tests/support/games.ts';
 import {
   BANDS,
   countedGames,
   countsOf,
-  createCounter,
+  gamesReaching,
   mergeTallies,
   movesFrom,
   SPEEDS,
   type Tally,
 } from './tally.ts';
 
-const replay = createReplayer();
-const positionAfter = (pgn: string) => replay('a line', pgn).positions.at(-1) as string;
-
-const START = createGame().position();
-const E4 = positionAfter('1. e4');
-const SICILIAN = positionAfter('1. e4 c5');
-const NAJDORF = positionAfter('1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6');
-const QUEENS_PAWN = positionAfter('1. d4 d5 2. Nf3');
+const E4 = positionReachedBy('1. e4');
+const SICILIAN = positionReachedBy('1. e4 c5');
+const NAJDORF = positionReachedBy('1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6');
+const QUEENS_PAWN = positionReachedBy('1. d4 d5 2. Nf3');
 const POSITIONS = [START, E4, SICILIAN, NAJDORF, QUEENS_PAWN];
 
-interface GameOptions {
-  event?: string;
-  white?: number | '?';
-  black?: number | '?';
-  result?: string;
-  tags?: Record<string, string>;
-}
-
-/** A game as lichess writes one. */
-function game(moves: string, options: GameOptions = {}): string {
-  const { event = 'Rated Blitz game', white = 1500, black = 1500, result = '1-0' } = options;
-  const tags = {
-    Event: event,
-    Result: result,
-    WhiteElo: String(white),
-    BlackElo: String(black),
-    Termination: 'Normal',
-    ...options.tags,
-  };
-  const lines = Object.entries(tags).map(([name, value]) => `[${name} "${value}"]`);
-  return `${lines.join('\n')}\n\n${moves} ${result}\n\n`;
-}
-
 /** The tally of `games`, read as deep as `depth`. */
-function tallyOf(games: string[], depth = 40, positions = POSITIONS): Tally {
-  const counter = createCounter(positions, depth);
-  counter.count(games.join(''));
-  return counter.tally;
-}
+const tallyOf = (games: string[], depth = 40, positions = POSITIONS) =>
+  countGames(games.join(''), positions, depth);
 
 /** How many games reached each position, whatever their speed and band. */
-function reached(tally: Tally, positions = POSITIONS): number[] {
-  return positions.map((_, position) =>
-    SPEEDS.flatMap((speed) => BANDS.map((band) => countsOf(tally, position, speed, band))).reduce(
-      (sum, { white, draws, black }) => sum + white + draws + black,
-      0,
-    ),
-  );
-}
+const reached = (tally: Tally) => POSITIONS.map((_, position) => gamesReaching(tally, position));
 
 const NAJDORF_GAME = '1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6 6. Be3 e5';
 

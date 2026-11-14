@@ -6,7 +6,8 @@ import { Chess } from 'chess.js';
 import { formatMoveText } from '../src/chess/san.ts';
 import { BOOK, SITE } from '../src/wikibooks/book.ts';
 import { DATA_DIR } from './openings/dataset.ts';
-import { SOURCE_FILE } from './openings/source.ts';
+import { formatTsv } from './openings/parse-tsv.ts';
+import { formatSourceFile, SOURCE_FILE, today, USER_AGENT } from './openings/source.ts';
 import {
   PAGE_COLUMNS,
   PAGES_FILE,
@@ -118,11 +119,8 @@ export async function updateWikibooksData(dataDir: string, io: UpdateIo): Promis
 
   const table = [...rows.values()]
     .sort((a, b) => (a.pgn < b.pgn ? -1 : 1))
-    .map(({ page, revision, name, pgn }) => [page, revision, name, pgn].join('\t'));
-  await io.writeFile(
-    join(dataDir, PAGES_FILE),
-    `${[PAGE_COLUMNS.join('\t'), ...table].join('\n')}\n`,
-  );
+    .map(({ page, revision, name, pgn }) => [page, revision, name, pgn]);
+  await io.writeFile(join(dataDir, PAGES_FILE), formatTsv(PAGE_COLUMNS, table));
 
   const source: VendoredWikibook = {
     book: BOOK,
@@ -130,14 +128,11 @@ export async function updateWikibooksData(dataDir: string, io: UpdateIo): Promis
     license: 'CC-BY-SA-4.0',
     retrieved: io.today(),
   };
-  await io.writeFile(join(dataDir, SOURCE_FILE), `${JSON.stringify(source, null, 2)}\n`);
+  await io.writeFile(join(dataDir, SOURCE_FILE), formatSourceFile(source));
 
   skipped.sort((a, b) => (a.title < b.title ? -1 : 1));
   return { lines: rows.size, skipped };
 }
-
-/** Says who is asking, as the wiki asks of every client. */
-const USER_AGENT = 'chess-openings (https://github.com/cfeduke/chess-openings)';
 
 /**
  * Fetches from the wiki without leaning on it: one request at a time, a pause before each, and
@@ -161,7 +156,7 @@ if (import.meta.main) {
   const { lines, skipped } = await updateWikibooksData(dataDir, {
     fetchJson: fetchJsonPolitely,
     writeFile,
-    today: () => new Date().toISOString().slice(0, 10),
+    today,
   });
   console.log(`${dataDir}: ${lines} lines of "${BOOK}".`);
   for (const { title, reason } of skipped) console.log(`  left out ${title}: ${reason}`);

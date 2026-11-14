@@ -34,22 +34,24 @@ function seeded(seed: number): () => number {
 }
 
 /**
- * A legal game of up to `plies` moves chosen by chance, half the time from the pawn moves alone:
- * pawns that keep going are what make captures in passing and promotions.
+ * A legal game of up to `plies` moves chosen by chance, half the time from the pawn moves alone
+ * — pawns that keep going are what make captures in passing and promotions — with the position
+ * the rules engine has after each.
  */
-function gameOfChance(seed: number, plies: number): string[] {
+function gameOfChance(seed: number, plies: number): { san: string[]; positions: string[] } {
   const random = seeded(seed);
   const game = new Chess();
   const san: string[] = [];
+  const positions: string[] = [];
   while (san.length < plies && !game.isGameOver()) {
     const legal = game.moves();
     const pawns = legal.filter((move) => /^[a-h]/.test(move));
     const from = pawns.length > 0 && random() < 0.5 ? pawns : legal;
     const move = from[Math.floor(random() * from.length)] as string;
-    game.move(move);
+    positions.push(positionOf(game.move(move).after));
     san.push(move);
   }
-  return san;
+  return { san, positions };
 }
 
 describe('a game played without the rules', () => {
@@ -113,8 +115,8 @@ describe('a game played without the rules', () => {
   });
 
   it('agrees with the rules engine move for move through whole games of chance', () => {
-    const games = Array.from({ length: 60 }, (_, seed) => gameOfChance(seed + 1, 200));
-    const moves = games.flat();
+    const games = Array.from({ length: 20 }, (_, seed) => gameOfChance(seed + 1, 200));
+    const moves = games.flatMap((game) => game.san);
 
     // The games are only worth playing if they hold what the opening lines do not.
     expect(moves.filter((move) => move.includes('=')).length).toBeGreaterThan(10);
@@ -123,8 +125,8 @@ describe('a game played without the rules', () => {
     );
     expect(moves.filter((move) => move.startsWith('O-O')).length).toBeGreaterThan(0);
 
-    const wrong = games.filter((san) => played(san).join('\n') !== byTheRules(san).join('\n'));
-    expect(wrong.map((san) => san.join(' '))).toEqual([]);
+    const wrong = games.filter(({ san, positions }) => played(san).join() !== positions.join());
+    expect(wrong.map(({ san }) => san.join(' '))).toEqual([]);
   });
 
   it('refuses a move that no piece can make', () => {

@@ -1,34 +1,31 @@
 import { zstdCompressSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
-import { createGame } from './games/play.ts';
-import { createCounter } from './games/tally.ts';
+import {
+  countGames,
+  lichessGame as game,
+  positionReachedBy,
+  START,
+} from '../tests/support/games.ts';
 import { formatTallies } from './games/vendored.ts';
-import { createReplayer } from './openings/replay.ts';
 import { updateGamesData } from './update-games-data.ts';
-
-const replay = createReplayer();
-const positionAfter = (pgn: string) => replay('a line', pgn).positions.at(-1) as string;
 
 const INTEREST = {
   positions: [
-    createGame().position(),
-    positionAfter('1. e4'),
-    positionAfter('1. e4 c5'),
-    positionAfter('1. b4 e5'),
+    START,
+    positionReachedBy('1. e4'),
+    positionReachedBy('1. e4 c5'),
+    positionReachedBy('1. b4 e5'),
   ],
   depth: 8,
 };
 
-const game = (moves: string, result = '1-0', event = 'Blitz') =>
-  `[Event "Rated ${event} game"]\n[Result "${result}"]\n[WhiteElo "1500"]\n[BlackElo "1700"]\n\n${moves} ${result}\n\n`;
-
 const PGN = [
   game('1. e4 c5 2. Nf3'),
-  game('1. e4 e5', '0-1'),
-  game('1. d4 d5', '1/2-1/2', 'Rapid'),
-  game('1. e4 c5 2. Nc3', '1-0', 'Correspondence'),
-  game('1. e4', '*'),
-  game('1. e4 c6', '0-1', 'Bullet'),
+  game('1. e4 e5', { result: '0-1' }),
+  game('1. d4 d5', { result: '1/2-1/2', event: 'Rated Rapid game' }),
+  game('1. e4 c5 2. Nc3', { event: 'Rated Correspondence game' }),
+  game('1. e4', { result: '*' }),
+  game('1. e4 c6', { result: '0-1', event: 'Rated Bullet game' }),
 ].join('');
 
 /** The games as lichess publishes them: zstd, in frames that end wherever they end. */
@@ -104,11 +101,8 @@ function fakeDatabase(mishap: Mishap = () => undefined) {
 }
 
 /** What counting `PGN` in one go leaves to be written. */
-function expected() {
-  const counter = createCounter(INTEREST.positions, INTEREST.depth);
-  counter.count(PGN);
-  return { tally: counter.tally, files: formatTallies(INTEREST.positions, counter.tally) };
-}
+const expected = () =>
+  formatTallies(INTEREST.positions, countGames(PGN, INTEREST.positions, INTEREST.depth));
 
 describe('updateGamesData', () => {
   const update = (target: string | undefined, database: ReturnType<typeof fakeDatabase>) =>
@@ -122,10 +116,8 @@ describe('updateGamesData', () => {
     expect(new Set(database.read.map(([location]) => location))).toEqual(
       new Set([urlOf('2026-09')]),
     );
-    expect(database.written.get('data/lichess-games/positions.tsv')).toBe(
-      expected().files.positions,
-    );
-    expect(database.written.get('data/lichess-games/tallies.tsv')).toBe(expected().files.tallies);
+    expect(database.written.get('data/lichess-games/positions.tsv')).toBe(expected().positions);
+    expect(database.written.get('data/lichess-games/tallies.tsv')).toBe(expected().tallies);
   });
 
   it('asks for the file a part at a time, in order, and for no more at once than it may', async () => {
@@ -169,7 +161,7 @@ describe('updateGamesData', () => {
     const report = await update(undefined, database);
 
     expect(database.read[0]?.[0]).toBe(urlOf('2026-10'));
-    expect(report.month).toBe('2026-10');
+    expect(report.source.month).toBe('2026-10');
   });
 
   it('reads a file that has been downloaded already, and knows its month by its name', async () => {
@@ -197,20 +189,11 @@ describe('updateGamesData', () => {
 
     const report = await update('2026-09', database);
 
-    expect(report).toEqual({
-      month: '2026-09',
-      games: 6,
-      counted: 4,
-      leftOut: {
-        correspondence: 1,
-        unfinished: 1,
-        unrated: 0,
-        abandoned: 0,
-        bot: 0,
-        unreadable: 0,
-      },
-      unreached: [positionAfter('1. b4 e5')],
-    });
+    expect(report.source).toEqual(
+      JSON.parse(database.written.get('data/lichess-games/SOURCE.json') ?? ''),
+    );
+    expect(report.source).toMatchObject({ month: '2026-09', games: 6, counted: 4 });
+    expect(report.unreached).toEqual([positionReachedBy('1. b4 e5')]);
   });
 
   it('says how far it has got as it goes', async () => {
@@ -235,7 +218,7 @@ describe('updateGamesData', () => {
     expect(database.read.length).toBe(PARTS.length + 2);
     expect(database.paused.length).toBe(2);
     expect(database.said.filter((line) => line.includes('asking again')).length).toBe(2);
-    expect(database.written.get('data/lichess-games/tallies.tsv')).toBe(expected().files.tallies);
+    expect(database.written.get('data/lichess-games/tallies.tsv')).toBe(expected().tallies);
   });
 
   it('gives up on a part of the file that keeps failing, and writes nothing', async () => {
