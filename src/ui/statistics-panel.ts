@@ -10,7 +10,7 @@ import {
   type Split,
   scoreOf,
 } from '../statistics/detail.ts';
-import { percentage, shareInWords } from '../statistics/popularity.ts';
+import { percent, percentage, shareInWords } from '../statistics/popularity.ts';
 import type { LineNumbers } from '../statistics/statistics.ts';
 import { monthInWords } from '../text/month.ts';
 
@@ -30,13 +30,7 @@ export interface PanelSubject {
   leadsTo(place: number): { opening: Opening; name: string } | undefined;
 }
 
-/** A score, or a share of the results, to one decimal: `52.6%`. */
-const percent = (share: number) => `${(share * 100).toFixed(1)}%`;
-
 const games = (count: number) => `${count.toLocaleString('en')} ${count === 1 ? 'game' : 'games'}`;
-
-/** A heading of the panel and what comes under it. */
-const section = (heading: HTMLElement, ...content: HTMLElement[]) => [heading, ...content];
 
 let panels = 0;
 
@@ -53,9 +47,8 @@ export function createStatisticsPanel({ onSelect }: { onSelect(opening: Opening)
   const id = `stats-${++panels}`;
   let subject: PanelSubject | null = null;
   let open = false;
-  /** The rest of the numbers of `subject`: come, failed to come, or — undefined — not yet. */
-  let detail: OpeningDetail | 'failed' | undefined;
-  let fetching = false;
+  /** The rest of the numbers of `subject`: come, coming, failed to come, or not yet asked for. */
+  let detail: OpeningDetail | 'fetching' | 'failed' | undefined;
 
   const toggle = el(
     'button',
@@ -94,7 +87,7 @@ export function createStatisticsPanel({ onSelect }: { onSelect(opening: Opening)
         ? `None of the ${counted(shown, ' games')} reached this position.`
         : `${games(numbers.games)} reached this position: ` +
           `${shareInWords(numbers.share)} of the ${counted(shown)}.`;
-    return section(heading('How often'), el('p', { class: 'stats__often' }, said));
+    return [heading('How often'), el('p', { class: 'stats__often' }, said)];
   };
 
   const howItGoes = ({ numbers, total }: PanelSubject) => {
@@ -131,13 +124,13 @@ export function createStatisticsPanel({ onSelect }: { onSelect(opening: Opening)
         : `White scores ${percent(score)}.`,
     );
     const ratings = againstRatings(numbers, total);
-    return section(
+    return [
       heading('How it goes'),
       bar,
       outcomes,
       scored,
       ...(ratings ? [el('p', { class: 'stats__ratings' }, ratings)] : []),
-    );
+    ];
   };
 
   /** A table of the games of each band, or each speed: its share of them, and White's score. */
@@ -184,7 +177,7 @@ export function createStatisticsPanel({ onSelect }: { onSelect(opening: Opening)
         ),
       ),
     );
-    return section(titled, table);
+    return [titled, table];
   };
 
   const whatNext = ({ plies, leadsTo }: PanelSubject, { moves, others }: OpeningDetail) => {
@@ -209,13 +202,13 @@ export function createStatisticsPanel({ onSelect }: { onSelect(opening: Opening)
       ...moves.map(({ san, share, to }) => item(numberedMove(san, plies), share, leadsTo(to))),
       ...(others.games > 0 ? [item('Other moves', others.share)] : []),
     );
-    return section(titled, list);
+    return [titled, list];
   };
 
   const howLong = ({ meanMoves, short }: OpeningDetail) =>
     meanMoves === undefined || short === undefined
       ? []
-      : section(
+      : [
           heading('How long'),
           el(
             'p',
@@ -223,7 +216,7 @@ export function createStatisticsPanel({ onSelect }: { onSelect(opening: Opening)
             `The games last ${meanMoves} moves on average, ` +
               `and ${percentage(short)} of them are over within twenty.`,
           ),
-        );
+        ];
 
   const about = (shown: PanelSubject) =>
     el(
@@ -245,8 +238,8 @@ export function createStatisticsPanel({ onSelect }: { onSelect(opening: Opening)
   /** Asks for the rest of the numbers of the opening on show, and draws again when they come. */
   const fetchDetail = () => {
     const asked = subject;
-    if (!asked?.detail || fetching) return;
-    fetching = true;
+    if (!asked?.detail || detail !== undefined) return;
+    detail = 'fetching';
     asked
       .detail()
       .then(
@@ -256,7 +249,6 @@ export function createStatisticsPanel({ onSelect }: { onSelect(opening: Opening)
       .then((came) => {
         // The board may have moved on to another opening while this one's numbers were coming.
         if (asked !== subject) return;
-        fetching = false;
         detail = came;
         draw();
       });
@@ -280,7 +272,7 @@ export function createStatisticsPanel({ onSelect }: { onSelect(opening: Opening)
         retry,
       ];
     }
-    if (!detail) {
+    if (detail === undefined || detail === 'fetching') {
       fetchDetail();
       return [
         el('p', { class: 'stats__notice', role: 'status' }, 'Fetching the rest of the numbers…'),
@@ -317,7 +309,6 @@ export function createStatisticsPanel({ onSelect }: { onSelect(opening: Opening)
     show(shown) {
       subject = shown;
       detail = undefined;
-      fetching = false;
       // What is there is of the opening before: it is not to be seen again when the panel opens.
       body.replaceChildren();
       draw();

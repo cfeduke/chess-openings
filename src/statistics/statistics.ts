@@ -84,12 +84,13 @@ const isRanking = (ranking: MostPlayedData | undefined): ranking is MostPlayedDa
 
 /** Whether `index` says how the detail is cut up, and into what. */
 const isIndex = (index: DetailIndex | undefined): index is DetailIndex =>
-  Number.isInteger(index?.size) &&
-  (index?.size ?? 0) > 0 &&
-  Array.isArray(index?.bands) &&
-  Array.isArray(index?.speeds) &&
-  Array.isArray(index?.totals?.bands) &&
-  Array.isArray(index?.totals?.speeds);
+  !!index &&
+  Number.isInteger(index.size) &&
+  index.size > 0 &&
+  Array.isArray(index.bands) &&
+  Array.isArray(index.speeds) &&
+  Array.isArray(index.totals?.bands) &&
+  Array.isArray(index.totals?.speeds);
 
 function refuse(why: string): never {
   throw new Error(`the statistics are unreadable: ${why}`);
@@ -123,7 +124,9 @@ export function readStatistics(data: StatisticsData, collections: OpeningCollect
       const place = ends[index] ?? -1;
       if (!positions[place]) continue;
       places.set(opening.id, place);
-      endingAt.set(place, [...(endingAt.get(place) ?? []), opening]);
+      const there = endingAt.get(place);
+      if (there) there.push(opening);
+      else endingAt.set(place, [opening]);
     }
   }
 

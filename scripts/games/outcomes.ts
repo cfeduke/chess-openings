@@ -1,5 +1,5 @@
 import type { Outcomes } from '../../src/statistics/data.ts';
-import { BANDS, type Band, countsOf, SPEEDS, type Speed, type Tally } from './tally.ts';
+import { BANDS, type Band, countsOver, SPEEDS, type Speed, type Tally } from './tally.ts';
 
 /** How the games of these speeds and bands that reached the `position`th position went. */
 function outcomesIn(
@@ -8,16 +8,8 @@ function outcomesIn(
   speeds: readonly Speed[],
   bands: readonly Band[],
 ): Outcomes {
-  const sum: Outcomes = [0, 0, 0];
-  for (const speed of speeds) {
-    for (const band of bands) {
-      const { white, draws, black } = countsOf(tally, position, speed, band);
-      sum[0] += white;
-      sum[1] += draws;
-      sum[2] += black;
-    }
-  }
-  return sum;
+  const { white, draws, black } = countsOver(tally, position, speeds, bands);
+  return [white, draws, black];
 }
 
 /** What was counted for the `position`th position in each band of strength, at every speed. */

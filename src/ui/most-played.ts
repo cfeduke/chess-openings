@@ -4,7 +4,7 @@ import { formatMoveText } from '../chess/san.ts';
 import { el } from '../dom.ts';
 import type { GamesSource, MostPlayedData } from '../statistics/data.ts';
 import { bandNames, type RankedFamily, rankMostPlayed } from '../statistics/most-played.ts';
-import { percentage } from '../statistics/popularity.ts';
+import { percent, percentage } from '../statistics/popularity.ts';
 import { monthInWords } from '../text/month.ts';
 import { type LeadPage, LINES_REDRAWN } from './catalog.ts';
 import { popularityMeter } from './meter.ts';
@@ -47,7 +47,7 @@ function row({ family, place }: ReturnType<typeof mostPlayedIn>[number], rank: n
       : [
           'White',
           el('span', { class: 'visually-hidden' }, ' scores'),
-          ` ${(family.whiteScore * 100).toFixed(1)}%`,
+          ` ${percent(family.whiteScore)}`,
         ];
   return el(
     'li',

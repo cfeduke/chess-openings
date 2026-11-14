@@ -6,7 +6,7 @@ import { endOf } from './interest.ts';
 import { rankableFamilies } from './most-played.ts';
 import { outcomesByBand } from './outcomes.ts';
 import { createGame } from './play.ts';
-import { BANDS, countsOf, SPEEDS, type Tally } from './tally.ts';
+import { BANDS, countsOver, type Tally } from './tally.ts';
 import type { GameTallies } from './vendored.ts';
 
 /** What the credits call the database the games are from, and where they point to. */
@@ -14,18 +14,8 @@ const DATABASE = { title: 'lichess.org open database', url: 'https://database.li
 
 /** What was counted for the `position`th position, of games of every speed and strength. */
 function countsAt(tally: Tally, position: number): PositionCounts {
-  const sum: PositionCounts = [0, 0, 0, 0];
-  for (const speed of SPEEDS) {
-    for (const band of BANDS) {
-      const { white, draws, black, expected } = countsOf(tally, position, speed, band);
-      sum[0] += white;
-      sum[1] += draws;
-      sum[2] += black;
-      sum[3] += expected;
-    }
-  }
-  sum[3] = Math.round(sum[3]);
-  return sum;
+  const { white, draws, black, expected } = countsOver(tally, position);
+  return [white, draws, black, Math.round(expected)];
 }
 
 /**

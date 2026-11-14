@@ -1,5 +1,6 @@
 import type { DetailChunk, DetailIndex, Outcomes, PositionDetail } from './data.ts';
 import { bandNames } from './most-played.ts';
+import { percent } from './popularity.ts';
 import { type LineNumbers, numbersOf } from './statistics.ts';
 
 /**
@@ -126,7 +127,6 @@ export function createDetails(
   };
 }
 
-const percent = (share: number) => `${(share * 100).toFixed(1)}%`;
 const points = (difference: number) => (Math.abs(difference) * 100).toFixed(1);
 
 /**

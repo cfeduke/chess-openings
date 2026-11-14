@@ -3,7 +3,7 @@ import type { DetailChunk, DetailIndex, PositionDetail } from '../../src/statist
 import { endOf } from './interest.ts';
 import { outcomesByBand, outcomesBySpeed } from './outcomes.ts';
 import { createGame } from './play.ts';
-import { BANDS, countsOf, movesFrom, SPEEDS, type Tally } from './tally.ts';
+import { BANDS, countsOver, movesFrom, SPEEDS, type Tally } from './tally.ts';
 import type { GameTallies } from './vendored.ts';
 
 /**
@@ -46,15 +46,7 @@ export function buildDetail(dataset: OpeningsDataset, tallies: GameTallies): Det
   };
 
   const details = positions.map((_, place): PositionDetail => {
-    let plies = 0;
-    let short = 0;
-    for (const speed of SPEEDS) {
-      for (const band of BANDS) {
-        const counts = countsOf(tally, place, speed, band);
-        plies += counts.plies;
-        short += counts.short;
-      }
-    }
+    const { plies, short } = countsOver(tally, place);
     const line = lineTo.get(place);
     return {
       bands: outcomesByBand(tally, place),
