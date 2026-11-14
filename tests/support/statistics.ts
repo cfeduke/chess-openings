@@ -1,4 +1,9 @@
-import type { Outcomes, StatisticsData } from '../../src/statistics/data.ts';
+import type {
+  DetailChunk,
+  Outcomes,
+  PositionDetail,
+  StatisticsData,
+} from '../../src/statistics/data.ts';
 
 /** How `games` games went, of which White won the share `white` and one in twenty-five was drawn. */
 const went = (games: number, white = 0.5): Outcomes => [
@@ -47,6 +52,16 @@ export const SMALL_STATISTICS: StatisticsData = {
     // Of the pamphlet's gambits only the Danish was counted.
     pamphlet: [9, -1, -1, -1],
   },
+  // What the detail of each position is cut up by, and how all the games fall into each.
+  detail: {
+    size: 256,
+    bands: [0, 1200, 1600, 2000, 2400],
+    speeds: ['bullet', 'blitz', 'rapid', 'classical'],
+    totals: {
+      bands: [200_000, 300_000, 300_000, 150_000, 50_000].map((games) => went(games)),
+      speeds: [400_000, 450_000, 130_000, 20_000].map((games) => went(games)),
+    },
+  },
   // Five families of the small book, the most played first. The beginners play the Scandinavian
   // and the Italian, the masters the Slav and the Sicilian; White does best in the Italian.
   mostPlayed: {
@@ -65,3 +80,57 @@ export const SMALL_STATISTICS: StatisticsData = {
     })),
   },
 };
+
+const NOTHING: PositionDetail = {
+  bands: [0, 0, 0, 0, 0].map((games) => went(games)),
+  speeds: [0, 0, 0, 0].map((games) => went(games)),
+  moves: [],
+  plies: 0,
+  short: 0,
+};
+
+/**
+ * The detail of the Italian Game's 39,000 games: mostly beginners', mostly fast, 34 moves long
+ * on average and a fifth of them over within twenty. Of the moves played next the first is said
+ * to lead to the Giuoco Pianissimo, which is not chess but gives the small book a line to go to.
+ */
+export const ITALIAN_DETAIL: PositionDetail = {
+  bands: [22_000, 10_000, 5_000, 1_800, 200].map((games) => went(games, 0.55)),
+  speeds: [20_000, 15_000, 3_500, 500].map((games) => went(games, 0.55)),
+  moves: [
+    ['Bc5', 20_000, 7],
+    ['Nf6', 12_000, -1],
+    ['Be7', 4_000, -1],
+    ['h6', 2_000, -1],
+  ],
+  plies: 39_000 * 68,
+  short: 7_800,
+};
+
+/** The Najdorf's twenty games: too few to say how it scores. */
+export const NAJDORF_DETAIL: PositionDetail = {
+  bands: [
+    [0, 0, 0],
+    [2, 0, 3],
+    [5, 1, 4],
+    [2, 0, 3],
+    [0, 0, 0],
+  ],
+  speeds: [
+    [4, 0, 6],
+    [5, 1, 4],
+    [0, 0, 0],
+    [0, 0, 0],
+  ],
+  moves: [
+    ['Be3', 8, 5],
+    ['Bg5', 7, -1],
+  ],
+  plies: 20 * 80,
+  short: 1,
+};
+
+/** The one file of detail the small statistics come in: a position to each place. */
+export const SMALL_DETAIL: DetailChunk = SMALL_STATISTICS.positions.map((_, place) =>
+  place === 6 ? ITALIAN_DETAIL : place === 4 ? NAJDORF_DETAIL : NOTHING,
+);
