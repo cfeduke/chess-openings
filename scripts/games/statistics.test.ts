@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { OpeningsDataset } from '../../src/data/opening.ts';
+import type { PositionCounts } from '../../src/statistics/data.ts';
 import { countGames, lichessGame as game } from '../../tests/support/games.ts';
 import { encyclopaedia, LICHESS, opening } from '../../tests/support/openings.ts';
 import { realDataset } from '../../tests/support/real-openings.ts';
@@ -65,7 +66,7 @@ describe('buildStatistics', () => {
     const { positions } = buildStatistics(COUNTED, tallies());
 
     // Every game, then 1. e4 c5, then 1. e4 c5 2. Nf3 by either road, then 1. b4.
-    expect(positions.map(([white, draws, black]) => [white, draws, black])).toEqual([
+    expect(positions.map((counts) => counts.slice(0, 3))).toEqual([
       [1, 1, 2],
       [1, 1, 0],
       [1, 0, 1],
@@ -101,9 +102,8 @@ describe('buildStatistics', () => {
 
 describe('the statistics of the vendored games', () => {
   const { source, positions, lines } = realStatistics;
-  const games = ([white, draws, black]: number[]) =>
-    (white as number) + (draws as number) + (black as number);
-  const total = games(positions[0] as number[]);
+  const games = ([white, draws, black]: PositionCounts) => white + draws + black;
+  const total = games(positions[0] as PositionCounts);
 
   it('are of October 2026’s 94 million counted games', () => {
     expect(source).toMatchObject({ month: '2026-10', games: 94_074_706, license: 'CC0-1.0' });
@@ -122,7 +122,7 @@ describe('the statistics of the vendored games', () => {
   it('find the Sicilian in 9.2% of games', () => {
     const [encyclopaedia] = realDataset.collections;
     const sicilian = encyclopaedia?.openings.findIndex(({ id }) => id === 'sicilian-defense') ?? -1;
-    const position = positions[lines.eco?.[sicilian] ?? -1] as number[];
+    const position = positions[lines.eco?.[sicilian] ?? -1] as PositionCounts;
 
     expect(games(position) / total).toBeCloseTo(0.092, 3);
   });

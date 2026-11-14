@@ -1,5 +1,6 @@
 import type { OpeningsDataset } from '../../src/data/opening.ts';
 import type { PositionCounts, StatisticsData } from '../../src/statistics/data.ts';
+import { endOf } from './interest.ts';
 import { createGame } from './play.ts';
 import { BANDS, countsOf, SPEEDS, type Tally } from './tally.ts';
 import type { GameTallies } from './vendored.ts';
@@ -36,11 +37,7 @@ export function buildStatistics(dataset: OpeningsDataset, tallies: GameTallies):
   const lines = Object.fromEntries(
     dataset.collections.map(({ id, openings }) => [
       id,
-      openings.map(({ san }) => {
-        game.restart();
-        for (const move of san) game.play(move);
-        return placeOf.get(game.position()) ?? -1;
-      }),
+      openings.map(({ san }) => placeOf.get(endOf(game, san)) ?? -1),
     ]),
   );
 

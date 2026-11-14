@@ -1,5 +1,5 @@
 import type { OpeningsDataset } from '../../src/data/opening.ts';
-import { createGame } from './play.ts';
+import { createGame, type Game } from './play.ts';
 
 /** What games are read for. */
 export interface Interest {
@@ -7,6 +7,13 @@ export interface Interest {
   positions: string[];
   /** How many moves into a game, counting each side's, the last of them can be reached. */
   depth: number;
+}
+
+/** The position the moves of a line lead to from the start, played on `game`. */
+export function endOf(game: Game, san: readonly string[]): string {
+  game.restart();
+  for (const move of san) game.play(move);
+  return game.position();
 }
 
 /**
@@ -18,9 +25,7 @@ export function positionsOfInterest(dataset: OpeningsDataset): Interest {
   const positions = new Set([game.position()]);
   let depth = 0;
   for (const { san } of dataset.collections.flatMap((collection) => collection.openings)) {
-    game.restart();
-    for (const move of san) game.play(move);
-    positions.add(game.position());
+    positions.add(endOf(game, san));
     depth = Math.max(depth, san.length);
   }
   return { positions: [...positions], depth };

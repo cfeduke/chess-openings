@@ -140,12 +140,7 @@ const count = (openings: number) =>
  * A list item with a button for one opening. `label` is what tells it from its neighbours;
  * `unseen` is read out before it, for when the list it is in already shows that part.
  */
-function lineItem(
-  opening: Opening,
-  label: string,
-  unseen = '',
-  numbersOf?: NumbersOf,
-): HTMLElement {
+function lineItem(opening: Opening, label: string, unseen = ''): HTMLElement {
   const moves = formatMoveText(opening.san);
   const name = el('span', { class: 'line__name' }, label);
   if (unseen) name.prepend(el('span', { class: 'visually-hidden' }, unseen));
@@ -157,14 +152,13 @@ function lineItem(
     name,
     el('span', { class: 'line__moves' }, moves),
   );
-  if (numbersOf) meterOn(button, numbersOf(opening));
   return el('li', {}, button);
 }
 
 /** Puts on a line's button the meter of how often it is played, in place of any it has. */
-function meterOn(button: Element, numbers: LineNumbers | undefined): void {
-  button.querySelector('.line__meter')?.remove();
-  if (!numbers) return;
+function meterOn(button: Element | null, numbers: LineNumbers | undefined): void {
+  button?.querySelector('.line__meter')?.remove();
+  if (!button || !numbers) return;
   const meter = popularityMeter(numbers.share);
   meter.classList.add('line__meter');
   button.append(meter);
@@ -188,6 +182,13 @@ export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogVie
   /** Puts the mark on every button on screen for the opening on the board, and on no other. */
   const markSelected = () => {
     holdMark(selected ? [...element.querySelectorAll(`.line[data-opening="${selected.id}"]`)] : []);
+  };
+
+  /** A line's list item, as `lineItem` makes it, saying how often it is played if that is known. */
+  const listed = (...line: Parameters<typeof lineItem>) => {
+    const item = lineItem(...line);
+    if (numbersOf) meterOn(item.firstElementChild, numbersOf(line[0]));
+    return item;
   };
 
   // Browsing ------------------------------------------------------------------------------
@@ -217,7 +218,7 @@ export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogVie
             'ul',
             { class: 'lines' },
             ...family.lines.map((line) =>
-              lineItem(line.opening, lineLabel(line), `${family.name}: `, numbersOf),
+              listed(line.opening, lineLabel(line), `${family.name}: `),
             ),
           ),
         );
@@ -356,7 +357,7 @@ export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogVie
     matches.replaceChildren(
       ...found.matches.map((opening) => {
         const place = catalog.locate(opening.id);
-        return lineItem(opening, place ? fullName(place) : opening.name, '', numbersOf);
+        return listed(opening, place ? fullName(place) : opening.name);
       }),
     );
     markSelected();

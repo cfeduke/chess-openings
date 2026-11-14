@@ -8,6 +8,7 @@ import { describeShare, POPULARITY_STEPS, popularityOf } from '../statistics/pop
  * reader in words that follow on from what the line is called.
  */
 export function popularityMeter(share: number): HTMLElement {
+  const none = share <= 0;
   const steps = popularityOf(share);
   const words = describeShare(share);
   const bars = Array.from({ length: POPULARITY_STEPS }, (_, step) =>
@@ -15,8 +16,8 @@ export function popularityMeter(share: number): HTMLElement {
   );
   return el(
     'span',
-    { class: share > 0 ? 'meter' : 'meter meter--none', title: words },
+    { class: none ? 'meter meter--none' : 'meter', title: words },
     el('span', { class: 'meter__bars', 'aria-hidden': 'true' }, ...bars),
-    el('span', { class: 'visually-hidden' }, `reached in ${words.replace(/^No/, 'no')}`),
+    el('span', { class: 'visually-hidden' }, `reached in ${none ? 'no games' : words}`),
   );
 }

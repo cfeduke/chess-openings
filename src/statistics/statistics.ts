@@ -51,6 +51,10 @@ function numbersOf([white, draws, black, expected]: PositionCounts, total: numbe
   };
 }
 
+function refuse(why: string): never {
+  throw new Error(`the statistics are unreadable: ${why}`);
+}
+
 const isCounts = (counts: unknown): counts is PositionCounts =>
   Array.isArray(counts) && counts.length === 4 && counts.every(Number.isFinite);
 
@@ -59,9 +63,6 @@ const isCounts = (counts: unknown): counts is PositionCounts =>
  * a collection it does not cover line for line simply has no numbers.
  */
 export function readStatistics(data: StatisticsData, collections: OpeningCollection[]): Statistics {
-  const refuse = (why: string): never => {
-    throw new Error(`the statistics are unreadable: ${why}`);
-  };
   if (!data || typeof data !== 'object') refuse('not an object');
   const { source, positions, lines } = data;
   if (!source || typeof source.month !== 'string') refuse('no source');
@@ -69,17 +70,9 @@ export function readStatistics(data: StatisticsData, collections: OpeningCollect
   if (!lines || typeof lines !== 'object') refuse('no lines');
 
   const [all] = positions;
-  const total = all ? all[0] + all[1] + all[2] : 0;
-  if (!all || total === 0) refuse('no games');
-
-  // A position's numbers are worked out the first time they are asked for.
-  const numbers: (LineNumbers | undefined)[] = [];
-  const at = (place: number) => {
-    const counts = positions[place];
-    if (!counts) return undefined;
-    numbers[place] ??= numbersOf(counts, total);
-    return numbers[place];
-  };
+  if (!all) return refuse('no games');
+  const total = all[0] + all[1] + all[2];
+  if (total === 0) refuse('no games');
 
   const places = new Map<string, number>();
   for (const { id, openings } of collections) {
@@ -90,7 +83,10 @@ export function readStatistics(data: StatisticsData, collections: OpeningCollect
 
   return {
     source,
-    total: numbersOf(all as PositionCounts, total),
-    of: (opening) => at(places.get(opening.id) ?? -1),
+    total: numbersOf(all, total),
+    of(opening) {
+      const counts = positions[places.get(opening.id) ?? -1];
+      return counts && numbersOf(counts, total);
+    },
   };
 }
