@@ -13,6 +13,7 @@ function setup(openings = SMALL_BOOK, ranking = RANKING) {
   const catalog = buildCatalog([encyclopaedia(openings)]);
   const page = mostPlayedPage({ catalog, ranking, source: SMALL_STATISTICS.source });
   const { element } = page;
+  document.body.replaceChildren(element);
   const rows = () => [...element.querySelectorAll<HTMLElement>('.ranking .line')];
   const part = (selector: string) =>
     rows().map((row) => row.querySelector(selector)?.textContent ?? null);
@@ -31,15 +32,15 @@ describe('the page of the most played openings', () => {
     expect(page).toMatchObject({
       id: 'most-played',
       tab: 'Top',
-      name: 'Most played',
-      title: 'The openings to start with',
+      name: 'Top openings',
+      title: 'Most played',
     });
   });
 
   it('says what it is, and of which games', () => {
     const { element } = setup();
 
-    expect(element.querySelector('h2')?.textContent).toBe('The openings to start with');
+    expect(element.querySelector('h2')?.textContent).toBe('Most played');
     const summary = element.querySelector('.section__summary')?.textContent;
     expect(summary).toContain('1,000,000 games');
     expect(summary).toContain('October 2026');
@@ -152,11 +153,9 @@ describe('the page of the most played openings', () => {
   });
 
   it('tells the catalog when it has drawn its lines again', () => {
-    const { element, choose } = setup();
+    const { choose } = setup();
     const redrawn = vi.fn();
-    const host = document.createElement('div');
-    host.append(element);
-    host.addEventListener(LINES_REDRAWN, redrawn);
+    document.body.addEventListener(LINES_REDRAWN, redrawn, { once: true });
 
     choose('2400 and over');
 

@@ -29,7 +29,28 @@ export interface CatalogView {
    * opening on the board is kept in view, in case the page made room for the numbers' credit.
    */
   count(numbersOf: NumbersOf): void;
+  /**
+   * Puts `page` ahead of the sections of the collection with this id, with a tab of its own. If
+   * the visitor has not yet turned to a section of that collection, or been taken to one by an
+   * opening, it becomes the page the collection opens at.
+   */
+  lead(collectionId: string, page: LeadPage): void;
 }
+
+/** What the catalog needs to know of something to give it a tab among a collection's sections. */
+type Tabbed = Pick<CatalogSection, 'id' | 'tab' | 'name' | 'title'>;
+
+/**
+ * A page that is not a section of a collection, to be shown as if it were one. Its lines are
+ * the catalog's to choose and to mark if they are `.line` buttons that name their opening in
+ * `data-opening`; when it draws them again it says so with a `LINES_REDRAWN` event.
+ */
+export interface LeadPage extends Tabbed {
+  element: HTMLElement;
+}
+
+/** The event, bubbling, by which a page tells the catalog that it has drawn its lines again. */
+export const LINES_REDRAWN = 'linesredrawn';
 
 /** The numbers of the games that reached an opening, if it has any. */
 type NumbersOf = (opening: Opening) => LineNumbers | undefined;
@@ -68,7 +89,7 @@ function tabRow<T>({
   about,
   onChoose,
 }: TabRowOptions<T>) {
-  const tabs = items.map((item) => {
+  const make = (item: T) => {
     const { id, text, name, title } = about(item);
     const tab = el(
       'button',
@@ -85,7 +106,8 @@ function tabRow<T>({
     if (name) tab.setAttribute('aria-label', name);
     tab.addEventListener('click', () => onChoose(item));
     return { item, tab, text };
-  });
+  };
+  const tabs = items.map(make);
   const element = el(
     'div',
     { class: className, role: 'tablist', 'aria-label': label },
@@ -104,6 +126,12 @@ function tabRow<T>({
 
   return {
     element,
+    /** Adds a tab for `item` before the others. It is not the chosen one until `mark` says so. */
+    prepend(item: T) {
+      const made = make(item);
+      tabs.unshift(made);
+      element.prepend(made.tab);
+    },
     /** Makes the tab of `chosen` the chosen one, and returns its id. */
     mark(chosen: T | undefined): string {
       let id = '';
@@ -269,10 +297,13 @@ export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogVie
     return page;
   };
 
-  /** Each collection's sections: their tabs, their pages, and the one that was last on show. */
+  /**
+   * Each collection's sections: their tabs, their pages, the one that was last on show, and
+   * whether the visitor has been to any of them but the one the collection opened at.
+   */
   const shelves = new Map(
     collections.map((collection) => {
-      const sectionTabs = tabRow({
+      const sectionTabs = tabRow<Tabbed>({
         label: collection.sectionsLabel,
         class: 'catalog__sections',
         controls: panel.id,
@@ -288,10 +319,11 @@ export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogVie
         },
         onChoose: (section) => turnTo(collection, section),
       });
-      const pages = new Map(
+      const pages = new Map<Tabbed, HTMLElement>(
         collection.sections.map((section) => [section, pageOf(collection, section)]),
       );
-      return [collection, { sectionTabs, pages, current: collection.sections[0] }];
+      const [current]: Tabbed[] = collection.sections;
+      return [collection, { sectionTabs, pages, current, wandered: false }];
     }),
   );
 
@@ -375,10 +407,13 @@ export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogVie
   });
 
   /** Turns to a collection, and to one of its sections: the one it was left at, unless told. */
-  const turnTo = (collection: CatalogCollection, section?: CatalogSection) => {
+  const turnTo = (collection: CatalogCollection, section?: Tabbed) => {
     const kept = shelves.get(collection);
     if (!kept) return;
-    kept.current = section ?? kept.current;
+    if (section) {
+      kept.current = section;
+      kept.wandered = true;
+    }
 
     const collectionTab = collectionTabs?.mark(collection);
     if (collectionTab) shelf.setAttribute('aria-labelledby', collectionTab);
@@ -393,6 +428,8 @@ export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogVie
     if (panel.firstChild !== page) {
       panel.replaceChildren(page ?? '');
       panel.scrollTop = 0;
+      // The mark is put on what is on the page, and this page was not when it was last put.
+      markSelected();
     }
 
     // A search is of the collection on show: when that changes, so does what it finds.
@@ -417,6 +454,9 @@ export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogVie
     if (chosen) onSelect(chosen.opening);
   });
 
+  // A page that has drawn its lines again has lost the mark of the opening on the board.
+  element.addEventListener(LINES_REDRAWN, markSelected);
+
   if (onShow) turnTo(onShow);
 
   return {
@@ -431,6 +471,17 @@ export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogVie
       }
       markSelected();
       revealSelected();
+    },
+
+    lead(collectionId, page) {
+      const collection = collections.find(({ id }) => id === collectionId);
+      const kept = collection && shelves.get(collection);
+      if (!collection || !kept) return;
+
+      kept.sectionTabs.prepend(page);
+      kept.pages.set(page, page.element);
+      if (!kept.wandered) kept.current = page;
+      if (collection === onShow) turnTo(collection);
     },
 
     count(numbers) {

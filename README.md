@@ -14,9 +14,14 @@ are there, and so are the 2,600-odd positions that Wikibooks'
 
 ## Using it
 
+- **Start with what is played** — the catalog opens at **Top**: the twenty opening families
+  played most on lichess, in order, each with its moves, the share of games that reach it and
+  White's score. The list can be ranked again for the players of one rating band, which changes
+  it a good deal: under 1200 the Scandinavian and the Italian lead, at 2400 and over 1. Nf3 and
+  the Sicilian. The first eight are also offered above the board while nothing is chosen.
 - **Browse** — the catalog holds two collections, chosen at its top. **ECO** has the five volumes
   of the encyclopaedia as tabs (A Flank, B Semi-Open, C Open and French, D Closed and Semi-Closed,
-  E Indian). Each volume is divided into groups of codes, such as
+  E Indian), after the tab of the most played. Each volume is divided into groups of codes, such as
   `B90–B99 Sicilian Defense: Najdorf`, shown with the moves that define them. Open a group to see
   its opening families and their lines. **Wikibooks** is laid out as the book is, by moves: a tab
   for 1. e4, one for 1. d4 and one for every other first move, each divided into the parts of the
@@ -74,7 +79,7 @@ TypeScript, built with Vite, with no UI framework and no runtime dependencies.
 | `scripts/games/`  | Counting a month of lichess's games for the catalog's positions, on every core                 |
 | `src/eco/`        | The ECO taxonomy: five volumes, 86 hand-curated groups of codes with their defining moves      |
 | `src/wikibooks/`  | How the Wikibook's lines are laid out: by first move, then by the tree of the book's pages     |
-| `src/catalog/`    | Collection → section → group → family → line tree, search, the openings offered to a newcomer  |
+| `src/catalog/`    | Collection → section → group → family → line tree, and search                                  |
 | `src/statistics/` | What the games say of an opening, and how often it is played on a scale of factors of ten      |
 | `src/chess/`      | A small board model: enough to play a known-legal line and say what each move did              |
 | `src/board/`      | The board on screen: pieces, highlight, arrow, slides — and its piece sets and board themes    |
@@ -359,7 +364,10 @@ say how much each line is played and how it scores:
   `openings.json`. Lines that end in the same position share its numbers. A line that was not
   in the catalog when the month was counted has no position, and so no numbers: that is not the
   same as no game having reached it;
-- which month was counted and how many of its games, for the credit under the catalog.
+- which month was counted and how many of its games, for the credit under the catalog;
+- for [the list of the most played](#the-most-played), the encyclopaedia's families that are
+  ranked, each as its main line with its wins, draws and losses in each rating band, and the
+  totals of each band.
 
 The split by speed and strength, the lengths of the games and the moves played next are five
 times the size and stay behind.
@@ -375,6 +383,36 @@ all games (1. e4) to none, the median line of the encyclopaedia is reached by on
 50,000, and only 59 of its 3,865 by one in a hundred. Only the share is shown so far; White's
 score over all games is 51.7% against the 50.0% the ratings predict, so a line's score means
 something only against that, and a score over a few hundred games means nothing at all.
+
+#### The most played
+
+The page the catalog opens at ranks the opening families of the encyclopaedia by the share of
+games that reach the family's **main line**: the line named for the family alone (`Sicilian
+Defense`, not `Sicilian Defense: Najdorf Variation`), and the shortest of them where
+transpositions repeat the name. 126 of the 141 families have one; the other fifteen (Colle
+System, Torre Attack, King's Gambit Declined…) are not ranked. The Wikibook's lines are named
+for the opening a page belongs to, which many lines share, so it has no such list.
+
+**Ways in are left out.** Counted by position, the top of the raw ranking is not openings anyone
+sets out to learn: 1. e4 ("King's Pawn Game", 58% of games), 1. d4 (26%), 1. e4 e5 2. Nf3
+("King's Knight Opening", 13%). Nearly all of their games go on to be something else. So a
+family is left out when more than half of the games that reach its main line go on to reach the
+main line of another family. "Go on to" is counted as: the other families whose main line passes
+through this one's position, and of those only the first on each road — the ones that do not
+pass through another of them — so that a game is not counted again for every family it goes on
+through. On October 2026 that leaves out eight: King's Pawn Game, Queen's Pawn Game, King's
+Knight Opening, Queen's Gambit, Center Game, Three Knights Opening, Danish Gambit and Benko
+Gambit. The rule is [`rankableFamilies`](scripts/games/most-played.ts), a function of the
+catalog and the tallies with no list of names in it; it is applied when the data is built, to
+all the games together, so that the families are the same whichever band they are ranked for.
+
+**What the figures are.** A family's share is the share of games it is _reached in_. A game
+that reaches one family's main line may reach another's, so the shares do not add up to
+anything. Ranked for a rating band, a family's share is of that band's games, and White's score
+is in that band's games. The ratings are lichess's, and four games in five are bullet and blitz.
+
+Without `statistics.json` there is no such page and nothing is offered above the board: the
+catalog opens at Volume A, as it did before there were numbers.
 
 ## Credits
 

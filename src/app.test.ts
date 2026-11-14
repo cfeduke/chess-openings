@@ -306,7 +306,7 @@ describe('for a first-time visitor', () => {
     await vi.waitFor(() => expect(root.querySelectorAll('[role="tab"]')).toHaveLength(6));
 
     expect(text('[role="tab"][aria-selected="true"]')).toBe('Top');
-    expect(text('#section-panel h2')).toBe('The openings to start with');
+    expect(text('#section-panel h2')).toBe('Most played');
     expect(
       [...root.querySelectorAll('#section-panel .ranking .line__name')].map(
         (name) => name.textContent,

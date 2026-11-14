@@ -882,8 +882,8 @@ describe('a page put ahead of a collection’s sections', () => {
     const page = {
       id: 'most-played',
       tab: 'Top',
-      name: 'Most played',
-      title: 'The openings to start with',
+      name: 'Top openings',
+      title: 'Most played',
       element: list,
     };
     const lead = () => all.catalog.lead('eco', page);
@@ -897,7 +897,7 @@ describe('a page put ahead of a collection’s sections', () => {
     lead();
 
     expect(tabsOf('ECO volumes')).toEqual(['Top', 'A', 'B', 'C', 'D', 'E']);
-    expect(tab('Top')?.getAttribute('aria-label')).toBe('Most played: The openings to start with');
+    expect(tab('Top')?.getAttribute('aria-label')).toBe('Top openings: Most played');
     expect(tab('Top')?.id).toBe('section-tab-eco-most-played');
     expect(tab('Top')?.getAttribute('aria-controls')).toBe('section-panel');
   });

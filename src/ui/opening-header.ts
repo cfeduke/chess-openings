@@ -10,7 +10,7 @@ export function createOpeningHeader({ onSelect }: { onSelect(opening: Opening): 
   element: HTMLElement;
   /** Names the opening on the board; with `null`, invites a choice. */
   show(place: CatalogPlace | null): void;
-  /** Offers these well-known openings whenever a choice is invited. */
+  /** Offers these openings, the most played there are, whenever a choice is invited. */
   suggest(openings: Opening[]): void;
 } {
   let shown: CatalogPlace | null = null;
@@ -18,7 +18,7 @@ export function createOpeningHeader({ onSelect }: { onSelect(opening: Opening): 
 
   /** The opening's name and where it is filed — or the invitation. Redrawn on every change. */
   const title = el('div', { class: 'opening__title' });
-  /** The well-known openings, while a choice is invited. */
+  /** The most played openings, while a choice is invited. */
   const offers = el('div', { class: 'opening__offers' });
   /** The link to where the opening can be read about, while it has such a place. */
   let more: HTMLElement | null = null;
@@ -99,7 +99,7 @@ export function createOpeningHeader({ onSelect }: { onSelect(opening: Opening): 
         ? [
             el(
               'ul',
-              { class: 'opening__classics', 'aria-label': 'Well-known openings' },
+              { class: 'opening__classics', 'aria-label': 'Most played openings' },
               ...buttons,
             ),
           ]

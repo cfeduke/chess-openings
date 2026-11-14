@@ -147,7 +147,7 @@ test('the openings are fetched once, alongside the page rather than after it', a
   });
 
   await page.goto('/');
-  await expect(volumeTabsOn(page)).toHaveCount(5);
+  await expect(volumeTabsOn(page)).toHaveCount(6);
 
   expect(fetched).toHaveLength(1);
   await expect(page.locator('link[rel="preload"][as="fetch"]')).toHaveAttribute(
@@ -191,11 +191,9 @@ test.describe('the most played openings', () => {
 
     await expect(volumeTabsOn(page)).toHaveText(['Top', 'A', 'B', 'C', 'D', 'E']);
     await expect(
-      catalogOn(page).getByRole('tab', { name: 'Most played: The openings to start with' }),
+      catalogOn(page).getByRole('tab', { name: 'Top openings: Most played' }),
     ).toHaveAttribute('aria-selected', 'true');
-    await expect(catalogOn(page).getByRole('heading', { level: 2 })).toHaveText(
-      'The openings to start with',
-    );
+    await expect(catalogOn(page).getByRole('heading', { level: 2 })).toHaveText('Most played');
     await expect(names(page)).toHaveCount(20);
     await expect(names(page).first()).toHaveText('Sicilian Defense');
     await expect(names(page).nth(1)).toHaveText('Scandinavian Defense');
@@ -232,7 +230,7 @@ test.describe('the most played openings', () => {
     );
 
     await catalogOn(page)
-      .getByRole('tab', { name: /^Most played/ })
+      .getByRole('tab', { name: /^Top openings/ })
       .click();
     await expect(ranking(page).locator('.line[aria-current="true"] .line__name')).toHaveText(
       'Caro-Kann Defense',
@@ -267,7 +265,7 @@ test.describe('the most played openings', () => {
     await page.goto('/');
     await expect(names(page)).toHaveCount(20);
     await catalogOn(page)
-      .getByRole('tab', { name: /^Most played/ })
+      .getByRole('tab', { name: /^Top openings/ })
       .focus();
 
     await page.keyboard.press('ArrowRight');
@@ -375,7 +373,7 @@ test.describe('how often each line is played', () => {
     // The Wikibook's page for 1. e4 c5 and the encyclopaedia's Sicilian Defense.
     await catalog.getByRole('searchbox', { name: 'Search openings' }).fill('1. e4 c5');
     await expect(
-      meterOf(catalog.locator('.line[data-opening="sicilian-defense"]')),
+      meterOf(catalog.locator('.catalog__results .line[data-opening="sicilian-defense"]')),
     ).toHaveAttribute('title', '9.2% of games');
     await collectionTabOn(page, 'Wikibooks').click();
 

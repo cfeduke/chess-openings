@@ -75,7 +75,13 @@ describe('rankableFamilies', () => {
   it('keep a family half of whose games stay its own', () => {
     const games = [...times(2, '1. e4 c5'), ...times(2, '1. e4 e5')];
 
-    expect(ranked(E4, games)).toEqual(['kings-pawn-game', 'sicilian-defense']);
+    // The families no game reached come last, in the order of the catalog.
+    expect(ranked(E4, games)).toEqual([
+      'kings-pawn-game',
+      'sicilian-defense',
+      'french-defense',
+      'polish-opening',
+    ]);
   });
 
   it('do not count a game again for each family it goes on through', () => {
