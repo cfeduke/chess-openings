@@ -209,7 +209,7 @@ test.describe('how often each line is played', () => {
     const sicilian = catalog.locator('.line[data-opening="sicilian-defense"]');
     await expect(meterOf(sicilian)).toHaveAttribute('title', '9.2% of games');
     await expect(sicilian).toHaveAccessibleName(
-      'B20 Sicilian Defense: Main line 1. e4 c5, 9.2% of games',
+      'B20 Sicilian Defense: Main line 1. e4 c5 reached in 9.2% of games',
     );
     await expect(meterOf(sicilian).locator('.meter__bar--on')).toHaveCount(4);
     await expect(meterOf(sicilian)).toBeVisible();
@@ -269,6 +269,9 @@ test.describe('how often each line is played', () => {
     send();
 
     await expect(meterOf(italian)).toHaveAttribute('title', '3.9% of games');
+    // The credit of the games takes room from the catalog: the line on the board stays in view.
+    await expect(page.locator('.credits')).toContainText('How often');
+    await expect(italian).toBeInViewport({ ratio: 1 });
   });
 
   for (const [what, respond] of [

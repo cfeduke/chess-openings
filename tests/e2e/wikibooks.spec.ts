@@ -126,7 +126,7 @@ test('searching looks in the collection on show, and counts the matches in each'
   await search.fill('ruy lopez');
 
   await expect(results.getByRole('button').first()).toHaveAccessibleName(
-    /^C60 Ruy Lopez 1\. e4 e5 2\. Nf3 Nc6 3\. Bb5$/,
+    /^C60 Ruy Lopez 1\. e4 e5 2\. Nf3 Nc6 3\. Bb5 reached in [\d.]+% of games$/,
   );
   await expect(tabsOn(page, 'Collections').first()).toHaveAccessibleName(/^ECO \d+ matches$/);
   await expect(wikibooksTab(page)).toHaveAccessibleName(/^Wikibooks \d+ matches$/);
@@ -134,7 +134,7 @@ test('searching looks in the collection on show, and counts the matches in each'
   await wikibooksTab(page).click();
 
   await expect(results.getByRole('button').first()).toHaveAccessibleName(
-    /^C60 Ruy López \/ Spanish game 1\. e4 e5 2\. Nf3 Nc6 3\. Bb5$/,
+    /^C60 Ruy López \/ Spanish game 1\. e4 e5 2\. Nf3 Nc6 3\. Bb5 reached in [\d.]+% of games$/,
   );
   await results.getByRole('button').first().click();
   await expect(page).toHaveURL(/#\/wikibooks-\d+$/);
@@ -167,7 +167,9 @@ test('the Wikibook’s lines are found by ECO code and by moves too', async ({ p
   await expect(first).toHaveAccessibleName(/^C60 Ruy López \/ Spanish game 1\. e4/);
 
   await search.fill('e4 c5 nf3 d6 d4');
-  await expect(first).toHaveAccessibleName(/^B5\d .* 1\. e4 c5 2\. Nf3 d6 3\. d4$/);
+  await expect(first).toHaveAccessibleName(
+    /^B5\d .* 1\. e4 c5 2\. Nf3 d6 3\. d4 reached in [\d.]+% of games$/,
+  );
 });
 
 test('the page credits the book, its authors and its licence', async ({ page }) => {

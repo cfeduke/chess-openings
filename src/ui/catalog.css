@@ -244,7 +244,7 @@
 
 .line {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: baseline;
   gap: 1px 8px;
   width: 100%;
@@ -279,10 +279,20 @@
   grid-column: 2;
 }
 
+/* How often the line is played: at its end, beside the name and the moves. */
+.line__meter {
+  grid-area: 1 / 3 / span 2;
+  align-self: center;
+}
+
 /* The opening on the board. */
 .line[aria-current="true"] {
   background: var(--accent);
   color: var(--accent-ink);
+}
+
+.line[aria-current="true"] .line__meter {
+  color: inherit;
 }
 
 .line[aria-current="true"] .line__moves {

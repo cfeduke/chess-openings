@@ -20,7 +20,7 @@ describe('popularityMeter', () => {
   it('says the same to a screen reader, after whatever it follows', () => {
     const meter = popularityMeter(0.092);
 
-    expect(meter.querySelector('.visually-hidden')?.textContent).toBe(', 9.2% of games');
+    expect(meter.querySelector('.visually-hidden')?.textContent).toBe('reached in 9.2% of games');
     expect(meter.querySelector('.meter__bars')?.getAttribute('aria-hidden')).toBe('true');
   });
 
@@ -29,6 +29,7 @@ describe('popularityMeter', () => {
 
     expect(bars(meter)).toEqual([false, false, false, false, false]);
     expect(meter.title).toBe('No games');
+    expect(meter.querySelector('.visually-hidden')?.textContent).toBe('reached in no games');
     expect(meter.classList.contains('meter--none')).toBe(true);
   });
 

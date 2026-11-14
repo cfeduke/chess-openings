@@ -811,7 +811,7 @@ describe('how often each line is played', () => {
     group('C50')?.click();
 
     expect(line('italian-game')?.textContent).toBe(
-      'C50Italian Game: Main line1. e4 e5 2. Nf3 Nc6 3. Bc4, 3.9% of games',
+      'C50Italian Game: Main line1. e4 e5 2. Nf3 Nc6 3. Bc4reached in 3.9% of games',
     );
   });
 
