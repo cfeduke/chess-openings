@@ -8,7 +8,7 @@ import { mountApp } from './app.ts';
 import type { OpeningsDataset } from './data/opening.ts';
 import { hashForOpening } from './routing.ts';
 import { appearanceSetting, delaySetting } from './settings.ts';
-import type { StatisticsData } from './statistics/data.ts';
+import type { MostPlayedData, StatisticsData } from './statistics/data.ts';
 
 let unmount = new AbortController();
 
@@ -263,23 +263,109 @@ describe('mounted as the site mounts it, with no options', () => {
 });
 
 describe('for a first-time visitor', () => {
-  it('offers the well-known openings it has, and opens the one that is picked', async () => {
-    const { root, ready, text, cursor } = mount();
+  const offered = (root: HTMLElement) => [
+    ...root.querySelectorAll<HTMLElement>('[aria-label="Most played openings"] button'),
+  ];
+
+  it('offers the most played openings, and opens the one that is picked', async () => {
+    const { root, ready, text, cursor } = mount('', undefined, async () => SMALL_STATISTICS);
     await ready;
-    const classics = [
-      ...root.querySelectorAll<HTMLElement>('[aria-label="Well-known openings"] button'),
-    ];
-    expect(classics.map((button) => button.textContent)).toEqual([
+    await vi.waitFor(() => expect(offered(root)).not.toHaveLength(0));
+
+    expect(offered(root).map((button) => button.textContent)).toEqual([
+      'Slav Defense',
+      'Sicilian Defense',
+      'Scandinavian Defense',
       'Italian Game',
-      'Sicilian Defense: Najdorf Variation',
+      'Polish Opening',
     ]);
 
-    classics[1]?.click();
+    offered(root)[3]?.click();
 
-    expect(text('.opening__variation')).toBe('Najdorf Variation');
-    expect(location.hash).toBe(hashForOpening(NAJDORF.id));
+    expect(text('.opening__family')).toBe('Italian Game');
+    expect(location.hash).toBe(hashForOpening(ITALIAN.id));
     vi.advanceTimersByTime(1500);
     expect(cursor()).toBe('e4');
+  });
+
+  it('offers the first eight of them, where there are more', async () => {
+    const ranking = SMALL_STATISTICS.mostPlayed as MostPlayedData;
+    const families = Array.from({ length: 4 }, () => ranking.families).flat();
+    const { root, ready } = mount('', undefined, async () => ({
+      ...SMALL_STATISTICS,
+      mostPlayed: { ...ranking, families },
+    }));
+    await ready;
+
+    await vi.waitFor(() => expect(offered(root)).toHaveLength(8));
+  });
+
+  it('arrives at the page of the most played, ahead of the volumes', async () => {
+    const { root, ready, text } = mount('', undefined, async () => SMALL_STATISTICS);
+    await ready;
+    await vi.waitFor(() => expect(root.querySelectorAll('[role="tab"]')).toHaveLength(6));
+
+    expect(text('[role="tab"][aria-selected="true"]')).toBe('Top');
+    expect(text('#section-panel h2')).toBe('The openings to start with');
+    expect(
+      [...root.querySelectorAll('#section-panel .ranking .line__name')].map(
+        (name) => name.textContent,
+      ),
+    ).toEqual([
+      'Slav Defense',
+      'Sicilian Defense',
+      'Scandinavian Defense',
+      'Italian Game',
+      'Polish Opening',
+    ]);
+  });
+
+  it('plays an opening chosen from that page', async () => {
+    const { root, ready, text, cursor } = mount('', undefined, async () => SMALL_STATISTICS);
+    await ready;
+    await vi.waitFor(() => expect(root.querySelector('.ranking')).not.toBeNull());
+
+    root.querySelector<HTMLElement>('.ranking [data-opening="italian-game"]')?.click();
+
+    expect(text('.opening__family')).toBe('Italian Game');
+    vi.advanceTimersByTime(1500);
+    expect(cursor()).toBe('e4');
+  });
+
+  it('stays with the opening a link brought, though the page of the most played is there', async () => {
+    const { root, ready, text } = mount(
+      hashForOpening(NAJDORF.id),
+      undefined,
+      async () => SMALL_STATISTICS,
+    );
+    await ready;
+    await vi.waitFor(() => expect(root.querySelectorAll('[role="tab"]')).toHaveLength(6));
+
+    expect(text('[role="tab"][aria-selected="true"]')).toBe('B');
+    expect(offered(root)).toHaveLength(0);
+  });
+
+  it('has neither the page nor anything to offer without the numbers, and opens at volume A', async () => {
+    const { root, ready, text } = mount();
+    await ready;
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(offered(root)).toHaveLength(0);
+    expect(root.querySelector('.opening__classics')).toBeNull();
+    expect(root.querySelectorAll('[role="tab"]')).toHaveLength(5);
+    expect(text('[role="tab"][aria-selected="true"]')).toBe('A');
+  });
+
+  it('does without them too when the numbers say nothing of what is most played', async () => {
+    const { mostPlayed: _, ...glance } = SMALL_STATISTICS;
+    const { root, ready } = mount('', undefined, async () => glance);
+    await ready;
+    await vi.waitFor(() =>
+      expect(root.querySelector('.credits')?.textContent).toContain('How often'),
+    );
+
+    expect(offered(root)).toHaveLength(0);
+    expect(root.querySelectorAll('[role="tab"]')).toHaveLength(5);
   });
 });
 
@@ -584,7 +670,7 @@ describe('how often the openings are played', () => {
     await ready;
 
     $('.catalog-panel button')?.click();
-    await vi.waitFor(() => expect(root.querySelectorAll('[role="tab"]')).toHaveLength(5));
+    await vi.waitFor(() => expect(root.querySelector('[role="tab"]')).not.toBeNull());
     chooseItalian();
 
     await vi.waitFor(() => expect(said(root, ITALIAN.id)).toBe('3.9% of games'));

@@ -1,4 +1,11 @@
-import type { StatisticsData } from '../../src/statistics/data.ts';
+import type { Outcomes, StatisticsData } from '../../src/statistics/data.ts';
+
+/** How `games` games went, of which White won the share `white` and one in twenty-five was drawn. */
+const went = (games: number, white = 0.5): Outcomes => [
+  games * white,
+  games * 0.04,
+  games * (0.96 - white),
+];
 
 /**
  * A month of a million games, for the small book and the pamphlet: of each position, White's
@@ -39,5 +46,22 @@ export const SMALL_STATISTICS: StatisticsData = {
     eco: [1, 2, 3, 4, 5, 6, 7, -1, 8],
     // Of the pamphlet's gambits only the Danish was counted.
     pamphlet: [9, -1, -1, -1],
+  },
+  // Five families of the small book, the most played first. The beginners play the Scandinavian
+  // and the Italian, the masters the Slav and the Sicilian; White does best in the Italian.
+  mostPlayed: {
+    collection: 'eco',
+    bands: [0, 1200, 1600, 2000, 2400],
+    totals: [200_000, 300_000, 300_000, 150_000, 50_000].map((games) => went(games)),
+    families: [
+      { opening: 'slav-defense', counts: [10_000, 40_000, 50_000, 35_000, 15_000] },
+      { opening: 'sicilian-defense', counts: [8_000, 24_000, 30_000, 20_000, 10_000] },
+      { opening: 'scandinavian-defense', counts: [30_000, 20_000, 12_000, 5_000, 1_000] },
+      { opening: 'italian-game', counts: [22_000, 10_000, 5_000, 1_800, 200], white: 0.55 },
+      { opening: 'polish-opening', counts: [400, 600, 600, 300, 100] },
+    ].map(({ opening, counts, white }) => ({
+      opening,
+      counts: counts.map((games) => went(games, white)),
+    })),
   },
 };

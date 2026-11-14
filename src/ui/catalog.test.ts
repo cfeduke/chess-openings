@@ -12,8 +12,9 @@ import { realDataset, realOpenings } from '../../tests/support/real-openings.ts'
 import { SMALL_STATISTICS } from '../../tests/support/statistics.ts';
 import { buildCatalog } from '../catalog/catalog.ts';
 import type { OpeningCollection } from '../data/opening.ts';
+import { el } from '../dom.ts';
 import { readStatistics } from '../statistics/statistics.ts';
-import { createCatalog } from './catalog.ts';
+import { createCatalog, LINES_REDRAWN } from './catalog.ts';
 
 /** The catalog of `collections` — just the encyclopaedia's small book, unless told otherwise. */
 function setup(collections: OpeningCollection[] = [encyclopaedia(SMALL_BOOK)]) {
@@ -865,5 +866,180 @@ describe('how often each line is played', () => {
     expect(said(all('.line').find((line) => line.dataset.opening === DANISH.id))).toBe(
       '1 game in 1,700',
     );
+  });
+});
+
+describe('a page put ahead of a collection’s sections', () => {
+  /** A page that lists the Italian Game and the Slav as lines, as the most played might. */
+  function leading(collections: OpeningCollection[] = [encyclopaedia(SMALL_BOOK)]) {
+    const all = setup(collections);
+    const list = el('div', { class: 'top' });
+    const draw = (...ids: string[]) =>
+      list.replaceChildren(
+        ...ids.map((id) => el('button', { type: 'button', class: 'line', 'data-opening': id }, id)),
+      );
+    draw('italian-game', 'slav-defense');
+    const page = {
+      id: 'most-played',
+      tab: 'Top',
+      name: 'Most played',
+      title: 'The openings to start with',
+      element: list,
+    };
+    const lead = () => all.catalog.lead('eco', page);
+    const onPage = () => all.element.querySelector('#section-panel')?.firstElementChild === list;
+    return { ...all, list, draw, lead, onPage };
+  }
+
+  it('gets a tab before theirs, named in full for a screen reader', () => {
+    const { lead, tabsOf, tab } = leading();
+
+    lead();
+
+    expect(tabsOf('ECO volumes')).toEqual(['Top', 'A', 'B', 'C', 'D', 'E']);
+    expect(tab('Top')?.getAttribute('aria-label')).toBe('Most played: The openings to start with');
+    expect(tab('Top')?.id).toBe('section-tab-eco-most-played');
+    expect(tab('Top')?.getAttribute('aria-controls')).toBe('section-panel');
+  });
+
+  it('is what the catalog turns to, when the visitor has not yet gone anywhere', () => {
+    const { lead, tab, onPage, element } = leading();
+
+    lead();
+
+    expect(onPage()).toBe(true);
+    expect(tab('Top')?.getAttribute('aria-selected')).toBe('true');
+    expect(tab('A')?.getAttribute('aria-selected')).toBe('false');
+    expect(tab('Top')?.getAttribute('tabindex')).toBe('0');
+    expect(element.querySelector('#section-panel')?.getAttribute('aria-labelledby')).toBe(
+      tab('Top')?.id,
+    );
+  });
+
+  it('is left alone when the visitor has already chosen a section', () => {
+    const { lead, tab, onPage } = leading();
+    tab('C')?.click();
+
+    lead();
+
+    expect(onPage()).toBe(false);
+    expect(tab('C')?.getAttribute('aria-selected')).toBe('true');
+    expect(tab('Top')?.getAttribute('aria-selected')).toBe('false');
+    expect(tab('Top')?.getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('is left alone when there is an opening on the board', () => {
+    const { catalog, lead, tab, onPage, line } = leading();
+    catalog.show(NAJDORF);
+
+    lead();
+
+    expect(onPage()).toBe(false);
+    expect(tab('B')?.getAttribute('aria-selected')).toBe('true');
+    expect(line(NAJDORF.id)?.getAttribute('aria-current')).toBe('true');
+  });
+
+  it('is turned to and away from like any section', () => {
+    const { lead, tab, onPage, element } = leading();
+    lead();
+
+    tab('B')?.click();
+    expect(onPage()).toBe(false);
+    expect(element.querySelector('#section-panel h2')?.textContent).toBe('Semi-Open Games');
+
+    tab('Top')?.click();
+    expect(onPage()).toBe(true);
+  });
+
+  it('is reached with the arrow keys along with the sections', () => {
+    const { lead, tab, tabList, press, onPage } = leading();
+    tab('B')?.click();
+    lead();
+
+    press(tab('B') as HTMLElement, 'Home');
+    expect(onPage()).toBe(true);
+    expect(document.activeElement).toBe(tab('Top'));
+
+    press(tab('Top') as HTMLElement, 'ArrowLeft');
+    expect(tab('E')?.getAttribute('aria-selected')).toBe('true');
+    expect(tabList('ECO volumes')?.querySelectorAll('[tabindex="0"]')).toHaveLength(1);
+  });
+
+  it('has its lines chosen by clicking them', () => {
+    const { lead, list, onSelect } = leading();
+    lead();
+
+    list.querySelector<HTMLElement>('[data-opening="italian-game"]')?.click();
+
+    expect(onSelect).toHaveBeenCalledWith(ITALIAN);
+  });
+
+  it('gives way to the section of an opening that is put on the board', () => {
+    const { catalog, lead, tab, onPage } = leading();
+    lead();
+
+    catalog.show(ITALIAN);
+
+    expect(onPage()).toBe(false);
+    expect(tab('C')?.getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('has the line of the opening on the board marked, when it is turned back to', () => {
+    const { catalog, lead, tab, list } = leading();
+    lead();
+    catalog.show(ITALIAN);
+
+    tab('Top')?.click();
+
+    expect(
+      [...list.querySelectorAll('[aria-current="true"]')].map((line) => line.textContent),
+    ).toEqual(['italian-game']);
+  });
+
+  it('has the mark put back when it says it has drawn its lines again', () => {
+    const { catalog, lead, tab, list, draw } = leading();
+    lead();
+    catalog.show(ITALIAN);
+    tab('Top')?.click();
+
+    draw('slav-defense', 'italian-game');
+    list.dispatchEvent(new Event(LINES_REDRAWN, { bubbles: true }));
+
+    expect(
+      [...list.querySelectorAll('[aria-current="true"]')].map((line) => line.textContent),
+    ).toEqual(['italian-game']);
+  });
+
+  it('waits its turn when another collection is on show', () => {
+    const { lead, tab, tabsOf, onPage } = leading(TWO_COLLECTIONS.collections);
+    tab('Pamphlet')?.click();
+
+    lead();
+
+    expect(tabsOf('Pamphlet chapters')).toEqual(['1. e4', '1. d4', '1. c4']);
+    expect(onPage()).toBe(false);
+
+    tab('ECO')?.click();
+    expect(tabsOf('ECO volumes')).toEqual(['Top', 'A', 'B', 'C', 'D', 'E']);
+    expect(onPage()).toBe(true);
+  });
+
+  it('is not put ahead of a collection there is not', () => {
+    const { catalog, tabsOf } = leading();
+
+    catalog.lead('pamphlet', { id: 'x', tab: 'X', name: 'X', title: 'X', element: el('div') });
+
+    expect(tabsOf('ECO volumes')).toEqual(['A', 'B', 'C', 'D', 'E']);
+  });
+
+  it('gives way to a search, and comes back when the search is over', () => {
+    const { lead, type, onPage, element } = leading();
+    lead();
+
+    type('sicilian');
+    expect(element.querySelector<HTMLElement>('.catalog__browse')?.hidden).toBe(true);
+
+    type('');
+    expect(onPage()).toBe(true);
   });
 });

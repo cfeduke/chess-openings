@@ -39,15 +39,25 @@ describe('before anything is chosen', () => {
     expect(element.querySelector<HTMLElement>('[role="group"]')?.hidden).toBe(true);
   });
 
-  it('offers the well-known openings it is given, to start from', () => {
+  it('offers the most played openings it is given, to start from', () => {
     const { header, element } = setup();
 
     header.suggest([ITALIAN, NAJDORF]);
 
-    const classics = element.querySelector('[aria-label="Well-known openings"]');
+    const classics = element.querySelector('[aria-label="Most played openings"]');
     expect(
       [...(classics?.querySelectorAll('button') ?? [])].map((button) => button.textContent),
     ).toEqual(['Italian Game', 'Sicilian Defense: Najdorf Variation']);
+  });
+
+  it('offers nothing until it is given something to offer, and nothing when given nothing', () => {
+    const { header, element } = setup();
+    expect(element.querySelector('.opening__classics')).toBeNull();
+
+    header.suggest([ITALIAN]);
+    header.suggest([]);
+
+    expect(element.querySelector('.opening__classics')).toBeNull();
   });
 
   it('opens one when it is clicked', () => {
@@ -136,16 +146,16 @@ describe('with an opening on the board', () => {
     expect(element.querySelector('.opening__variation')).toBeNull();
   });
 
-  it('puts the well-known openings away', () => {
+  it('puts the most played openings away', () => {
     const { header, element } = setup();
     header.suggest([ITALIAN, NAJDORF]);
 
     header.show(placeOf(POLISH));
 
-    expect(element.querySelector('[aria-label="Well-known openings"]')).toBeNull();
+    expect(element.querySelector('[aria-label="Most played openings"]')).toBeNull();
   });
 
-  it('goes back to the invitation, and the well-known openings, when there is none', () => {
+  it('goes back to the invitation, and the most played openings, when there is none', () => {
     const { header, element, text } = setup();
     header.suggest([ITALIAN]);
     header.show(placeOf(NAJDORF));
@@ -153,7 +163,7 @@ describe('with an opening on the board', () => {
     header.show(null);
 
     expect(text('h2')).toBe('Choose an opening');
-    expect(element.querySelector('[aria-label="Well-known openings"] button')?.textContent).toBe(
+    expect(element.querySelector('[aria-label="Most played openings"] button')?.textContent).toBe(
       'Italian Game',
     );
   });

@@ -1,5 +1,4 @@
-import { expect, type Locator, test } from '@playwright/test';
-import { FEATURED_OPENINGS } from '../../src/catalog/featured.ts';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 import {
   boardOn,
   box,
@@ -30,7 +29,7 @@ test('arriving: a board, an invitation, and the whole encyclopaedia to browse', 
   await expect(boardOn(page).locator('.piece')).toHaveCount(32);
   await expect(tabsOn(page, 'Collections')).toHaveText(['ECO', 'Wikibooks']);
   await expect(tabsOn(page, 'Collections').first()).toHaveAttribute('aria-selected', 'true');
-  await expect(volumeTabsOn(page)).toHaveText(['A', 'B', 'C', 'D', 'E']);
+  await expect(volumeTabsOn(page)).toHaveText(['Top', 'A', 'B', 'C', 'D', 'E']);
   await expect(catalog.getByRole('searchbox', { name: 'Search openings' })).toHaveAttribute(
     'placeholder',
     /^Search 6,\d{3} openings$/,
@@ -157,17 +156,163 @@ test('the openings are fetched once, alongside the page rather than after it', a
   );
 });
 
-test('a first-time visitor can start from a well-known opening', async ({ page }) => {
+test('a first-time visitor can start from one of the eight most played openings', async ({
+  page,
+}) => {
   await page.goto('/');
-  const classics = page.getByRole('list', { name: 'Well-known openings' });
-  await expect(classics.getByRole('button')).toHaveCount(FEATURED_OPENINGS.length);
-  await expect(classics.getByRole('button').first()).toHaveText('Italian Game');
+  const offered = page.getByRole('list', { name: 'Most played openings' });
+  await expect(offered.getByRole('button')).toHaveText([
+    'Sicilian Defense',
+    'Scandinavian Defense',
+    'French Defense',
+    'Caro-Kann Defense',
+    'Indian Defense',
+    'Italian Game',
+    'Zukertort Opening',
+    'English Opening',
+  ]);
 
-  await classics.getByRole('button', { name: 'Ruy Lopez' }).click();
+  await offered.getByRole('button', { name: 'Italian Game' }).click();
 
-  await expect(openingNameOn(page)).toHaveAccessibleName('C60 Ruy Lopez');
-  await expect(page).toHaveTitle('Ruy Lopez (C60) — Chess Openings');
+  await expect(openingNameOn(page)).toHaveAccessibleName('C50 Italian Game');
+  await expect(page).toHaveTitle('Italian Game (C50) — Chess Openings');
   await expect(pieceFrom(page, 'e2')).toHaveAttribute('data-square', 'e4');
+  await expect(offered).toHaveCount(0);
+});
+
+test.describe('the most played openings', () => {
+  const ranking = (page: Page) => catalogOn(page).getByRole('list', { name: 'Most played' });
+  const names = (page: Page) => ranking(page).locator('.line__name');
+
+  test('are the page a visitor arrives at: twenty families, ahead of the volumes', async ({
+    page,
+  }) => {
+    await page.goto('/');
+
+    await expect(volumeTabsOn(page)).toHaveText(['Top', 'A', 'B', 'C', 'D', 'E']);
+    await expect(
+      catalogOn(page).getByRole('tab', { name: 'Most played: The openings to start with' }),
+    ).toHaveAttribute('aria-selected', 'true');
+    await expect(catalogOn(page).getByRole('heading', { level: 2 })).toHaveText(
+      'The openings to start with',
+    );
+    await expect(names(page)).toHaveCount(20);
+    await expect(names(page).first()).toHaveText('Sicilian Defense');
+    await expect(names(page).nth(1)).toHaveText('Scandinavian Defense');
+    await expect(names(page).nth(2)).toHaveText('French Defense');
+    // The ways in are not in it, however many games pass through them.
+    await expect(ranking(page)).not.toContainText("King's Pawn Game");
+    await expect(ranking(page)).not.toContainText("Queen's Gambit");
+  });
+
+  test('each has its rank, its moves, its share of games and White’s score', async ({ page }) => {
+    await page.goto('/');
+    const sicilian = ranking(page).getByRole('button').first();
+
+    await expect(sicilian).toHaveAccessibleName(
+      /^1 Sicilian Defense 1\. e4 c5 reached in 9\.2% of games White scores \d\d\.\d%$/,
+    );
+    await expect(sicilian.locator('.ranked__share')).toHaveText('9.2%');
+    await expect(sicilian.locator('.meter__bar--on')).toHaveCount(4);
+    await expect(sicilian.locator('.ranked__score')).toBeVisible();
+  });
+
+  test('choosing one puts it on the board, and it stays marked in the list', async ({ page }) => {
+    await page.goto('/');
+
+    await ranking(page)
+      .getByRole('button', { name: /Caro-Kann Defense/ })
+      .click();
+
+    await expect(openingNameOn(page)).toHaveAccessibleName('B10 Caro-Kann Defense');
+    await expect(pieceFrom(page, 'c7')).toHaveAttribute('data-square', 'c6');
+    await expect(catalogOn(page).getByRole('tab', { name: /Volume B/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+
+    await catalogOn(page)
+      .getByRole('tab', { name: /^Most played/ })
+      .click();
+    await expect(ranking(page).locator('.line[aria-current="true"] .line__name')).toHaveText(
+      'Caro-Kann Defense',
+    );
+  });
+
+  test('are ranked again for the players of one strength, and the mark is kept', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    const players = catalogOn(page).getByRole('combobox', { name: 'Players' });
+    await expect(players).toHaveValue('');
+    const all = await names(page).allTextContents();
+
+    await players.selectOption({ label: 'Under 1200' });
+    await expect(names(page).first()).toHaveText('Scandinavian Defense');
+    await expect(names(page).nth(1)).toHaveText('Italian Game');
+    await expect(ranking(page).getByRole('button').first()).toHaveAccessibleName(
+      /reached in 7\.9% of games/,
+    );
+
+    await players.selectOption({ label: '2400 and over' });
+    await expect(names(page).first()).toHaveText('Zukertort Opening');
+    await expect(names(page).nth(1)).toHaveText('Sicilian Defense');
+    await expect(names(page)).toHaveCount(20);
+
+    await players.selectOption({ label: 'All players' });
+    expect(await names(page).allTextContents()).toEqual(all);
+  });
+
+  test('can be reached, chosen from and ranked again with the keyboard alone', async ({ page }) => {
+    await page.goto('/');
+    await expect(names(page)).toHaveCount(20);
+    await catalogOn(page)
+      .getByRole('tab', { name: /^Most played/ })
+      .focus();
+
+    await page.keyboard.press('ArrowRight');
+    await expect(catalogOn(page).getByRole('tab', { name: /Volume A/ })).toBeFocused();
+    await page.keyboard.press('Home');
+    await expect(names(page)).toHaveCount(20);
+
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await expect(catalogOn(page).getByRole('combobox', { name: 'Players' })).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(ranking(page).getByRole('button').first()).toBeFocused();
+    await page.keyboard.press('Enter');
+
+    await expect(openingNameOn(page)).toHaveAccessibleName('B20 Sicilian Defense');
+  });
+
+  test('give way to the opening a link names', async ({ page }) => {
+    await page.goto(NAJDORF);
+
+    await expect(volumeTabsOn(page)).toHaveCount(6);
+    await expect(catalogOn(page).getByRole('tab', { name: /Volume B/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(page.getByRole('list', { name: 'Most played openings' })).toHaveCount(0);
+  });
+
+  test('are not there without the numbers: the catalog opens at volume A, with nothing offered', async ({
+    page,
+  }) => {
+    const answered = page.waitForResponse('**/statistics.json');
+    await page.route('**/statistics.json', (route) => route.fulfill({ status: 404, body: '' }));
+
+    await page.goto('/');
+    await answered;
+
+    await expect(volumeTabsOn(page)).toHaveText(['A', 'B', 'C', 'D', 'E']);
+    await expect(catalogOn(page).getByRole('tab', { name: /Volume A/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(page.getByRole('heading', { name: 'Choose an opening' })).toBeVisible();
+    await expect(page.getByRole('list', { name: 'Most played openings' })).toHaveCount(0);
+  });
 });
 
 test('the lines of a family can be stepped through, one after another', async ({ page }) => {
