@@ -28,6 +28,11 @@ export function parseTsv(text: string, fileName: string, columns: string[]): Tsv
   });
 }
 
+/** A TSV file with the header `columns` and a line for each of `rows`, as `parseTsv` reads one. */
+export function formatTsv(columns: string[], rows: (string | number)[][]): string {
+  return `${[columns, ...rows].map((row) => row.join('\t')).join('\n')}\n`;
+}
+
 /** One row of an upstream `a.tsv`–`e.tsv` file, as written. */
 export interface OpeningRow {
   eco: string;

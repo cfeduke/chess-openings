@@ -1,0 +1,18 @@
+{
+  "database": "lichess_db_standard_rated",
+  "month": "2026-10",
+  "url": "https://database.lichess.org/standard/lichess_db_standard_rated_2026-10.pgn.zst",
+  "license": "CC0-1.0",
+  "retrieved": "2026-11-14",
+  "games": 95395628,
+  "counted": 94074706,
+  "leftOut": {
+    "correspondence": 99689,
+    "unfinished": 370,
+    "unrated": 0,
+    "abandoned": 728643,
+    "bot": 492220,
+    "unreadable": 0
+  },
+  "depth": 36
+}

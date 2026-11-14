@@ -22,7 +22,7 @@ interface Ply {
 }
 
 /** What makes a position the same position: the board, the side to move, the castling rights. */
-const positionOf = (fen: string) => fen.split(' ', 3).join(' ');
+export const positionOf = (fen: string) => fen.split(' ', 3).join(' ');
 
 /**
  * Replays lines with a real rules engine, so the browser never needs one. A replay throws on an
