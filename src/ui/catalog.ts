@@ -10,6 +10,8 @@ import {
 import { formatMoveText } from '../chess/san.ts';
 import type { Opening } from '../data/opening.ts';
 import { el, exclusiveAttribute, revealWithin } from '../dom.ts';
+import type { LineNumbers } from '../statistics/statistics.ts';
+import { popularityMeter } from './meter.ts';
 
 interface CatalogOptions {
   catalog: Catalog;
@@ -21,7 +23,16 @@ export interface CatalogView {
   element: HTMLElement;
   /** Marks `opening` as the one on the board and brings it into view; `null` marks none. */
   show(opening: Opening | null): void;
+  /**
+   * Says on every line how often it is played, from now on: `numbersOf` gives the numbers of an
+   * opening, or nothing for one that has none, whose line then says nothing. The line of the
+   * opening on the board is kept in view, in case the page made room for the numbers' credit.
+   */
+  count(numbersOf: NumbersOf): void;
 }
+
+/** The numbers of the games that reached an opening, if it has any. */
+type NumbersOf = (opening: Opening) => LineNumbers | undefined;
 
 /** The keys that move between tabs: where each leads from tab `from`, of tabs `0` to `last`. */
 const TAB_KEYS: Record<string, (from: number, last: number) => number> = {
@@ -144,16 +155,40 @@ function lineItem(opening: Opening, label: string, unseen = ''): HTMLElement {
   return el('li', {}, button);
 }
 
+/** Puts on a line's button the meter of how often it is played, in place of any it has. */
+function meterOn(button: Element | null, numbers: LineNumbers | undefined): void {
+  button?.querySelector('.line__meter')?.remove();
+  if (!button || !numbers) return;
+  const meter = popularityMeter(numbers.share);
+  meter.classList.add('line__meter');
+  button.append(meter);
+}
+
 export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogView {
   const { collections } = catalog;
   /** The collection on show: the one being browsed, and the one a search looks in. */
   let [onShow] = collections;
   let selected: Opening | null = null;
+  /** How often each opening is played, once that is known. */
+  let numbersOf: NumbersOf | undefined;
+
+  /** Scrolls the panel, if it must, to where the line of the opening on the board can be seen. */
+  const revealSelected = () => {
+    const marked = panel.querySelector('.line[aria-current]');
+    if (marked) revealWithin(panel, marked);
+  };
   const holdMark = exclusiveAttribute('aria-current', 'true');
 
   /** Puts the mark on every button on screen for the opening on the board, and on no other. */
   const markSelected = () => {
     holdMark(selected ? [...element.querySelectorAll(`.line[data-opening="${selected.id}"]`)] : []);
+  };
+
+  /** A line's list item, as `lineItem` makes it, saying how often it is played if that is known. */
+  const listed = (...line: Parameters<typeof lineItem>) => {
+    const item = lineItem(...line);
+    if (numbersOf) meterOn(item.firstElementChild, numbersOf(line[0]));
+    return item;
   };
 
   // Browsing ------------------------------------------------------------------------------
@@ -183,7 +218,7 @@ export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogVie
             'ul',
             { class: 'lines' },
             ...family.lines.map((line) =>
-              lineItem(line.opening, lineLabel(line), `${family.name}: `),
+              listed(line.opening, lineLabel(line), `${family.name}: `),
             ),
           ),
         );
@@ -322,7 +357,7 @@ export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogVie
     matches.replaceChildren(
       ...found.matches.map((opening) => {
         const place = catalog.locate(opening.id);
-        return lineItem(opening, place ? fullName(place) : opening.name);
+        return listed(opening, place ? fullName(place) : opening.name);
       }),
     );
     markSelected();
@@ -395,8 +430,21 @@ export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogVie
         setExpanded(place.group, true);
       }
       markSelected();
-      const marked = panel.querySelector('.line[aria-current]');
-      if (marked) revealWithin(panel, marked);
+      revealSelected();
+    },
+
+    count(numbers) {
+      numbersOf = numbers;
+      // The lines there are already: those of every group that has been opened, on show or
+      // not, and what a search has found.
+      const built = [...groups.values()].map(({ body }) => body).concat(matches);
+      for (const line of built.flatMap((list) => [
+        ...list.querySelectorAll<HTMLElement>('.line'),
+      ])) {
+        const place = catalog.locate(line.dataset.opening ?? '');
+        if (place) meterOn(line, numbers(place.opening));
+      }
+      revealSelected();
     },
   };
 }

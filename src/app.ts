@@ -6,12 +6,14 @@ import { createBoardView } from './board/board-view.ts';
 import { type Arrangement, buildCatalog, fullName } from './catalog/catalog.ts';
 import { featuredOpenings } from './catalog/featured.ts';
 import { buildTimeline } from './chess/timeline.ts';
-import { loadOpenings } from './data/load.ts';
+import { loadOpenings, loadStatistics } from './data/load.ts';
 import type { DataSource, Opening, OpeningsDataset } from './data/opening.ts';
 import { el } from './dom.ts';
 import { createPlayer } from './playback/player.ts';
 import { hashForOpening, openingIdFromHash } from './routing.ts';
 import { appearanceSetting, delaySetting, mutedSetting } from './settings.ts';
+import type { GamesSource, StatisticsData } from './statistics/data.ts';
+import { readStatistics } from './statistics/statistics.ts';
 import { createAnnouncer } from './ui/announcer.ts';
 import { createCatalog } from './ui/catalog.ts';
 import { createMoveList } from './ui/move-list.ts';
@@ -22,6 +24,8 @@ import { createTransport } from './ui/transport.ts';
 interface AppOptions {
   /** Fetches the openings. */
   load?: () => Promise<OpeningsDataset>;
+  /** Fetches what lichess's games say of them. The site does without if they do not come. */
+  loadStatistics?: () => Promise<StatisticsData>;
   /** Aborting it removes the listeners the app has put on the page. */
   signal?: AbortSignal;
   /** The looks the board can be given, the default first. */
@@ -45,19 +49,54 @@ const LICENCES: Record<string, () => (Node | string)[]> = {
   ],
 };
 
+const licence = (license: string) => LICENCES[license]?.() ?? [`under ${license}`];
+
 /**
  * Says where the openings of each collection come from and, in `pieceCredit` — which the caller
- * keeps up to date — where the pieces do.
+ * keeps up to date — where the pieces do. Between the two is `gamesCredit`, for the caller to
+ * fill if the numbers of how the openings are played arrive.
  */
-function credits(sources: DataSource[], pieceCredit: HTMLElement): HTMLElement {
+function credits(
+  sources: DataSource[],
+  gamesCredit: HTMLElement,
+  pieceCredit: HTMLElement,
+): HTMLElement {
   const openings = sources.flatMap(({ title, url, author, revision, license }, index) => [
     index === 0 ? 'Openings from ' : '; from ',
     el('a', { href: url }, title),
     `${author ? ` by ${author}` : ''} @ ${revision}, `,
-    ...(LICENCES[license]?.() ?? [`under ${license}`]),
+    ...licence(license),
   ]);
-  return el('p', { class: 'credits' }, ...openings, '. Chess pieces ', pieceCredit, '.');
+  return el(
+    'p',
+    { class: 'credits' },
+    ...openings,
+    '. ',
+    gamesCredit,
+    'Chess pieces ',
+    pieceCredit,
+    '.',
+  );
 }
+
+/** A month given as `2026-10`, as it is said: `October 2026`. */
+function monthInWords(month: string): string {
+  const [year = 0, monthOfYear = 1] = month.split('-').map(Number);
+  return new Date(Date.UTC(year, monthOfYear - 1)).toLocaleDateString('en', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+/** Says which games the numbers of how the openings are played were counted from. */
+const gamesCredited = ({ title, url, month, games, license }: GamesSource): (Node | string)[] => [
+  `How often each is played: ${games.toLocaleString('en')} games of ${monthInWords(month)} from the `,
+  el('a', { href: url }, title),
+  ', ',
+  ...licence(license),
+  '. ',
+];
 
 /**
  * Builds the site in `root`. The board and its controls are there at once; the catalog arrives
@@ -65,6 +104,9 @@ function credits(sources: DataSource[], pieceCredit: HTMLElement): HTMLElement {
  */
 export async function mountApp(root: HTMLElement, options: AppOptions = {}): Promise<void> {
   const { load = loadOpenings, signal, appearances = APPEARANCES, arrangements } = options;
+  // Asked for at once, and waited for by nothing: the site is whole without them, and stays
+  // that way if they never come.
+  const counted = (options.loadStatistics ?? loadStatistics)().catch(() => undefined);
   /** The page's title before an opening adds its name to it. */
   const siteTitle = document.title;
 
@@ -180,13 +222,26 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
     };
 
     const catalogView = createCatalog({ catalog, onSelect: open });
+    const gamesCredit = el('span');
     catalogPanel.replaceChildren(
       catalogView.element,
       credits(
         dataset.collections.map((collection) => collection.source),
+        gamesCredit,
         pieceCredit,
       ),
     );
+    void counted.then((data) => {
+      if (!data) return;
+      try {
+        const statistics = readStatistics(data, dataset.collections);
+        // The credit first: it takes room from the catalog, which then sees to what it shows.
+        gamesCredit.replaceChildren(...gamesCredited(statistics.source));
+        catalogView.count(statistics.of);
+      } catch {
+        // Numbers that cannot be read are numbers that did not come.
+      }
+    });
     header.suggest(featuredOpenings(catalog));
 
     window.addEventListener('hashchange', showFromAddress, { signal });

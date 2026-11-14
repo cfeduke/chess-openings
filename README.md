@@ -26,6 +26,10 @@ are there, and so are the 2,600-odd positions that Wikibooks'
   or by moves (`1. e4 c5 2. Nf3 d6`, or just `e4 c5 nf3 d6`). Terms combine: `e4 c5 naj`. A
   search looks in the collection on show; while there is one, each collection's tab says how
   many of its lines match, and choosing the other shows those.
+- **See what is played** — every line, browsed or found, has a small meter of how often it is
+  reached in a month of games on lichess. Its five bars are factors of ten: one for 1 game in
+  100,000, all five for 1 game in 10. Rest the pointer on it for the figure (`9.2% of games`,
+  `1 game in 50,000`); a screen reader hears it as part of the line's name.
 - **Watch** — choosing a line plays it. The bar along the bottom has restart, step back,
   play/pause, step forward and jump to end; a slider for the **delay between moves** (0.3–5 s,
   1.5 s to begin with); and buttons to flip the board and switch the sound off.
@@ -63,21 +67,22 @@ the opening data is prepared at build time and fetched by the page as one JSON f
 
 TypeScript, built with Vite, with no UI framework and no runtime dependencies.
 
-| Where            | What                                                                                           |
-| ---------------- | ---------------------------------------------------------------------------------------------- |
-| `data/`          | The vendored data, a directory to a source: `lichess/`, `wikibooks/` and `lichess-games/`      |
-| `scripts/`       | Build-time: parse the data, replay every line with chess.js, write `public/openings.json`      |
-| `scripts/games/` | Counting a month of lichess's games for the catalog's positions, on every core                 |
-| `src/eco/`       | The ECO taxonomy: five volumes, 86 hand-curated groups of codes with their defining moves      |
-| `src/wikibooks/` | How the Wikibook's lines are laid out: by first move, then by the tree of the book's pages     |
-| `src/catalog/`   | Collection → section → group → family → line tree, search, the openings offered to a newcomer  |
-| `src/chess/`     | A small board model: enough to play a known-legal line and say what each move did              |
-| `src/board/`     | The board on screen: pieces, highlight, arrow, slides — and its piece sets and board themes    |
-| `src/playback/`  | The player: the schedule of a move's three beats and the play/pause/step/seek state            |
-| `src/audio/`     | Sound effects, synthesised with the Web Audio API — there are no audio files                   |
-| `src/ui/`        | Catalog, opening header, move list, transport bar, keyboard shortcuts, screen-reader announcer |
-| `src/app.ts`     | Wires it all together; the address (`#/<opening id>`) is the source of truth for what is shown |
-| `tests/e2e/`     | Playwright specs that drive the built site                                                     |
+| Where             | What                                                                                           |
+| ----------------- | ---------------------------------------------------------------------------------------------- |
+| `data/`           | The vendored data, a directory to a source: `lichess/`, `wikibooks/` and `lichess-games/`      |
+| `scripts/`        | Build-time: parse the data, replay every line with chess.js, write what the site is sent       |
+| `scripts/games/`  | Counting a month of lichess's games for the catalog's positions, on every core                 |
+| `src/eco/`        | The ECO taxonomy: five volumes, 86 hand-curated groups of codes with their defining moves      |
+| `src/wikibooks/`  | How the Wikibook's lines are laid out: by first move, then by the tree of the book's pages     |
+| `src/catalog/`    | Collection → section → group → family → line tree, search, the openings offered to a newcomer  |
+| `src/statistics/` | What the games say of an opening, and how often it is played on a scale of factors of ten      |
+| `src/chess/`      | A small board model: enough to play a known-legal line and say what each move did              |
+| `src/board/`      | The board on screen: pieces, highlight, arrow, slides — and its piece sets and board themes    |
+| `src/playback/`   | The player: the schedule of a move's three beats and the play/pause/step/seek state            |
+| `src/audio/`      | Sound effects, synthesised with the Web Audio API — there are no audio files                   |
+| `src/ui/`         | Catalog, opening header, move list, transport bar, keyboard shortcuts, screen-reader announcer |
+| `src/app.ts`      | Wires it all together; the address (`#/<opening id>`) is the source of truth for what is shown |
+| `tests/e2e/`      | Playwright specs that drive the built site                                                     |
 
 ## Development workflow
 
@@ -200,6 +205,10 @@ holds what lichess's games say of how they are played.
 its ECO code, its name, its moves in both SAN and UCI (so the browser can animate a line without a
 rules engine), and a unique id. The build fails if a row is malformed or a move is illegal.
 
+It also writes `public/statistics.json`, from the tallies of lichess's games:
+[what the site shows of them](#what-the-site-shows-of-them) says what is in it. Neither file is
+committed, and neither build step touches the network.
+
 ### The encyclopaedia, from lichess
 
 The five TSV files of
@@ -278,7 +287,7 @@ month to a file, released under CC0: October 2026 is 95 million games. `data/lic
 holds what one month of them has to say about the positions the catalog's lines end in — how
 often each is reached, how it scores, who plays it, and what is played next.
 `data/lichess-games/SOURCE.json` records which month that is, how many games it held and how
-many were counted. Nothing on the site shows these numbers yet.
+many were counted.
 
 **What a game counts for.** Every position that a line of either collection ends in is a
 position of interest, and so is the one every game begins in. A game counts once for each of
@@ -337,6 +346,35 @@ for each core to decompress and count. And the games are played through without 
 they are known to be legal, so [`scripts/games/play.ts`](scripts/games/play.ts) finds the piece
 a move names by looking back from the square it goes to, which in a trial was some forty times
 quicker than replaying with chess.js. It is tested against chess.js, move for move.
+
+#### What the site shows of them
+
+`npm run data` writes `public/statistics.json` (135 KB, 60 KB compressed) with what it takes to
+say how much each line is played and how it scores:
+
+- for each position, over every speed and strength together, White's wins, the draws, Black's
+  wins and what the ratings said White would score — the starting position first, whose numbers
+  are the totals;
+- for each collection, which position each of its openings ends in, in the order of
+  `openings.json`. Lines that end in the same position share its numbers. A line that was not
+  in the catalog when the month was counted has no position, and so no numbers: that is not the
+  same as no game having reached it;
+- which month was counted and how many of its games, for the credit under the catalog.
+
+The split by speed and strength, the lengths of the games and the moves played next are five
+times the size and stay behind.
+
+The page asks for the file when it asks for the openings, and waits for it for nothing: the
+catalog is drawn as soon as the openings are there, and the numbers are put on when they come.
+If they do not come, or cannot be read, the site does without them and says nothing.
+[`src/statistics/`](src/statistics/) turns the counts into what is said of an opening — the
+games that reached it, that as a share of all games, White's score, the share drawn, and
+White's score less what the ratings predicted — and, for the meter on each line of the catalog,
+into a step for each factor of ten. The scale has to be of that kind: the lines run from 58% of
+all games (1. e4) to none, the median line of the encyclopaedia is reached by one game in
+50,000, and only 59 of its 3,865 by one in a hundred. Only the share is shown so far; White's
+score over all games is 51.7% against the 50.0% the ratings predict, so a line's score means
+something only against that, and a score over a few hundred games means nothing at all.
 
 ## Credits
 

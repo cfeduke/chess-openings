@@ -1,0 +1,54 @@
+/*
+ * How often a line is played: five bars, each taller than the last, lit from the left. It takes
+ * its colour from the text it sits in, so it shows on whatever the line is drawn on.
+ */
+.meter {
+  position: relative;
+  display: inline-block;
+  color: var(--ink-soft);
+}
+
+.meter__bars {
+  display: flex;
+  align-items: end;
+  gap: 2px;
+  height: 14px;
+}
+
+.meter__bar {
+  width: 3px;
+  border-radius: 1px;
+  background: currentColor;
+  opacity: 0.25;
+}
+
+.meter__bar:nth-child(1) {
+  height: 6px;
+}
+
+.meter__bar:nth-child(2) {
+  height: 8px;
+}
+
+.meter__bar:nth-child(3) {
+  height: 10px;
+}
+
+.meter__bar:nth-child(4) {
+  height: 12px;
+}
+
+.meter__bar:nth-child(5) {
+  height: 14px;
+}
+
+.meter__bar--on {
+  opacity: 1;
+}
+
+/* No game at all: the bars are only outlined. */
+.meter--none .meter__bar {
+  border: 1px solid currentColor;
+  background: transparent;
+  opacity: 0.45;
+}

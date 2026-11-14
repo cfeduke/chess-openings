@@ -9,8 +9,10 @@ import {
   TWO_COLLECTIONS,
 } from '../../tests/support/pamphlet.ts';
 import { realDataset, realOpenings } from '../../tests/support/real-openings.ts';
+import { SMALL_STATISTICS } from '../../tests/support/statistics.ts';
 import { buildCatalog } from '../catalog/catalog.ts';
 import type { OpeningCollection } from '../data/opening.ts';
+import { readStatistics } from '../statistics/statistics.ts';
 import { createCatalog } from './catalog.ts';
 
 /** The catalog of `collections` — just the encyclopaedia's small book, unless told otherwise. */
@@ -746,5 +748,122 @@ describe('searching a collection in which many lines share a name', () => {
     type('kings indian attack with');
 
     expect(text('.catalog__results .line__name')).toContain("King's Indian Attack, with Bf5");
+  });
+});
+
+describe('how often each line is played', () => {
+  /** What the meter on the line of the opening with this id says, or nothing if it has none. */
+  const said = (line: HTMLElement | null | undefined) =>
+    line?.querySelector<HTMLElement>('.meter')?.title;
+
+  function counted(collections: OpeningCollection[] = [encyclopaedia(SMALL_BOOK)]) {
+    const all = setup(collections);
+    const count = () => all.catalog.count(readStatistics(SMALL_STATISTICS, collections).of);
+    return { ...all, count };
+  }
+
+  it('is not shown until the numbers have come', () => {
+    const { tab, group, all } = counted();
+    tab('B')?.click();
+    group('B20')?.click();
+
+    expect(all('.line')).not.toHaveLength(0);
+    expect(all('.meter')).toEqual([]);
+  });
+
+  it('is shown on the lines already on show when the numbers come', () => {
+    const { tab, group, line, count } = counted();
+    tab('B')?.click();
+    group('B20')?.click();
+
+    count();
+
+    expect(said(line('sicilian-defense'))).toBe('9.2% of games');
+  });
+
+  it('is shown on lines of a volume that has been turned away from', () => {
+    const { tab, group, line, count } = counted();
+    tab('B')?.click();
+    group('B20')?.click();
+    tab('C')?.click();
+
+    count();
+    tab('B')?.click();
+
+    expect(said(line('sicilian-defense'))).toBe('9.2% of games');
+  });
+
+  it('is shown on lines that are built after the numbers came', () => {
+    const { tab, group, line, count } = counted();
+    count();
+
+    tab('C')?.click();
+    group('C50')?.click();
+
+    expect(said(line('italian-game'))).toBe('3.9% of games');
+    expect(said(line('italian-game-giuoco-pianissimo'))).toBe('0.4% of games');
+  });
+
+  it('is part of what the line is called, after what it shows', () => {
+    const { tab, group, line, count } = counted();
+    count();
+    tab('C')?.click();
+    group('C50')?.click();
+
+    expect(line('italian-game')?.textContent).toBe(
+      'C50Italian Game: Main line1. e4 e5 2. Nf3 Nc6 3. Bc4reached in 3.9% of games',
+    );
+  });
+
+  it('is shown on what a search finds, whenever the numbers come', () => {
+    const { type, line, count } = counted();
+    type('sicilian');
+    expect(said(line('sicilian-defense'))).toBeUndefined();
+
+    count();
+    expect(said(line('sicilian-defense'))).toBe('9.2% of games');
+
+    type('najdorf');
+    expect(said(line('sicilian-defense-najdorf-variation'))).toBe('1 game in 50,000');
+  });
+
+  it('says so of a line no game reached', () => {
+    const { type, line, count } = counted();
+    count();
+    type('english attack');
+
+    expect(said(line('sicilian-defense-najdorf-variation-english-attack'))).toBe('No games');
+  });
+
+  it('shows nothing on a line the numbers do not know', () => {
+    const { type, line, count } = counted();
+    count();
+    type('four knights');
+
+    const unknown = line('four-knights-game-italian-variation');
+    expect(unknown).not.toBeNull();
+    expect(unknown?.querySelector('.meter')).toBeNull();
+  });
+
+  it('is shown once on each line, however often the numbers come', () => {
+    const { tab, group, line, count } = counted();
+    tab('B')?.click();
+    group('B20')?.click();
+
+    count();
+    count();
+
+    expect(line('sicilian-defense')?.querySelectorAll('.meter')).toHaveLength(1);
+  });
+
+  it('is shown for every collection', () => {
+    const { tab, all, count } = counted(TWO_COLLECTIONS.collections);
+    count();
+    tab('Pamphlet')?.click();
+    all<HTMLElement>('.group__toggle')[0]?.click();
+
+    expect(said(all('.line').find((line) => line.dataset.opening === DANISH.id))).toBe(
+      '1 game in 1,700',
+    );
   });
 });
