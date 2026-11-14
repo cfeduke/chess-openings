@@ -1,23 +1,10 @@
 import { parseOpeningName } from '../../src/catalog/name.ts';
 import type { Opening } from '../../src/data/opening.ts';
-import type { MostPlayedData, Outcomes } from '../../src/statistics/data.ts';
+import type { MostPlayedData } from '../../src/statistics/data.ts';
+import { outcomesByBand } from './outcomes.ts';
 import { createGame } from './play.ts';
-import { BANDS, countsOf, gamesReaching, SPEEDS, type Tally } from './tally.ts';
+import { gamesReaching } from './tally.ts';
 import type { GameTallies } from './vendored.ts';
-
-/** What was counted for the `position`th position in each band of strength, at every speed. */
-export function outcomesByBand(tally: Tally, position: number): Outcomes[] {
-  return BANDS.map((band) => {
-    const sum: Outcomes = [0, 0, 0];
-    for (const speed of SPEEDS) {
-      const { white, draws, black } = countsOf(tally, position, speed, band);
-      sum[0] += white;
-      sum[1] += draws;
-      sum[2] += black;
-    }
-    return sum;
-  });
-}
 
 /**
  * The main line of each family of `openings`: the line named for the family alone, and the

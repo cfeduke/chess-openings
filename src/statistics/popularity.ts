@@ -24,9 +24,14 @@ const twoFigures = (number: number) => Number(number.toPrecision(2));
 /** A share as a percentage to two figures: `9.2%`. */
 export const percentage = (share: number) => `${twoFigures(share * 100)}%`;
 
+/** A share that is not nothing, as it is best said: `9.2%`, or `1 game in 50,000`. */
+export const shareInWords = (share: number) =>
+  share >= SMALLEST_PERCENTAGE
+    ? percentage(share)
+    : `1 game in ${twoFigures(1 / share).toLocaleString('en')}`;
+
 /** A share of the games in words: `9.2% of games`, `1 game in 50,000`, `No games`. */
 export function describeShare(share: number): string {
   if (share <= 0) return 'No games';
-  if (share >= SMALLEST_PERCENTAGE) return `${percentage(share)} of games`;
-  return `1 game in ${twoFigures(1 / share).toLocaleString('en')}`;
+  return share >= SMALLEST_PERCENTAGE ? `${shareInWords(share)} of games` : shareInWords(share);
 }

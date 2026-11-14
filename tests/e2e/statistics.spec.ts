@@ -39,7 +39,9 @@ test('the build ships the detail in files of a few hundred positions', async ({ 
   const last = await request.get(`/statistics/${files - 1}.json`);
   expect(first.ok()).toBe(true);
   expect(last.ok()).toBe(true);
-  expect((await request.get(`/statistics/${files}.json`)).ok()).toBe(false);
+  // There is no file after the last: asking for one gets the page, as any unknown address does.
+  const beyond = await request.get(`/statistics/${files}.json`);
+  expect(beyond.headers()['content-type']).not.toContain('json');
   expect(await first.json()).toHaveLength(256);
   expect((await first.body()).length).toBeLessThan(200_000);
   const [start] = await first.json();
@@ -129,8 +131,9 @@ test.describe('the statistics of the opening on the board', () => {
     await moves.getByRole('listitem').first().getByRole('button').click();
 
     await expect(page).toHaveURL(/#\/sicilian-defense-[a-z0-9-]+$/);
-    await expect(pieceFrom(page, 'g1')).toHaveAttribute('data-square', 'f3');
     await expect(movesOn(page).getByRole('button', { name: '2. Nf3' })).toBeVisible();
+    await page.keyboard.press('End');
+    await expect(pieceFrom(page, 'g1')).toHaveAttribute('data-square', 'f3');
     // The panel stays open, on the numbers of the line it led to.
     await expect(toggleOn(page)).toHaveAttribute('aria-expanded', 'true');
     await expect(panelOn(page).locator('.stats__often')).not.toContainText('8,666,513');
@@ -219,7 +222,10 @@ test.describe('the statistics of the opening on the board', () => {
     await expect(panelOn(page)).toBeHidden();
 
     await page.route('**/statistics.json', (route) => route.fulfill({ status: 404, body: '' }));
-    await arriveAt(page, SICILIAN);
+    await page.goto(SICILIAN);
+    // Going from one address of the site to another does not fetch anything again.
+    await page.reload();
+    await movesOn(page).getByRole('button').first().waitFor();
     await expect(openingNameOn(page)).toHaveAccessibleName('B20 Sicilian Defense');
     await expect(panelOn(page)).toBeHidden();
   });

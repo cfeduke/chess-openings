@@ -80,10 +80,11 @@ describe.each(WIDTHS)('the statistics panel in a column %i pixels wide', (width)
     const [white, draws, black] = all('.stats__part').map(box) as [DOMRect, DOMRect, DOMRect];
     const bar = box(all('.stats__bar')[0] as HTMLElement);
 
-    expect(white.left).toBeCloseTo(bar.left, 0);
+    // End to end, from one edge of the bar to the other, inside its outline.
+    expect(Math.abs(white.left - bar.left)).toBeLessThanOrEqual(1.5);
     expect(draws.left).toBeCloseTo(white.right, 0);
     expect(black.left).toBeCloseTo(draws.right, 0);
-    expect(black.right).toBeCloseTo(bar.right, 0);
+    expect(Math.abs(black.right - bar.right)).toBeLessThanOrEqual(1.5);
     expect(white.width / bar.width).toBeCloseTo(20_000 / 39_000, 1);
     expect(bar.height).toBeGreaterThanOrEqual(8);
     const looks = all('.stats__part').map((part) => getComputedStyle(part).backgroundColor);

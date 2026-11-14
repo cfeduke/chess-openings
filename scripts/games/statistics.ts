@@ -1,8 +1,10 @@
 import type { OpeningsDataset } from '../../src/data/opening.ts';
 import { ECO_COLLECTION } from '../../src/eco/arrangement.ts';
 import type { PositionCounts, StatisticsData } from '../../src/statistics/data.ts';
+import { detailIndex } from './detail.ts';
 import { endOf } from './interest.ts';
-import { outcomesByBand, rankableFamilies } from './most-played.ts';
+import { rankableFamilies } from './most-played.ts';
+import { outcomesByBand } from './outcomes.ts';
 import { createGame } from './play.ts';
 import { BANDS, countsOf, SPEEDS, type Tally } from './tally.ts';
 import type { GameTallies } from './vendored.ts';
@@ -51,6 +53,7 @@ export function buildStatistics(dataset: OpeningsDataset, tallies: GameTallies):
     source: { ...DATABASE, month: source.month, games: source.counted, license: source.license },
     positions: positions.map((_, place) => countsAt(tally, place)),
     lines,
+    detail: detailIndex(tally),
     ...(encyclopaedia && {
       mostPlayed: {
         collection: encyclopaedia.id,

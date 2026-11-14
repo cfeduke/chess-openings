@@ -20,9 +20,20 @@ const DATASET: OpeningsDataset = {
   ],
 };
 
+/** Move text for `moves`, numbered as a game's is. */
+const numbered = (moves: string[]) =>
+  moves.map((move, ply) => (ply % 2 === 0 ? `${ply / 2 + 1}. ${move}` : move)).join(' ');
+
+/** An open Sicilian in which the knights go out and home until twenty moves have been made. */
+const TWENTY_MOVES = numbered([
+  ...['e4', 'c5', 'Nf3'],
+  ...Array.from({ length: 9 }, () => ['Nc6', 'Ng1', 'Nb8', 'Nf3']).flat(),
+  'Nc6',
+]);
+
 const GAMES = [
   // Twenty moves each side, and no more: a short game.
-  game(`1. e4 c5 2. Nf3 ${'Nc6 3. Ng1 Nb8 4. Nf3 '.repeat(9)}Nc6`, { white: 1000, black: 1000 }),
+  game(TWENTY_MOVES, { white: 1000, black: 1000 }),
   game('1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4', { white: 1000, black: 1000, result: '0-1' }),
   game('1. e4 c5 2. Nc3', { white: 2500, black: 2500, result: '1/2-1/2' }),
   game('1. e4 e5', { event: 'Rated Bullet game', white: 2500, black: 2500 }),

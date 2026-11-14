@@ -63,6 +63,21 @@
   min-height: 0;
 }
 
+/*
+ * Beside the board: the moves, and under them the numbers of the opening. The moves have what
+ * room the numbers leave, and never less than a few rows of it.
+ */
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.side .move-list {
+  flex: 1 1 0;
+  min-height: 120px;
+}
+
 .catalog-panel {
   order: -1;
   display: flex;

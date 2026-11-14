@@ -1,4 +1,4 @@
-import type { StatisticsData } from '../statistics/data.ts';
+import type { DetailChunk, StatisticsData } from '../statistics/data.ts';
 import type { OpeningsDataset } from './opening.ts';
 
 type Fetch = typeof globalThis.fetch;
@@ -18,3 +18,7 @@ export const loadOpenings = (fetch: Fetch = globalThis.fetch) =>
 /** Fetches what lichess's games say of the openings, at a glance. */
 export const loadStatistics = (fetch: Fetch = globalThis.fetch) =>
   load<StatisticsData>('statistics.json', fetch);
+
+/** Fetches one file of the detail of the statistics: the `chunk`th. */
+export const loadDetail = (chunk: number, fetch: Fetch = globalThis.fetch) =>
+  load<DetailChunk>(`statistics/${chunk}.json`, fetch);
