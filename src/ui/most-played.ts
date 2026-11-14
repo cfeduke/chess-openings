@@ -3,16 +3,14 @@ import type { Catalog, CatalogPlace } from '../catalog/catalog.ts';
 import { formatMoveText } from '../chess/san.ts';
 import { el } from '../dom.ts';
 import type { GamesSource, MostPlayedData } from '../statistics/data.ts';
-import {
-  bandNames,
-  MOST_PLAYED,
-  type RankedFamily,
-  rankMostPlayed,
-} from '../statistics/most-played.ts';
+import { bandNames, type RankedFamily, rankMostPlayed } from '../statistics/most-played.ts';
 import { percentage } from '../statistics/popularity.ts';
 import { monthInWords } from '../text/month.ts';
 import { type LeadPage, LINES_REDRAWN } from './catalog.ts';
 import { popularityMeter } from './meter.ts';
+
+/** How many families the page of the most played lists. */
+const MOST_PLAYED = 20;
 
 /**
  * The most played families of `ranking` that `catalog` has, each with where its main line is
@@ -21,10 +19,10 @@ import { popularityMeter } from './meter.ts';
 export function mostPlayedIn(
   catalog: Catalog,
   ranking: MostPlayedData,
-  limit = MOST_PLAYED,
+  limit: number,
   band?: number,
 ): { family: RankedFamily; place: CatalogPlace }[] {
-  return rankMostPlayed(ranking, band, ranking.families.length)
+  return rankMostPlayed(ranking, band)
     .flatMap((family) => {
       const place = catalog.locate(family.opening);
       return place ? [{ family, place }] : [];
@@ -75,7 +73,7 @@ function row({ family, place }: ReturnType<typeof mostPlayedIn>[number], rank: n
  */
 export function mostPlayedPage({ catalog, ranking, source }: MostPlayedOptions): LeadPage {
   const title = 'Most played';
-  const list = el('ol', { class: 'ranking lines', 'aria-label': 'Most played' });
+  const list = el('ol', { class: 'ranking lines', 'aria-label': title });
 
   const option = (value: string, text: string) => el('option', { value }, text);
   const players = el(

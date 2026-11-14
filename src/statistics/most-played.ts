@@ -12,9 +12,6 @@ export interface RankedFamily {
   whiteScore?: number;
 }
 
-/** How many families a ranking holds, unless it is asked for another number. */
-export const MOST_PLAYED = 20;
-
 const sum = (outcomes: Outcomes[]): Outcomes =>
   outcomes.reduce<Outcomes>(
     (total, [white, draws, black]) => [total[0] + white, total[1] + draws, total[2] + black],
@@ -24,13 +21,9 @@ const sum = (outcomes: Outcomes[]): Outcomes =>
 /**
  * The families of `data`, the most played first: ranked by the share of games that reach them,
  * of all the games or — given its place among `data.bands` — of one band's. The families are
- * the same whichever is asked for; only their order differs. The first `limit` of them.
+ * the same whichever is asked for; only their order differs.
  */
-export function rankMostPlayed(
-  data: MostPlayedData,
-  band?: number,
-  limit = MOST_PLAYED,
-): RankedFamily[] {
+export function rankMostPlayed(data: MostPlayedData, band?: number): RankedFamily[] {
   const of = (counts: Outcomes[]) =>
     band === undefined ? sum(counts) : (counts[band] ?? [0, 0, 0]);
   const [white, draws, black] = of(data.totals);
@@ -43,8 +36,7 @@ export function rankMostPlayed(
       const ranked = { opening, games, share: total ? games / total : 0 };
       return games ? { ...ranked, whiteScore: (white + draws / 2) / games } : ranked;
     })
-    .sort((a, b) => b.share - a.share)
-    .slice(0, limit);
+    .sort((a, b) => b.share - a.share);
 }
 
 /** What each band of strength is called, given the rating each begins at: `1200–1599`. */

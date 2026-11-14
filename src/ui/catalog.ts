@@ -298,8 +298,8 @@ export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogVie
   };
 
   /**
-   * Each collection's sections: their tabs, their pages, the one that was last on show, and
-   * whether the visitor has been to any of them but the one the collection opened at.
+   * Each collection's sections: their tabs, their pages, the one the collection opens at, and
+   * the one that was last on show, once the visitor has turned to one or been taken to it.
    */
   const shelves = new Map(
     collections.map((collection) => {
@@ -322,8 +322,11 @@ export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogVie
       const pages = new Map<Tabbed, HTMLElement>(
         collection.sections.map((section) => [section, pageOf(collection, section)]),
       );
-      const [current]: Tabbed[] = collection.sections;
-      return [collection, { sectionTabs, pages, current, wandered: false }];
+      const [opensAt]: Tabbed[] = collection.sections;
+      return [
+        collection,
+        { sectionTabs, pages, opensAt, current: undefined as Tabbed | undefined },
+      ];
     }),
   );
 
@@ -410,18 +413,16 @@ export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogVie
   const turnTo = (collection: CatalogCollection, section?: Tabbed) => {
     const kept = shelves.get(collection);
     if (!kept) return;
-    if (section) {
-      kept.current = section;
-      kept.wandered = true;
-    }
+    kept.current = section ?? kept.current;
+    const showing = kept.current ?? kept.opensAt;
 
     const collectionTab = collectionTabs?.mark(collection);
     if (collectionTab) shelf.setAttribute('aria-labelledby', collectionTab);
-    panel.setAttribute('aria-labelledby', kept.sectionTabs.mark(kept.current));
+    panel.setAttribute('aria-labelledby', kept.sectionTabs.mark(showing));
 
     // Only what has changed is put in place: taking the panel or its page out of the document,
     // even to put it straight back, would lose how far the panel had been scrolled.
-    const page = (kept.current && kept.pages.get(kept.current)) ?? null;
+    const page = (showing && kept.pages.get(showing)) ?? null;
     if (kept.sectionTabs.element.parentNode !== browse) {
       browse.replaceChildren(kept.sectionTabs.element, panel);
     }
@@ -480,7 +481,7 @@ export function createCatalog({ catalog, onSelect }: CatalogOptions): CatalogVie
 
       kept.sectionTabs.prepend(page);
       kept.pages.set(page, page.element);
-      if (!kept.wandered) kept.current = page;
+      kept.opensAt = page;
       if (collection === onShow) turnTo(collection);
     },
 

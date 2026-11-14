@@ -4,8 +4,7 @@ import type { MostPlayedData } from './data.ts';
 import { bandNames, rankMostPlayed } from './most-played.ts';
 
 const DATA = SMALL_STATISTICS.mostPlayed as MostPlayedData;
-const order = (band?: number, limit?: number) =>
-  rankMostPlayed(DATA, band, limit).map((family) => family.opening);
+const order = (band?: number) => rankMostPlayed(DATA, band).map((family) => family.opening);
 
 describe('rankMostPlayed', () => {
   it('ranks the families by the share of all games that reach them', () => {
@@ -55,23 +54,6 @@ describe('rankMostPlayed', () => {
     };
 
     expect(rankMostPlayed(level, 0).map((family) => family.opening)).toEqual(['b', 'a', 'c']);
-  });
-
-  it('stops at as many as it is asked for: twenty, unless told', () => {
-    const many: MostPlayedData = {
-      ...DATA,
-      families: Array.from({ length: 30 }, (_, index) => ({
-        opening: `family-${index}`,
-        counts: [[30 - index, 0, 0]],
-      })),
-    };
-
-    expect(order(undefined, 3)).toEqual([
-      'slav-defense',
-      'sicilian-defense',
-      'scandinavian-defense',
-    ]);
-    expect(rankMostPlayed(many, 0)).toHaveLength(20);
   });
 
   it('has no score for a family none of the band’s games reached', () => {
