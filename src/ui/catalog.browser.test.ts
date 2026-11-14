@@ -2,9 +2,11 @@ import '../styles/theme.css';
 import { afterEach, describe, expect, it } from 'vitest';
 import { encyclopaedia, opening, SMALL_BOOK } from '../../tests/support/openings.ts';
 import { TWO_ARRANGEMENTS, TWO_COLLECTIONS } from '../../tests/support/pamphlet.ts';
+import { SMALL_STATISTICS } from '../../tests/support/statistics.ts';
 import { buildCatalog } from '../catalog/catalog.ts';
 import type { OpeningCollection } from '../data/opening.ts';
 import { el } from '../dom.ts';
+import { readStatistics } from '../statistics/statistics.ts';
 import { createCatalog } from './catalog.ts';
 
 /** As narrow as the page ever makes the catalog: its column on a small laptop. */
@@ -169,5 +171,83 @@ describe('the panel in a real browser', () => {
     view.show(longFamily[10] as (typeof longFamily)[number]);
 
     expect(panel.scrollTop).toBe(scrolledTo);
+  });
+});
+
+describe('the meter on a line in a real browser', () => {
+  /** The small book with its numbers, and the Sicilians on show. */
+  function counted() {
+    const collections = [encyclopaedia(SMALL_BOOK)];
+    const all = mount(collections);
+    all.view.count(readStatistics(SMALL_STATISTICS, collections).of);
+    all.tab('B').click();
+    for (const toggle of all.element.querySelectorAll<HTMLElement>('.group__toggle')) {
+      toggle.click();
+    }
+    const line = (id: string) =>
+      all.element.querySelector(`.line[data-opening="${id}"]`) as HTMLElement;
+    const meter = (id: string) => line(id).querySelector('.meter') as HTMLElement;
+    const bars = (id: string) => [...meter(id).querySelectorAll<HTMLElement>('.meter__bar')];
+    return { ...all, line, meter, bars };
+  }
+
+  it('sits at the end of the line, beside its name and moves, inside the line', () => {
+    const { line, meter, box } = counted();
+    const sicilian = line('sicilian-defense');
+    const name = sicilian.querySelector('.line__name') as HTMLElement;
+    const moves = sicilian.querySelector('.line__moves') as HTMLElement;
+
+    expect(box(meter('sicilian-defense')).left).toBeGreaterThanOrEqual(box(name).right);
+    expect(box(meter('sicilian-defense')).left).toBeGreaterThanOrEqual(box(moves).right);
+    expect(box(meter('sicilian-defense')).right).toBeLessThanOrEqual(box(sicilian).right);
+    expect(box(meter('sicilian-defense')).top).toBeGreaterThanOrEqual(box(sicilian).top);
+    expect(box(meter('sicilian-defense')).bottom).toBeLessThanOrEqual(box(sicilian).bottom);
+  });
+
+  it('is five bars side by side, each big enough to see', () => {
+    const { bars, box } = counted();
+    const drawn = bars('sicilian-defense').map(box);
+
+    expect(drawn).toHaveLength(5);
+    for (const [index, bar] of drawn.entries()) {
+      expect(bar.width).toBeGreaterThanOrEqual(3);
+      expect(bar.height).toBeGreaterThanOrEqual(4);
+      if (index > 0) expect(bar.left).toBeGreaterThan((drawn[index - 1] as DOMRect).right);
+    }
+  });
+
+  it('shows the bars that are lit apart from the ones that are not', () => {
+    const { bars } = counted();
+    const look = (bar: HTMLElement) =>
+      `${getComputedStyle(bar).backgroundColor} ${getComputedStyle(bar).opacity}`;
+    const [first, , , fourth, fifth] = bars('sicilian-defense').map(look);
+
+    expect(first).toBe(fourth);
+    expect(fifth).not.toBe(fourth);
+  });
+
+  it('lines up from one line to the next, whatever each has to say', () => {
+    const { meter, box } = counted();
+
+    expect(box(meter('sicilian-defense')).left).toBe(box(meter('scandinavian-defense')).left);
+    expect(box(meter('sicilian-defense')).width).toBe(
+      box(meter('sicilian-defense-najdorf-variation-english-attack')).width,
+    );
+  });
+
+  it('keeps the line inside the catalog at its narrowest', () => {
+    const { element, fits } = counted();
+
+    expect(
+      [...element.querySelectorAll<HTMLElement>('.line')].filter((line) => !fits(line)),
+    ).toEqual([]);
+  });
+
+  it('takes no room for its words, which are for a screen reader', () => {
+    const { meter, box } = counted();
+    const words = meter('sicilian-defense').querySelector('.visually-hidden') as HTMLElement;
+
+    expect(box(words).width * box(words).height).toBeLessThanOrEqual(1);
+    expect(box(meter('sicilian-defense')).width).toBeLessThan(40);
   });
 });

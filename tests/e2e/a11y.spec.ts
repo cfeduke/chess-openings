@@ -27,6 +27,8 @@ async function violations(page: Page) {
 async function watchItalianGame(page: Page) {
   await stepInto(page, ITALIAN_GAME, 3);
   await expect(pieceFrom(page, 'g1')).toHaveAttribute('data-square', 'f3');
+  // The checks are of the page as it ends up: with how often each line is played on it.
+  await expect(catalogOn(page).locator('.line[aria-current="true"] .meter')).toBeVisible();
 }
 
 for (const colorScheme of ['light', 'dark'] as const) {
@@ -74,6 +76,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await watchItalianGame(page);
       await catalogOn(page).getByRole('searchbox', { name: 'Search openings' }).fill('gambit');
       await expect(catalogOn(page).getByRole('status')).toContainText('openings');
+      await expect(catalogOn(page).locator('.catalog__results .meter').first()).toBeVisible();
 
       expect(await violations(page)).toEqual([]);
     });

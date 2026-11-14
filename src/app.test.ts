@@ -3,20 +3,35 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { STUDY, TWO_APPEARANCES } from '../tests/support/appearances.ts';
 import { ITALIAN, NAJDORF, SMALL_DATASET } from '../tests/support/openings.ts';
 import { DANISH, PAMPHLET, TWO_ARRANGEMENTS, TWO_COLLECTIONS } from '../tests/support/pamphlet.ts';
+import { SMALL_STATISTICS } from '../tests/support/statistics.ts';
 import { mountApp } from './app.ts';
 import type { OpeningsDataset } from './data/opening.ts';
 import { hashForOpening } from './routing.ts';
 import { appearanceSetting, delaySetting } from './settings.ts';
+import type { StatisticsData } from './statistics/data.ts';
 
 let unmount = new AbortController();
 
-/** Mounts the app at a URL, with the small book of openings unless a loader is given. */
-function mount(hash = '', load: () => Promise<OpeningsDataset> = async () => SMALL_DATASET) {
+/** How the games' statistics fail to come, which is how most of these tests have them. */
+const noStatistics = async (): Promise<StatisticsData> => {
+  throw new Error('statistics.json: HTTP 404');
+};
+
+/**
+ * Mounts the app at a URL, with the small book of openings unless a loader is given, and without
+ * the statistics of how they are played unless a loader of those is.
+ */
+function mount(
+  hash = '',
+  load: () => Promise<OpeningsDataset> = async () => SMALL_DATASET,
+  loadStatistics: () => Promise<StatisticsData> = noStatistics,
+) {
   history.replaceState(null, '', `/${hash}`);
   const root = document.createElement('div');
   document.body.append(root);
   const ready = mountApp(root, {
     load,
+    loadStatistics,
     signal: unmount.signal,
     appearances: TWO_APPEARANCES,
     arrangements: TWO_ARRANGEMENTS,
@@ -511,5 +526,111 @@ describe('the appearance of the board', () => {
 
     expect(text('.credits')).toContain('Chess pieces by A. Tester.');
     expect(text('.credits')).not.toContain('Burnett');
+  });
+});
+
+describe('how often the openings are played', () => {
+  const said = (root: HTMLElement, id: string) =>
+    root.querySelector<HTMLElement>(`.line[data-opening="${id}"] .meter`)?.title;
+  const withStatistics = async () => SMALL_STATISTICS;
+
+  it('is asked for at once, along with the openings', () => {
+    const load = vi.fn(() => new Promise<OpeningsDataset>(() => {}));
+    const loadStatistics = vi.fn(() => new Promise<StatisticsData>(() => {}));
+
+    mount('', load, loadStatistics);
+
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(loadStatistics).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not keep the catalog waiting: the numbers are put on when they come', async () => {
+    const counting = Promise.withResolvers<StatisticsData>();
+    const { root, ready } = mount(hashForOpening(ITALIAN.id), undefined, () => counting.promise);
+    await ready;
+
+    expect(root.querySelectorAll('[role="tab"]')).toHaveLength(5);
+    expect(root.querySelector(`.line[data-opening="${ITALIAN.id}"]`)).not.toBeNull();
+    expect(root.querySelectorAll('.meter')).toHaveLength(0);
+
+    counting.resolve(SMALL_STATISTICS);
+
+    await vi.waitFor(() => expect(said(root, ITALIAN.id)).toBe('3.9% of games'));
+  });
+
+  it('is on the lines from the start when the numbers come before the openings', async () => {
+    const fetching = Promise.withResolvers<OpeningsDataset>();
+    const { root, ready } = mount(
+      hashForOpening(ITALIAN.id),
+      () => fetching.promise,
+      withStatistics,
+    );
+    await Promise.resolve();
+
+    fetching.resolve(SMALL_DATASET);
+    await ready;
+
+    await vi.waitFor(() => expect(said(root, ITALIAN.id)).toBe('3.9% of games'));
+  });
+
+  it('is still shown when the openings came at the second attempt', async () => {
+    const load = vi
+      .fn<() => Promise<OpeningsDataset>>()
+      .mockRejectedValueOnce(new Error('openings.json: HTTP 503'))
+      .mockResolvedValueOnce(SMALL_DATASET);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const loadStatistics = vi.fn(withStatistics);
+    const { root, ready, $, chooseItalian } = mount('', load, loadStatistics);
+    await ready;
+
+    $('.catalog-panel button')?.click();
+    await vi.waitFor(() => expect(root.querySelectorAll('[role="tab"]')).toHaveLength(5));
+    chooseItalian();
+
+    await vi.waitFor(() => expect(said(root, ITALIAN.id)).toBe('3.9% of games'));
+    expect(loadStatistics).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['cannot be fetched', noStatistics],
+    ['are not what they should be', async () => ({ collections: [] }) as unknown as StatisticsData],
+  ])('leaves the site as it was when the numbers %s', async (_, loadStatistics) => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { root, ready, text, squareOf, chooseItalian } = mount('', undefined, loadStatistics);
+    await ready;
+    await vi.advanceTimersByTimeAsync(0);
+
+    chooseItalian();
+    vi.advanceTimersByTime(1500);
+
+    expect(squareOf('e2')).toBe('e4');
+    expect(root.querySelectorAll('.line').length).toBeGreaterThan(0);
+    expect(root.querySelectorAll('.meter')).toHaveLength(0);
+    expect(root.querySelector('[role="alert"]')).toBeNull();
+    expect(logged).not.toHaveBeenCalled();
+    expect(text('.credits')).toBe(
+      'Openings from lichess-org/chess-openings @ abc1234, in the public domain. ' +
+        'Chess pieces by Colin M.L. Burnett.',
+    );
+  });
+
+  it('is credited: the database, the month and how many games were counted', async () => {
+    const { root, ready, text } = mount('', undefined, withStatistics);
+    await ready;
+
+    await vi.waitFor(() =>
+      expect(text('.credits')).toBe(
+        'Openings from lichess-org/chess-openings @ abc1234, in the public domain. ' +
+          'How often each is played: 1,000,000 games of October 2026 from the ' +
+          'lichess.org open database, in the public domain. ' +
+          'Chess pieces by Colin M.L. Burnett.',
+      ),
+    );
+    expect(
+      [...root.querySelectorAll<HTMLAnchorElement>('.credits a')].map((link) => link.href),
+    ).toEqual([
+      'https://github.com/lichess-org/chess-openings/tree/abc1234def',
+      'https://database.lichess.org/',
+    ]);
   });
 });

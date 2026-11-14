@@ -40,6 +40,18 @@ test.describe('on a phone', () => {
     expect(catalog.y).toBeGreaterThanOrEqual(moves.y + moves.height);
   });
 
+  test('how often a line is played is on the line, inside the screen', async ({ page }) => {
+    await page.goto(ITALIAN_GAME);
+    const viewport = page.viewportSize() ?? { width: 0, height: 0 };
+    const line = catalogOn(page).locator('.line[aria-current="true"]');
+
+    const meter = await box(line.locator('.meter'));
+    const name = await box(line.locator('.line__name'));
+    expect(meter.x).toBeGreaterThanOrEqual(name.x + name.width);
+    expect(meter.x + meter.width).toBeLessThanOrEqual(viewport.width);
+    expect(await overflowsSideways(page)).toBe(false);
+  });
+
   test('the controls stay at the bottom of the screen, and all of them fit', async ({ page }) => {
     await page.goto(ITALIAN_GAME);
     const viewport = page.viewportSize() ?? { width: 0, height: 0 };

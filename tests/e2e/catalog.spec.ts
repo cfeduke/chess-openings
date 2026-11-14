@@ -1,9 +1,10 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Locator, test } from '@playwright/test';
 import { FEATURED_OPENINGS } from '../../src/catalog/featured.ts';
 import {
   boardOn,
   box,
   catalogOn,
+  collectionTabOn,
   controlsOn,
   ITALIAN_GAME,
   movesOn,
@@ -194,4 +195,99 @@ test('the page credits its sources', async ({ page }) => {
 
   await expect(page.locator('.credits')).toContainText('lichess-org/chess-openings');
   await expect(page.locator('.credits')).toContainText('Colin M.L. Burnett');
+});
+
+test.describe('how often each line is played', () => {
+  const meterOf = (line: Locator) => line.locator('.meter');
+
+  test('is on every line, browsed or found, as a meter and in words', async ({ page }) => {
+    await page.goto('/');
+    const catalog = catalogOn(page);
+
+    await catalog.getByRole('tab', { name: /Volume B/ }).click();
+    await catalog.getByRole('button', { name: /^B20–B29/ }).click();
+    const sicilian = catalog.locator('.line[data-opening="sicilian-defense"]');
+    await expect(meterOf(sicilian)).toHaveAttribute('title', '9.2% of games');
+    await expect(sicilian).toHaveAccessibleName(
+      'B20 Sicilian Defense: Main line 1. e4 c5, 9.2% of games',
+    );
+    await expect(meterOf(sicilian).locator('.meter__bar--on')).toHaveCount(4);
+    await expect(meterOf(sicilian)).toBeVisible();
+    // Every line of the group has one: they were all counted.
+    const lines = catalog.locator('.group__body:not([hidden]) .line');
+    await expect(lines.locator('.meter')).toHaveCount(await lines.count());
+
+    await catalog.getByRole('searchbox', { name: 'Search openings' }).fill('1. e4');
+    const kingsPawn = catalog.locator('.line[data-opening="kings-pawn-game"]');
+    await expect(meterOf(kingsPawn)).toHaveAttribute('title', '58% of games');
+    await expect(meterOf(kingsPawn).locator('.meter__bar--on')).toHaveCount(5);
+  });
+
+  test('is the same for two lines that end in the same position', async ({ page }) => {
+    await page.goto('/');
+    const catalog = catalogOn(page);
+
+    // The Wikibook's page for 1. e4 c5 and the encyclopaedia's Sicilian Defense.
+    await catalog.getByRole('searchbox', { name: 'Search openings' }).fill('1. e4 c5');
+    await expect(
+      meterOf(catalog.locator('.line[data-opening="sicilian-defense"]')),
+    ).toHaveAttribute('title', '9.2% of games');
+    await collectionTabOn(page, 'Wikibooks').click();
+
+    await expect(meterOf(catalog.locator('.line').first())).toHaveAttribute(
+      'title',
+      '9.2% of games',
+    );
+  });
+
+  test('is credited under the catalog: the database, the month, the games', async ({ page }) => {
+    await page.goto('/');
+
+    await expect(page.locator('.credits')).toContainText(
+      /How often each is played: 94,074,706 games of October 2026 from the lichess\.org open database, in the public domain\./,
+    );
+  });
+
+  test('is not waited for: the catalog is there while the numbers are still coming', async ({
+    page,
+  }) => {
+    let send = () => {};
+    const held = new Promise<void>((resolve) => {
+      send = resolve;
+    });
+    await page.route('**/statistics.json', async (route) => {
+      await held;
+      await route.continue();
+    });
+
+    await page.goto(ITALIAN_GAME);
+    const italian = catalogOn(page).locator('.line[aria-current="true"]');
+    await expect(italian).toBeVisible();
+    await expect(pieceFrom(page, 'e2')).toHaveAttribute('data-square', 'e4');
+    await expect(page.locator('.meter')).toHaveCount(0);
+
+    send();
+
+    await expect(meterOf(italian)).toHaveAttribute('title', '3.9% of games');
+  });
+
+  for (const [what, respond] of [
+    ['missing', { status: 404, body: 'Not found' }],
+    ['unreadable', { status: 200, contentType: 'text/html', body: '<!doctype html>' }],
+  ] as const) {
+    test(`leaves the site as it was when the numbers are ${what}`, async ({ page }) => {
+      const answered = page.waitForResponse('**/statistics.json');
+      await page.route('**/statistics.json', (route) => route.fulfill(respond));
+
+      await page.goto(ITALIAN_GAME);
+      await answered;
+
+      await expect(openingNameOn(page)).toHaveAccessibleName('C50 Italian Game');
+      await expect(pieceFrom(page, 'e2')).toHaveAttribute('data-square', 'e4');
+      await expect(catalogOn(page).locator('.line[aria-current="true"]')).toBeVisible();
+      await expect(page.locator('.meter')).toHaveCount(0);
+      await expect(page.getByRole('alert')).toHaveCount(0);
+      await expect(page.locator('.credits')).not.toContainText('How often');
+    });
+  }
 });

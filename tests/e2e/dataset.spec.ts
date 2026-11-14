@@ -36,3 +36,32 @@ test('the production build ships the generated openings dataset', async ({ reque
     page: expect.any(Number),
   });
 });
+
+test('the production build ships what the games say of each line, at a glance', async ({
+  request,
+}) => {
+  const [openings, statistics] = await Promise.all(
+    ['/openings.json', '/statistics.json'].map(async (url) => {
+      const response = await request.get(url);
+      expect(response.ok()).toBe(true);
+      return response.json();
+    }),
+  );
+
+  expect(statistics.source).toEqual({
+    title: 'lichess.org open database',
+    url: 'https://database.lichess.org/',
+    month: expect.stringMatching(/^20\d\d-\d\d$/),
+    games: expect.any(Number),
+    license: 'CC0-1.0',
+  });
+  expect(statistics.source.games).toBeGreaterThan(50_000_000);
+  // The position every game begins in: its games are all of them.
+  const [white, draws, black, expected] = statistics.positions[0];
+  expect(white + draws + black).toBe(statistics.source.games);
+  expect(expected).toBeGreaterThan(0);
+  expect(statistics.positions.length).toBeGreaterThan(5000);
+  for (const { id, openings: lines } of openings.collections) {
+    expect(statistics.lines[id]).toHaveLength(lines.length);
+  }
+});
