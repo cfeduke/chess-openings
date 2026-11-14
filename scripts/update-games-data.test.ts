@@ -38,19 +38,23 @@ const FILE = Buffer.concat(
 const urlOf = (month: string) =>
   `https://database.lichess.org/standard/lichess_db_standard_rated_${month}.pgn.zst`;
 
-/** Small enough parts that the file is several of them, and three to be asked for at a time. */
-const SETTINGS = { threads: 2, connections: 3, partSize: 64 };
+/** Small enough parts that the file is a good many of them: three asked for at a time, five held. */
+const SETTINGS = { threads: 2, connections: 3, partsHeld: 5, partSize: 32 };
 
 /** The parts of the file, as the bytes each begins and ends at. */
-const PARTS = Array.from({ length: Math.ceil(FILE.length / 64) }, (_, part) => [
-  part * 64,
-  Math.min(part * 64 + 64, FILE.length),
+const PARTS = Array.from({ length: Math.ceil(FILE.length / SETTINGS.partSize) }, (_, part) => [
+  part * SETTINGS.partSize,
+  Math.min((part + 1) * SETTINGS.partSize, FILE.length),
 ]);
 
 /** What goes wrong with the part of the file beginning at `from`, the `nth` time it is asked for. */
 type Mishap = (from: number, nth: number) => 'fails' | 'comes short' | undefined;
 
-function fakeDatabase(mishap: Mishap = () => undefined) {
+function fakeDatabase(
+  mishap: Mishap = () => undefined,
+  /** Waited for before the part of the file beginning at `from` comes. */
+  delay: (from: number) => Promise<unknown> = async () => {},
+) {
   const read: [location: string, from: number, to: number][] = [];
   const written = new Map<string, string>();
   const paused: number[] = [];
@@ -77,6 +81,7 @@ function fakeDatabase(mishap: Mishap = () => undefined) {
         await new Promise((resolve) => setTimeout(resolve, 2));
         flights.now--;
 
+        await delay(from);
         const wrong = mishap(from, nth);
         if (wrong === 'fails') throw new Error('the connection was lost');
         return FILE.subarray(from, wrong === 'comes short' ? to - 1 : to);
@@ -128,6 +133,27 @@ describe('updateGamesData', () => {
     expect(PARTS.length).toBeGreaterThan(SETTINGS.connections);
     expect(database.read.map(([, from, to]) => [from, to])).toEqual(PARTS);
     expect(database.flights.most).toBe(SETTINGS.connections);
+  });
+
+  it('goes on asking for parts while one is slow to come, but holds only so many', async () => {
+    const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
+    let askedFor = 0;
+    const database = fakeDatabase(undefined, async (from) => {
+      if (from > 0) return;
+      // The first part does not come until nothing more has been asked for in a while.
+      for (let before = -1; before !== database.read.length; await tick()) {
+        before = database.read.length;
+      }
+      askedFor = database.read.length;
+    });
+
+    await update('2026-09', database);
+
+    expect(PARTS.length).toBeGreaterThan(SETTINGS.partsHeld);
+    expect(askedFor).toBe(SETTINGS.partsHeld);
+    expect(database.flights.most).toBe(SETTINGS.connections);
+    expect(database.read.map(([, from, to]) => [from, to])).toEqual(PARTS);
+    expect(database.written.get('data/lichess-games/tallies.tsv')).toBe(expected().tallies);
   });
 
   it('records which month that was, how many games it held and which were left out', async () => {
@@ -210,11 +236,11 @@ describe('updateGamesData', () => {
     ['fails', 'fails'],
     ['comes short', 'comes short'],
   ] as const)('asks again for a part of the file that %s', async (_how, wrong) => {
-    const database = fakeDatabase((from, nth) => (from === 64 && nth < 2 ? wrong : undefined));
+    const database = fakeDatabase((from, nth) => (from === 32 && nth < 2 ? wrong : undefined));
 
     await update('2026-09', database);
 
-    expect(database.read.filter(([, from]) => from === 64).length).toBe(3);
+    expect(database.read.filter(([, from]) => from === 32).length).toBe(3);
     expect(database.read.length).toBe(PARTS.length + 2);
     expect(database.paused.length).toBe(2);
     expect(database.said.filter((line) => line.includes('asking again')).length).toBe(2);
@@ -222,10 +248,10 @@ describe('updateGamesData', () => {
   });
 
   it('gives up on a part of the file that keeps failing, and writes nothing', async () => {
-    const database = fakeDatabase((from) => (from === 64 ? 'fails' : undefined));
+    const database = fakeDatabase((from) => (from === 32 ? 'fails' : undefined));
 
     await expect(update('2026-09', database)).rejects.toThrow(/connection was lost/);
-    expect(database.read.filter(([, from]) => from === 64).length).toBe(6);
+    expect(database.read.filter(([, from]) => from === 32).length).toBe(6);
     expect(database.written.size).toBe(0);
   });
 });
