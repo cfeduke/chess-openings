@@ -286,7 +286,8 @@ them that it passes through, however it got there: by the position — the board
 move, the castling rights — not by the moves, and not by the name lichess gives the game. So a
 Najdorf game is also a Sicilian game; a game that reaches the Queen's Gambit by 1. Nf3 counts for
 it; and a line of the Wikibook has numbers though lichess has no name for it. Games are read as
-deep as the catalog's longest line, 36 moves counting each side's. (The `Opening` tag of a game
+deep as the catalog's longest line goes, which `SOURCE.json` records as `depth`, in moves of
+either side. (The `Opening` tag of a game
 will not do instead: it names only the deepest named line the game reached, so the Sicilian's
 games are spread over its variations, and its names are not always the ones vendored here.)
 
@@ -311,26 +312,31 @@ higher.
 
 **What is left out**, and counted as left out in `SOURCE.json`: correspondence games; games
 without a result; games in which a player has no rating; games abandoned before they began, or
-in which no move was made; games with a bot; and games that cannot be read.
+in which no move was made; games with a bot; and games that cannot be read, for a move no piece
+can make or a speed there is no telling.
 
 **To count another month:** `npm run data:update:games` for the newest there is, or
 `npm run data:update:games 2026-10` for one in particular, then `npm run verify`. The month is
-read as it arrives — 31 GB that become 220 GB of PGN, none of which is kept — and a download that
-breaks off is taken up where it stopped. @@TIMING@@ A file that has been downloaded already can be
-given in place of the month, under the name lichess gave it
-(`lichess_db_standard_rated_2026-10.pgn.zst`).
+read as it arrives — 31 GB that become some 220 GB of PGN, none of which is kept — sixteen
+megabytes at a time and four of those at once, and a part that fails or stalls is asked for
+again. How long it takes is how long the download takes: on a 16-core laptop the counting keeps
+up with anything the database sends. October 2026 came at 7 MB/s the one time it was read to the
+end this way, which took an hour and a quarter; it has since come at close to 20, which would
+take half an hour. A file that has been downloaded already can be given in place of the month,
+under the name lichess gave it (`lichess_db_standard_rated_2026-10.pgn.zst`), and is counted in
+ten minutes.
 
 The tallies are for the positions the catalog had when they were counted. After new lines are
 vendored, or a collection is added, the new positions have no numbers until a month is counted
 again.
 
 How it is done quickly enough: lichess compresses its files with pzstd, which starts a new zstd
-frame every 32 MB, so [`scripts/games/frames.ts`](scripts/games/frames.ts) cuts the file into
+frame for every 32 MB of PGN, so [`scripts/games/frames.ts`](scripts/games/frames.ts) cuts the file into
 frames as it arrives and [`scripts/games/pool.ts`](scripts/games/pool.ts) hands them to a thread
 for each core to decompress and count. And the games are played through without a rules engine:
 they are known to be legal, so [`scripts/games/play.ts`](scripts/games/play.ts) finds the piece
-a move names by looking back from the square it goes to, which is some forty times quicker than
-validating the move. It is tested against chess.js, move for move.
+a move names by looking back from the square it goes to, which in a trial was some forty times
+quicker than replaying with chess.js. It is tested against chess.js, move for move.
 
 ## Credits
 
