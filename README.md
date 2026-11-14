@@ -35,6 +35,10 @@ are there, and so are the 2,600-odd positions that Wikibooks'
   reached in a month of games on lichess. Its five bars are factors of ten: one for 1 game in
   100,000, all five for 1 game in 10. Rest the pointer on it for the figure (`9.2% of games`,
   `1 game in 50,000`); a screen reader hears it as part of the line's name.
+- **Read the numbers** — under the moves of the opening on the board is a **Statistics** panel,
+  shut until it is asked for: how often the position is reached, how the games go and how that
+  stands against the players' ratings, who plays it and at what speed, what is played next —
+  a move that leads to a line of the catalog opens that line — and how long the games last.
 - **Watch** — choosing a line plays it. The bar along the bottom has restart, step back,
   play/pause, step forward and jump to end; a slider for the **delay between moves** (0.3–5 s,
   1.5 s to begin with); and buttons to flip the board and switch the sound off.
@@ -370,7 +374,10 @@ say how much each line is played and how it scores:
   totals of each band.
 
 The split by speed and strength, the lengths of the games and the moves played next are five
-times the size and stay behind.
+times the size, and are for [the panel of one opening](#the-numbers-of-one-opening): they go
+into `public/statistics/0.json`, `1.json`…, 256 positions to a file in the order of
+`positions.tsv`, each some 25 KB compressed. `statistics.json` says how they are cut up and
+gives the totals of each band and speed, which a position's games are a share of.
 
 The page asks for the file when it asks for the openings, and waits for it for nothing: the
 catalog is drawn as soon as the openings are there, and the numbers are put on when they come.
@@ -413,6 +420,41 @@ is in that band's games. The ratings are lichess's, and four games in five are b
 
 Without `statistics.json` there is no such page and nothing is offered above the board: the
 catalog opens at Volume A, as it did before there were numbers.
+
+#### The numbers of one opening
+
+The Statistics panel is for the opening on the board. An opening the tallies do not know has no
+panel; one that no game reached has a panel that says so. What came with the page is shown as
+soon as the panel is opened; the rest is one file of detail, fetched the first time a panel is
+opened on a position in it and not before. While it is coming the panel says so, and if it
+cannot be had the panel says that, offers to try again, and the rest of the site carries on.
+
+| What it says            | How it is come by                                                                                                                                                                                                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **How often**           | The games that reached the position, and those as a share of all the games counted.                                                                                                                                                                                      |
+| **How it goes**         | White's wins, the draws and Black's wins as shares of those games, drawn as one bar and given in figures. White's score counts a draw as half.                                                                                                                           |
+| **Against the ratings** | Each game's expected score for White, from the two ratings, was added up when the games were counted. The sentence gives that as a percentage, White's score beside it, and the difference — and sets the difference against the same for all games (see below).         |
+| **Who plays it**        | For each rating band, the games of that band that reached the position as a share of all that band's games, and White's score in them.                                                                                                                                   |
+| **At what speed**       | The same for bullet, blitz, rapid and classical.                                                                                                                                                                                                                         |
+| **What is played next** | The ten moves most played from the position, each with its share of the position's games, and the rest as "Other moves". A move that leads to a position some line of the catalog ends in is a button to that line: one of the same collection, where there is a choice. |
+| **How long**            | The mean length of the games, in moves, and the share of them over within twenty.                                                                                                                                                                                        |
+
+**Doing well for whom.** Over all the games of October 2026 White scores 51.7% where the
+ratings predict 50.0%: 1.6 points better, in any opening. So an opening is doing well for White
+only if White beats the prediction by more than that, and well for Black if by less. Where the
+two differ by no more than chance would do — two standard errors of the score, a game's result
+having a standard deviation of about half a point — the panel says the difference could be
+chance.
+
+**Small numbers.** The count is always shown. A score is shown only for 1,000 games or more:
+over 1,000 it is good to about 1.6 points either way, which is the whole of White's edge, and
+1,613 of the encyclopaedia's 3,865 lines have fewer. Below that the panel counts the wins, draws
+and losses in place of percentages and says there are too few games for a score, and the same
+band by band and speed by speed.
+
+**What the numbers are**, which the panel also says: one month of rated games on lichess;
+lichess's ratings, not FIDE's; a game counts for every position it passes through, however it
+got there; games with a bot, by correspondence or abandoned are left out.
 
 ## Credits
 

@@ -98,6 +98,26 @@ export function countsOf(tally: Tally, position: number, speed: Speed, band: Ban
   return { white, draws, black, expected: expected / 100, plies, short };
 }
 
+/**
+ * What was counted for the `position`th position, of games of these speeds and bands added
+ * together: of all of them, unless told which.
+ */
+export function countsOver(
+  tally: Tally,
+  position: number,
+  speeds: readonly Speed[] = SPEEDS,
+  bands: readonly Band[] = BANDS,
+): Counts {
+  const sum: Counts = { white: 0, draws: 0, black: 0, expected: 0, plies: 0, short: 0 };
+  for (const speed of speeds) {
+    for (const band of bands) {
+      const counts = countsOf(tally, position, speed, band);
+      for (const measure of MEASURES) sum[measure] += counts[measure];
+    }
+  }
+  return sum;
+}
+
 /** Adds `counts` to what the tally has for a position, a speed and a band. */
 export function addCounts(
   tally: Tally,

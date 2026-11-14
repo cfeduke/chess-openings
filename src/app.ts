@@ -3,16 +3,17 @@ import './app.css';
 import { createSoundEffects } from './audio/sound-effects.ts';
 import { APPEARANCES, type Appearances, appearanceById } from './board/appearance.ts';
 import { createBoardView } from './board/board-view.ts';
-import { type Arrangement, buildCatalog, fullName } from './catalog/catalog.ts';
+import { type Arrangement, buildCatalog, type CatalogPlace, fullName } from './catalog/catalog.ts';
 import { buildTimeline } from './chess/timeline.ts';
-import { loadOpenings, loadStatistics } from './data/load.ts';
+import { loadDetail, loadOpenings, loadStatistics } from './data/load.ts';
 import type { DataSource, Opening, OpeningsDataset } from './data/opening.ts';
 import { el } from './dom.ts';
 import { createPlayer } from './playback/player.ts';
 import { hashForOpening, openingIdFromHash } from './routing.ts';
 import { appearanceSetting, delaySetting, mutedSetting } from './settings.ts';
-import type { GamesSource, StatisticsData } from './statistics/data.ts';
-import { readStatistics } from './statistics/statistics.ts';
+import type { DetailChunk, GamesSource, StatisticsData } from './statistics/data.ts';
+import { createDetails } from './statistics/detail.ts';
+import { readStatistics, type Statistics } from './statistics/statistics.ts';
 import { monthInWords } from './text/month.ts';
 import { createAnnouncer } from './ui/announcer.ts';
 import { createCatalog } from './ui/catalog.ts';
@@ -20,6 +21,7 @@ import { mostPlayedIn, mostPlayedPage } from './ui/most-played.ts';
 import { createMoveList } from './ui/move-list.ts';
 import { createOpeningHeader } from './ui/opening-header.ts';
 import { bindShortcuts } from './ui/shortcuts.ts';
+import { createStatisticsPanel } from './ui/statistics-panel.ts';
 import { createTransport } from './ui/transport.ts';
 
 interface AppOptions {
@@ -27,6 +29,8 @@ interface AppOptions {
   load?: () => Promise<OpeningsDataset>;
   /** Fetches what lichess's games say of them. The site does without if they do not come. */
   loadStatistics?: () => Promise<StatisticsData>;
+  /** Fetches one file of their detail, by its number, when the panel of an opening wants it. */
+  loadDetail?: (chunk: number) => Promise<DetailChunk>;
   /** Aborting it removes the listeners the app has put on the page. */
   signal?: AbortSignal;
   /** The looks the board can be given, the default first. */
@@ -130,6 +134,7 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
   /** Puts `opening` on the board, by way of the address. Nothing can be opened until the catalog is. */
   let open = (_opening: Opening) => {};
   const header = createOpeningHeader({ onSelect: (opening) => open(opening) });
+  const panel = createStatisticsPanel({ onSelect: (opening) => open(opening) });
   const stage = el(
     'section',
     { class: 'stage', 'aria-label': 'Board' },
@@ -157,7 +162,13 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
       el('p', { class: 'app__tagline' }, 'Learn them by watching them.'),
     ),
     // In reading order: what is being watched, then what there is to choose from.
-    el('main', { class: 'app__main' }, stage, moveList.element, catalogPanel),
+    el(
+      'main',
+      { class: 'app__main' },
+      stage,
+      el('div', { class: 'side' }, moveList.element, panel.element),
+      catalogPanel,
+    ),
     transport.element,
     announcer.element,
   );
@@ -188,6 +199,37 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
     }
 
     const catalog = buildCatalog(dataset.collections, arrangements);
+    /** What the games say of the openings, once that has come, and how to have the rest of it. */
+    let statistics: Statistics | undefined;
+    let detailAt: ReturnType<typeof createDetails> | undefined;
+
+    /** Where the opening the address names is filed, if it names one. */
+    const placeNow = () => catalog.locate(openingIdFromHash(location.hash) ?? '') ?? null;
+
+    /** Gives the panel the numbers of the opening at `place`, or puts it away if it has none. */
+    const showNumbers = (place: CatalogPlace | null) => {
+      const numbers = place && statistics?.of(place.opening);
+      if (!place || !statistics || !numbers) {
+        panel.show(null);
+        return;
+      }
+      const { total, source, linesAt } = statistics;
+      const at = statistics.placeOf(place.opening);
+      const fetch = detailAt;
+      panel.show({
+        numbers,
+        total,
+        source,
+        plies: place.opening.san.length,
+        ...(fetch && at !== undefined && { detail: () => fetch(at) }),
+        // A line of the collection the opening is in, if it has one that ends there.
+        leadsTo(to) {
+          const filed = linesAt(to).flatMap((line) => catalog.locate(line.id) ?? []);
+          const way = filed.find((found) => found.collection === place.collection) ?? filed[0];
+          return way && { opening: way.opening, name: fullName(way) };
+        },
+      });
+    };
 
     /**
      * The address says which opening is on the board; this makes the page agree with it. It is
@@ -195,10 +237,11 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
      * button or a link.
      */
     const showFromAddress = () => {
-      const place = catalog.locate(openingIdFromHash(location.hash) ?? '') ?? null;
+      const place = placeNow();
       const opening = place?.opening;
       const name = place && fullName(place);
       header.show(place);
+      showNumbers(place);
       catalogView.show(opening ?? null);
       document.title = opening ? `${name} (${opening.eco}) — Chess Openings` : siteTitle;
       player.load(buildTimeline(opening ?? NO_LINE));
@@ -228,7 +271,10 @@ export async function mountApp(root: HTMLElement, options: AppOptions = {}): Pro
     void counted.then((data) => {
       if (!data) return;
       try {
-        const statistics = readStatistics(data, dataset.collections);
+        statistics = readStatistics(data, dataset.collections);
+        detailAt =
+          statistics.detail && createDetails(statistics.detail, options.loadDetail ?? loadDetail);
+        showNumbers(placeNow());
         // The credit first: it takes room from the catalog, which then sees to what it shows.
         gamesCredit.replaceChildren(...gamesCredited(statistics.source));
         catalogView.count(statistics.of);

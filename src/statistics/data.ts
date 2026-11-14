@@ -40,6 +40,39 @@ export interface MostPlayedData {
   families: { opening: string; counts: Outcomes[] }[];
 }
 
+/** How the detail of the positions is cut up, and what any position's is a share of. */
+export interface DetailIndex {
+  /** How many positions there are to a file: the `place`th is in file `place / size`, rounded down. */
+  size: number;
+  /** The strengths the games are kept apart by, as the rating each band begins at. */
+  bands: number[];
+  /** The speeds they are kept apart by, as lichess calls them. */
+  speeds: string[];
+  /** How all the games counted went, band by band and speed by speed. */
+  totals: { bands: Outcomes[]; speeds: Outcomes[] };
+}
+
+/** What there is to say of one position beyond the glance. */
+export interface PositionDetail {
+  /** How the games that reached it went, band by band. */
+  bands: Outcomes[];
+  /** And speed by speed. */
+  speeds: Outcomes[];
+  /**
+   * The moves most played from it, the most played first: each with the games it was played in
+   * and the place of the position it leads to, or `-1` where that is not one games were counted
+   * for.
+   */
+  moves: [san: string, games: number, to: number][];
+  /** How long its games were, added up: the moves of both sides. */
+  plies: number;
+  /** How many of them were over within twenty moves. */
+  short: number;
+}
+
+/** The shape of each file of detail, `statistics/<n>.json`: its positions, in order of place. */
+export type DetailChunk = PositionDetail[];
+
 /** The shape of `statistics.json`: what the games say of each line, at a glance. */
 export interface StatisticsData {
   source: GamesSource;
@@ -57,4 +90,6 @@ export interface StatisticsData {
   lines: Record<string, number[]>;
   /** The families of the encyclopaedia to rank by how often they are played. */
   mostPlayed?: MostPlayedData;
+  /** Where the detail of each position is to be had, for the panel of one opening's numbers. */
+  detail?: DetailIndex;
 }

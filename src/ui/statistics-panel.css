@@ -1,0 +1,255 @@
+/* A bar under the moves while it is shut; opened, it takes what room the moves can spare. */
+.stats {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+/* `hidden` alone would lose to the `display` above. */
+.stats[hidden] {
+  display: none;
+}
+
+.stats__heading {
+  margin: 0;
+  font: inherit;
+}
+
+.stats__toggle {
+  position: relative;
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 16px 10px 32px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.stats__toggle:hover {
+  background: var(--accent-soft);
+}
+
+/* A chevron that turns when the panel is open, as a group's does in the catalog. */
+.stats__toggle::before {
+  content: "";
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 6px;
+  height: 6px;
+  border: solid var(--ink-soft);
+  border-width: 0 2px 2px 0;
+  transform: rotate(-45deg);
+  transition: transform 120ms ease-out;
+}
+
+.stats__toggle[aria-expanded="true"]::before {
+  transform: rotate(45deg);
+}
+
+.stats__body {
+  min-height: 0;
+  padding: 0 12px 12px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  font-size: 0.85rem;
+  overflow-wrap: break-word;
+}
+
+.stats__body p {
+  margin: 0 0 6px;
+}
+
+.stats__title {
+  margin: 12px 0 5px;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stats__title:first-child {
+  margin-top: 2px;
+}
+
+/* White's wins, the draws and Black's wins: one bar, each part as long as its share. */
+.stats__bar {
+  display: flex;
+  height: 12px;
+  margin: 0 0 6px;
+  overflow: hidden;
+  border: 1px solid var(--ink-soft);
+  border-radius: 6px;
+}
+
+.stats__part {
+  flex: 0 0 0;
+}
+
+.stats__part--white {
+  background: #fdfcf8;
+}
+
+.stats__part--draws {
+  background: #9a938a;
+}
+
+.stats__part--black {
+  background: #2a241d;
+}
+
+/* The same in figures, each beside a swatch of its part of the bar. */
+.stats__outcomes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  margin: 0 0 6px;
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats__outcome::before {
+  content: "";
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 5px;
+  border: 1px solid var(--ink-soft);
+  border-radius: 2px;
+}
+
+.stats__outcome--white::before {
+  background: #fdfcf8;
+}
+
+.stats__outcome--draws::before {
+  background: #9a938a;
+}
+
+.stats__outcome--black::before {
+  background: #2a241d;
+}
+
+.stats__score {
+  font-weight: 600;
+}
+
+.stats__ratings,
+.stats__notice {
+  color: var(--ink-soft);
+}
+
+.stats__retry {
+  padding: 6px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--paper);
+  cursor: pointer;
+}
+
+/* By band and by speed: what it is, its share with a bar under the figure, White's score. */
+.stats__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats__table th,
+.stats__table td {
+  padding: 3px 0 3px 6px;
+  border-top: 1px solid var(--rule);
+  font-weight: 400;
+  text-align: right;
+  vertical-align: top;
+}
+
+.stats__table th:first-child {
+  padding-left: 0;
+  text-align: left;
+}
+
+.stats__table thead th {
+  border-top: 0;
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  vertical-align: bottom;
+}
+
+.stats__share-bar {
+  display: block;
+  height: 4px;
+  margin: 2px 0 1px auto;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+/* The moves played next: the move, its share, and under them the line it leads to. */
+.stats__moves {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats__moves li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 8px;
+  padding: 4px 0;
+  border-top: 1px solid var(--rule);
+}
+
+.stats__moves li:first-child {
+  border-top: 0;
+}
+
+.stats__move {
+  font-weight: 600;
+}
+
+.stats__way {
+  grid-column: 1 / -1;
+  justify-self: start;
+  min-height: 28px;
+  max-width: 100%;
+  padding: 4px 9px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--paper);
+  font-size: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stats__way:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.stats__about {
+  margin-top: 12px;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
+.stats__about summary {
+  cursor: pointer;
+}
+
+.stats__about p {
+  margin: 6px 0 0;
+}

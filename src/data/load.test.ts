@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { SMALL_DATASET } from '../../tests/support/openings.ts';
-import { SMALL_STATISTICS } from '../../tests/support/statistics.ts';
-import { loadOpenings, loadStatistics } from './load.ts';
+import { SMALL_DETAIL, SMALL_STATISTICS } from '../../tests/support/statistics.ts';
+import { loadDetail, loadOpenings, loadStatistics } from './load.ts';
 
 const respondWith = (response: Partial<Response>) => vi.fn(async () => response as Response);
 
@@ -44,5 +44,22 @@ describe('loadStatistics', () => {
     const fetch = respondWith({ ok: false, status: 404 });
 
     await expect(loadStatistics(fetch)).rejects.toThrow(/statistics\.json.*404/);
+  });
+});
+
+describe('loadDetail', () => {
+  it('fetches one file of the detail, by its number', async () => {
+    const fetch = respondWith({ ok: true, json: async () => SMALL_DETAIL });
+
+    const chunk = await loadDetail(7, fetch);
+
+    expect(fetch).toHaveBeenCalledWith('/statistics/7.json');
+    expect(chunk).toEqual(SMALL_DETAIL);
+  });
+
+  it('fails with the status when the server does not have it', async () => {
+    const fetch = respondWith({ ok: false, status: 404 });
+
+    await expect(loadDetail(7, fetch)).rejects.toThrow(/statistics\/7\.json.*404/);
   });
 });

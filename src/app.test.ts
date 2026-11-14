@@ -3,12 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { STUDY, TWO_APPEARANCES } from '../tests/support/appearances.ts';
 import { ITALIAN, NAJDORF, SMALL_DATASET } from '../tests/support/openings.ts';
 import { DANISH, PAMPHLET, TWO_ARRANGEMENTS, TWO_COLLECTIONS } from '../tests/support/pamphlet.ts';
-import { SMALL_STATISTICS } from '../tests/support/statistics.ts';
+import { SMALL_DETAIL, SMALL_STATISTICS } from '../tests/support/statistics.ts';
 import { mountApp } from './app.ts';
 import type { OpeningsDataset } from './data/opening.ts';
 import { hashForOpening } from './routing.ts';
 import { appearanceSetting, delaySetting } from './settings.ts';
-import type { MostPlayedData, StatisticsData } from './statistics/data.ts';
+import type { DetailChunk, MostPlayedData, StatisticsData } from './statistics/data.ts';
 
 let unmount = new AbortController();
 
@@ -25,6 +25,7 @@ function mount(
   hash = '',
   load: () => Promise<OpeningsDataset> = async () => SMALL_DATASET,
   loadStatistics: () => Promise<StatisticsData> = noStatistics,
+  loadDetail: (chunk: number) => Promise<DetailChunk> = async () => SMALL_DETAIL,
 ) {
   history.replaceState(null, '', `/${hash}`);
   const root = document.createElement('div');
@@ -32,6 +33,7 @@ function mount(
   const ready = mountApp(root, {
     load,
     loadStatistics,
+    loadDetail,
     signal: unmount.signal,
     appearances: TWO_APPEARANCES,
     arrangements: TWO_ARRANGEMENTS,
@@ -718,5 +720,132 @@ describe('how often the openings are played', () => {
       'https://github.com/lichess-org/chess-openings/tree/abc1234def',
       'https://database.lichess.org/',
     ]);
+  });
+});
+
+describe('the statistics of the opening on the board', () => {
+  const withStatistics = async () => SMALL_STATISTICS;
+  const panelOf = (root: HTMLElement) => root.querySelector<HTMLElement>('.stats');
+  const toggleOf = (root: HTMLElement) => root.querySelector<HTMLElement>('.stats__toggle');
+  const headings = (root: HTMLElement) =>
+    [...root.querySelectorAll('.stats__body h3')].map((heading) => heading.textContent);
+
+  it('are in a panel beside the board, after the moves, which is shut to begin with', async () => {
+    const { root, ready } = mount(hashForOpening(ITALIAN.id), undefined, withStatistics);
+    await ready;
+    await vi.waitFor(() => expect(panelOf(root)?.hidden).toBe(false));
+
+    expect(toggleOf(root)?.getAttribute('aria-expanded')).toBe('false');
+    expect(root.querySelector('.move-list')?.compareDocumentPosition(panelOf(root) as Node)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(
+      panelOf(root)?.compareDocumentPosition(root.querySelector('.catalog-panel') as Node),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it('have no panel while nothing is chosen, or without the numbers', async () => {
+    const arrived = mount('', undefined, withStatistics);
+    await arrived.ready;
+    await vi.waitFor(() => expect(arrived.root.querySelector('.ranking')).not.toBeNull());
+    expect(panelOf(arrived.root)?.hidden).toBe(true);
+
+    const without = mount(hashForOpening(ITALIAN.id));
+    await without.ready;
+    await vi.advanceTimersByTimeAsync(0);
+    expect(panelOf(without.root)?.hidden).toBe(true);
+  });
+
+  it('have no panel for an opening the tallies do not know', async () => {
+    const { root, ready } = mount(
+      hashForOpening('four-knights-game-italian-variation'),
+      undefined,
+      withStatistics,
+    );
+    await ready;
+    await vi.waitFor(() =>
+      expect(root.querySelector('.credits')?.textContent).toContain('How often'),
+    );
+
+    expect(panelOf(root)?.hidden).toBe(true);
+  });
+
+  it('fetch no detail until the panel is opened, then the one file the opening is in', async () => {
+    const loadDetail = vi.fn(async () => SMALL_DETAIL);
+    const { root, ready } = mount(
+      hashForOpening(ITALIAN.id),
+      undefined,
+      withStatistics,
+      loadDetail,
+    );
+    await ready;
+    await vi.waitFor(() => expect(panelOf(root)?.hidden).toBe(false));
+    vi.advanceTimersByTime(5000);
+    expect(loadDetail).not.toHaveBeenCalled();
+
+    toggleOf(root)?.click();
+
+    expect(loadDetail).toHaveBeenCalledExactlyOnceWith(0);
+    await vi.waitFor(() => expect(headings(root)).toHaveLength(6));
+    expect(root.querySelector('.stats__often')?.textContent).toContain('39,000 games');
+  });
+
+  it('follow the board to another opening, without fetching a file they already have', async () => {
+    const loadDetail = vi.fn(async () => SMALL_DETAIL);
+    const { root, ready, text } = mount(
+      hashForOpening(ITALIAN.id),
+      undefined,
+      withStatistics,
+      loadDetail,
+    );
+    await ready;
+    await vi.waitFor(() => expect(panelOf(root)?.hidden).toBe(false));
+    toggleOf(root)?.click();
+    await vi.waitFor(() => expect(headings(root)).toHaveLength(6));
+
+    root.querySelector<HTMLElement>('.stats__moves button')?.click();
+
+    expect(location.hash).toBe(hashForOpening('italian-game-giuoco-pianissimo'));
+    expect(text('.opening__variation')).toBe('Giuoco Pianissimo');
+    await vi.waitFor(() =>
+      expect(root.querySelector('.stats__often')?.textContent).toContain('4,000 games'),
+    );
+    expect(toggleOf(root)?.getAttribute('aria-expanded')).toBe('true');
+    expect(loadDetail).toHaveBeenCalledTimes(1);
+  });
+
+  it('go when the opening does', async () => {
+    const { root, ready } = mount(hashForOpening(ITALIAN.id), undefined, withStatistics);
+    await ready;
+    await vi.waitFor(() => expect(panelOf(root)?.hidden).toBe(false));
+
+    history.pushState(null, '', '/');
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+
+    expect(panelOf(root)?.hidden).toBe(true);
+  });
+
+  it('say so, and leave the rest of the site alone, when the detail cannot be had', async () => {
+    const { root, ready, squareOf } = mount(
+      hashForOpening(ITALIAN.id),
+      undefined,
+      withStatistics,
+      async () => {
+        throw new Error('statistics/0.json: HTTP 404');
+      },
+    );
+    await ready;
+    await vi.waitFor(() => expect(panelOf(root)?.hidden).toBe(false));
+
+    toggleOf(root)?.click();
+
+    await vi.waitFor(() =>
+      expect(root.querySelector('.stats [role="alert"]')?.textContent).toContain(
+        'could not be fetched',
+      ),
+    );
+    expect(headings(root)).toEqual(['How often', 'How it goes']);
+    vi.advanceTimersByTime(1500);
+    expect(squareOf('e2')).toBe('e4');
   });
 });

@@ -82,6 +82,43 @@ describe('readStatistics', () => {
     expect(readStatistics(stale, SMALL_DATASET.collections).of(ITALIAN)).toBeUndefined();
   });
 
+  it('says which position an opening ends in, by its place among the positions counted', () => {
+    expect(statistics.placeOf(ITALIAN)).toBe(6);
+    expect(statistics.placeOf(DANISH)).toBe(9);
+    expect(statistics.placeOf(find('four-knights-game-italian-variation'))).toBeUndefined();
+    expect(statistics.placeOf(opening('A00', 'Never Heard Of', 'a3'))).toBeUndefined();
+  });
+
+  it('says which openings end in a position, in the order of the catalog', () => {
+    expect(statistics.linesAt(6)).toEqual([ITALIAN]);
+    expect(statistics.linesAt(9)).toEqual([DANISH]);
+    expect(statistics.linesAt(-1)).toEqual([]);
+    expect(statistics.linesAt(400)).toEqual([]);
+
+    const shared: StatisticsData = {
+      ...SMALL_STATISTICS,
+      lines: { eco: [3, 3, 1, 1, 1, 1, 1, 1, 1] },
+    };
+    expect(
+      readStatistics(shared, SMALL_DATASET.collections)
+        .linesAt(3)
+        .map((line) => line.name),
+    ).toEqual(['Polish Opening', 'Scandinavian Defense']);
+  });
+
+  it('says how the detail of each position is to be had, if it came with that', () => {
+    const { detail: _, ...glance } = SMALL_STATISTICS;
+
+    expect(statistics.detail).toBe(SMALL_STATISTICS.detail);
+    expect(readStatistics(glance, SMALL_DATASET.collections).detail).toBeUndefined();
+    expect(
+      readStatistics(
+        { ...SMALL_STATISTICS, detail: { size: 0 } } as unknown as StatisticsData,
+        SMALL_DATASET.collections,
+      ).detail,
+    ).toBeUndefined();
+  });
+
   it.each([
     ['nothing', null],
     ['a page of HTML', '<!doctype html>'],
